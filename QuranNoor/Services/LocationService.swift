@@ -1,0 +1,294 @@
+//
+//  LocationService.swift
+//  QuranNoor
+//
+//  Manages device location using CoreLocation for prayer time calculations
+//
+
+import Foundation
+import CoreLocation
+import MapKit
+import Combine
+
+// Using CLGeocoder for primary reverse geocoding to obtain city and country
+
+// MARK: - Location Service Error
+enum LocationServiceError: LocalizedError {
+    case permissionDenied
+    case locationUnavailable
+    case geocodingFailed
+
+    var errorDescription: String? {
+        switch self {
+        case .permissionDenied:
+            return "Location permission denied. Please enable location access in Settings."
+        case .locationUnavailable:
+            return "Unable to determine your location. Please check your device settings."
+        case .geocodingFailed:
+            return "Failed to determine city name from location."
+        }
+    }
+}
+
+// MARK: - Location Service
+@MainActor
+class LocationService: NSObject, ObservableObject {
+    // MARK: - Published Properties
+    @Published var authorizationStatus: CLAuthorizationStatus = .notDetermined
+    @Published var currentLocation: LocationCoordinates?
+    @Published var cityName: String?
+    @Published var countryName: String?
+
+    // Compass heading
+    @Published var heading: Double = 0
+    @Published var headingAccuracy: CLLocationDirection = -1
+
+    // MARK: - Private Properties
+    private let locationManager = CLLocationManager()
+    private let userDefaults = UserDefaults.standard
+
+    // UserDefaults keys
+    private let lastLocationKey = "lastKnownLocation"
+    private let lastCityKey = "lastKnownCity"
+    private let lastCountryKey = "lastKnownCountry"
+
+    // MARK: - Continuation
+    private var locationContinuation: CheckedContinuation<CLLocation, Error>?
+
+    // MARK: - Initializer
+    override init() {
+        super.init()
+        locationManager.delegate = self
+        locationManager.desiredAccuracy = kCLLocationAccuracyHundredMeters
+        authorizationStatus = locationManager.authorizationStatus
+
+        // Load cached location
+        loadCachedLocation()
+    }
+
+    // MARK: - Public Methods
+
+    /// Convenience: whether the app is currently authorized for location access
+    var isAuthorized: Bool {
+        authorizationStatus == .authorizedWhenInUse || authorizationStatus == .authorizedAlways
+    }
+
+    /// Request location permission from user
+    func requestLocationPermission() {
+        locationManager.requestWhenInUseAuthorization()
+    }
+
+    /// Get current device location
+    func getCurrentLocation() async throws -> LocationCoordinates {
+        // Check authorization
+        guard authorizationStatus == .authorizedWhenInUse || authorizationStatus == .authorizedAlways else {
+            throw LocationServiceError.permissionDenied
+        }
+
+        // Request location
+        let location: CLLocation = try await withCheckedThrowingContinuation { continuation in
+            self.locationContinuation = continuation
+            locationManager.requestLocation()
+        }
+
+        // Convert to LocationCoordinates
+        return LocationCoordinates(
+            latitude: location.coordinate.latitude,
+            longitude: location.coordinate.longitude
+        )
+    }
+
+    /// Get current location with city name (reverse geocoding)
+    func getCurrentLocationWithCity() async throws -> (coordinates: LocationCoordinates, city: String) {
+        let coordinates = try await getCurrentLocation()
+        let location = CLLocation(latitude: coordinates.latitude, longitude: coordinates.longitude)
+
+        // Reverse geocoding: Use MapKit for iOS 26+, CLGeocoder for earlier versions
+        if #available(iOS 26.0, *) {
+            // iOS 26+: Use new MapKit MKReverseGeocodingRequest
+            do {
+                guard let request = MKReverseGeocodingRequest(location: location) else {
+                    throw LocationServiceError.geocodingFailed
+                }
+
+                let mapItems = try await request.mapItems
+
+                if let addressRep = mapItems.first?.addressRepresentations {
+                    // MKAddressRepresentations provides cityName and regionName (country)
+                    let city = addressRep.cityName ?? "Unknown City"
+                    let country = addressRep.regionName ?? ""
+
+                    // Update published properties
+                    self.cityName = city
+                    self.countryName = country
+
+                    // Cache the values
+                    cacheLocation(coordinates, city: city, country: country)
+
+                    return (coordinates, city)
+                }
+            } catch {
+                // Geocoding failed, but we still have coordinates
+                print("⚠️ Reverse geocoding failed: \(error.localizedDescription)")
+            }
+        } else {
+            // iOS < 26: Use CLGeocoder
+            do {
+                let placemarks: [CLPlacemark] = try await withCheckedThrowingContinuation { continuation in
+                    CLGeocoder().reverseGeocodeLocation(location) { placemarks, error in
+                        if let error = error {
+                            continuation.resume(throwing: error)
+                            return
+                        }
+                        continuation.resume(returning: placemarks ?? [])
+                    }
+                }
+
+                if let placemark = placemarks.first {
+                    var city = "Unknown City"
+                    var country = ""
+
+                    if let locality = placemark.locality, !locality.isEmpty {
+                        city = locality
+                    } else if let subAdmin = placemark.subAdministrativeArea, !subAdmin.isEmpty {
+                        city = subAdmin
+                    } else if let admin = placemark.administrativeArea, !admin.isEmpty {
+                        city = admin
+                    }
+
+                    if let countryName = placemark.country, !countryName.isEmpty {
+                        country = countryName
+                    }
+
+                    // Update published properties
+                    self.cityName = city
+                    self.countryName = country
+
+                    // Cache the values
+                    cacheLocation(coordinates, city: city, country: country)
+
+                    return (coordinates, city)
+                }
+            } catch {
+                // Geocoding failed, but we still have coordinates
+                print("⚠️ Reverse geocoding failed: \(error.localizedDescription)")
+            }
+        }
+
+        // If geocoding failed, return cached city if available
+        if let cachedCity = self.cityName {
+            return (coordinates, cachedCity)
+        }
+
+        throw LocationServiceError.geocodingFailed
+    }
+
+    /// Check if location services are enabled (derived from authorization status to avoid blocking calls on main thread)
+    func isLocationServicesEnabled() -> Bool {
+        switch authorizationStatus {
+        case .authorizedAlways, .authorizedWhenInUse, .restricted, .denied:
+            // If we have a concrete status, Core Location services are available at the system level
+            return true
+        case .notDetermined:
+            // Not determined yet — treat as enabled so UI can prompt for permission
+            return true
+        @unknown default:
+            return true
+        }
+    }
+
+    /// Check if app has location permission
+    func hasLocationPermission() -> Bool {
+        return isAuthorized
+    }
+
+    /// Start receiving compass heading updates
+    func startHeadingUpdates() {
+        guard CLLocationManager.headingAvailable() else {
+            print("⚠️ Heading not available on this device")
+            return
+        }
+        locationManager.startUpdatingHeading()
+    }
+
+    /// Stop receiving compass heading updates
+    func stopHeadingUpdates() {
+        locationManager.stopUpdatingHeading()
+    }
+
+    // MARK: - Private Methods
+
+    private func loadCachedLocation() {
+        // Load cached location
+        if let locationData = userDefaults.data(forKey: lastLocationKey),
+           let location = try? JSONDecoder().decode(LocationCoordinates.self, from: locationData) {
+            currentLocation = location
+        }
+
+        // Load cached city names
+        cityName = userDefaults.string(forKey: lastCityKey)
+        countryName = userDefaults.string(forKey: lastCountryKey)
+    }
+
+    private func cacheLocation(_ coordinates: LocationCoordinates, city: String, country: String) {
+        // Cache location
+        if let encoded = try? JSONEncoder().encode(coordinates) {
+            userDefaults.set(encoded, forKey: lastLocationKey)
+        }
+
+        // Cache city names
+        userDefaults.set(city, forKey: lastCityKey)
+        userDefaults.set(country, forKey: lastCountryKey)
+    }
+}
+
+// MARK: - CLLocationManagerDelegate
+extension LocationService: CLLocationManagerDelegate {
+    nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        Task { @MainActor in
+            authorizationStatus = manager.authorizationStatus
+        }
+    }
+
+    nonisolated func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        guard let location = locations.last else { return }
+
+        Task { @MainActor in
+            let coordinates = LocationCoordinates(
+                latitude: location.coordinate.latitude,
+                longitude: location.coordinate.longitude
+            )
+            currentLocation = coordinates
+            locationContinuation?.resume(returning: location)
+            locationContinuation = nil
+        }
+    }
+
+    nonisolated func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        Task { @MainActor in
+            locationContinuation?.resume(throwing: LocationServiceError.locationUnavailable)
+            locationContinuation = nil
+        }
+    }
+
+    nonisolated func locationManager(_ manager: CLLocationManager, didUpdateHeading newHeading: CLHeading) {
+        Task { @MainActor in
+            // Use magnetic heading (trueHeading requires location permission and GPS)
+            // Magnetic heading is relative to magnetic north, which is what we want for compass
+            let magneticHeading = newHeading.magneticHeading
+
+            // Only update if heading is valid (>= 0)
+            if magneticHeading >= 0 {
+                heading = magneticHeading
+                headingAccuracy = newHeading.headingAccuracy
+            }
+        }
+    }
+
+    nonisolated func locationManagerShouldDisplayHeadingCalibration(_ manager: CLLocationManager) -> Bool {
+        // Return true to allow iOS to display the calibration screen when needed
+        // This shows the "figure-8" motion prompt to calibrate the compass
+        return true
+    }
+}
+
