@@ -117,12 +117,21 @@ class PrayerTransitionHandler {
         // Step 3: Recalculate prayer period
         viewModel.recalculatePeriod()
 
+        // Step 3.5: Reset urgent notification tracking for new day
+        viewModel.resetUrgentNotificationTracking()
+
         // Step 4: Update notifications for new day
         if viewModel.notificationService.isAuthorized &&
            viewModel.notificationService.notificationsEnabled,
            let todayPrayers = viewModel.todayPrayerTimes {
             do {
-                try await viewModel.notificationService.schedulePrayerNotifications(todayPrayers)
+                // Get location info for rich notifications
+                let locationInfo = viewModel.getLocationInfo()
+                try await viewModel.notificationService.schedulePrayerNotifications(
+                    todayPrayers,
+                    city: locationInfo.city,
+                    countryCode: locationInfo.countryCode
+                )
                 print("✅ Notifications updated for new day")
             } catch {
                 print("⚠️ Failed to update notifications: \(error)")

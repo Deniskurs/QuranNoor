@@ -188,9 +188,6 @@ struct CurrentPrayerHeader: View {
     let sampleFajr = Date()
     let sampleDhuhr = Calendar.current.date(byAdding: .hour, value: 6, to: sampleFajr)!
     let sampleAsr = Calendar.current.date(byAdding: .hour, value: 10, to: sampleFajr)!
-    let _ = Calendar.current.date(byAdding: .hour, value: 14, to: sampleFajr)! // sampleMaghrib
-    let _ = Calendar.current.date(byAdding: .hour, value: 16, to: sampleFajr)! // sampleIsha
-    let _ = Calendar.current.date(byAdding: .hour, value: 22, to: sampleFajr)! // sampleMidnight
 
     ScrollView {
         VStack(spacing: 20) {

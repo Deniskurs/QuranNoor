@@ -51,6 +51,11 @@ class PrayerViewModel {
     private let mosqueFinderService = MosqueFinderService()
     let notificationService = NotificationService() // Public for notification toggle
 
+    // MARK: - Urgent Notification Tracking
+
+    /// Tracks which prayers have had urgent notifications scheduled (to prevent duplicates)
+    private var urgentNotificationsScheduled: Set<String> = []
+
     // MARK: - UserDefaults
 
     private let userDefaults = UserDefaults.standard
@@ -223,6 +228,65 @@ class PrayerViewModel {
         )
 
         print("📅 Prayer period recalculated: \(currentPrayerPeriod?.state.description ?? "Unknown")")
+
+        // Check and schedule urgent notifications
+        checkAndScheduleUrgentNotification()
+    }
+
+    /// Check if we need to schedule urgent notification (30 min before deadline)
+    func checkAndScheduleUrgentNotification() {
+        guard let period = currentPrayerPeriod,
+              let today = todayPrayerTimes else {
+            return
+        }
+
+        // Only schedule during active prayer periods
+        guard case .inProgress(let prayer, let deadline) = period.state else {
+            return
+        }
+
+        // Create unique identifier for this prayer+deadline combination
+        let notificationKey = "\(prayer.rawValue)-\(deadline.timeIntervalSince1970)"
+
+        // Don't schedule if already scheduled
+        guard !urgentNotificationsScheduled.contains(notificationKey) else {
+            return
+        }
+
+        // Calculate time until deadline
+        let timeRemaining = deadline.timeIntervalSince(Date())
+
+        // Only schedule if deadline is > 30 minutes away
+        // (If < 30 min, notification time would be in the past)
+        guard timeRemaining > 1800 else { // 30 minutes = 1800 seconds
+            return
+        }
+
+        // Determine if this is midnight deadline (Isha)
+        let isMidnight = prayer == .isha && today.midnight != nil
+
+        // Schedule the notification
+        Task {
+            do {
+                try await notificationService.scheduleUrgentNotification(
+                    for: prayer,
+                    deadline: deadline,
+                    isMidnight: isMidnight
+                )
+
+                // Mark as scheduled
+                urgentNotificationsScheduled.insert(notificationKey)
+
+                print("🚨 Urgent notification scheduled for \(prayer.displayName) at \(deadline)")
+            } catch {
+                print("⚠️ Failed to schedule urgent notification: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    /// Reset urgent notification tracking (call at midnight or when prayer completes)
+    func resetUrgentNotificationTracking() {
+        urgentNotificationsScheduled.removeAll()
     }
 
     /// Check if we need to transition to next day (called on foreground)
@@ -303,14 +367,31 @@ class PrayerViewModel {
                     await notificationService.cancelPrayerNotifications()
                     notificationService.notificationsEnabled = false
                 } else {
-                    // Enable
-                    try await notificationService.schedulePrayerNotifications(prayerTimes)
+                    // Enable - Get location info for rich notifications
+                    let locationInfo = getLocationInfo()
+                    try await notificationService.schedulePrayerNotifications(
+                        prayerTimes,
+                        city: locationInfo.city,
+                        countryCode: locationInfo.countryCode
+                    )
                     notificationService.notificationsEnabled = true
                 }
             }
         } catch {
             handleError(error)
         }
+    }
+
+    /// Get formatted location info for notifications
+    /// - Returns: Tuple with (city, countryCode) for notification titles
+    func getLocationInfo() -> (city: String, countryCode: String) {
+        let city = locationService.cityName ?? userLocation
+        let country = locationService.countryName ?? "Unknown"
+
+        // Convert country name to code (simplified - can be enhanced)
+        let countryCode = convertToCountryCode(country)
+
+        return (city, countryCode)
     }
 
     // MARK: - Private Methods
@@ -323,6 +404,37 @@ class PrayerViewModel {
 
     private func setupNotificationCategories() {
         notificationService.registerNotificationCategories()
+    }
+
+    /// Convert country name to 2-letter country code
+    private func convertToCountryCode(_ countryName: String) -> String {
+        // Common countries mapping
+        let countryMappings: [String: String] = [
+            "United Kingdom": "GB",
+            "United States": "US",
+            "Canada": "CA",
+            "Australia": "AU",
+            "Saudi Arabia": "SA",
+            "United Arab Emirates": "AE",
+            "Pakistan": "PK",
+            "India": "IN",
+            "Malaysia": "MY",
+            "Indonesia": "ID",
+            "Turkey": "TR",
+            "Egypt": "EG",
+            "Morocco": "MA",
+            "Algeria": "DZ",
+            "Tunisia": "TN",
+            "France": "FR",
+            "Germany": "DE",
+            "Netherlands": "NL",
+            "Belgium": "BE",
+            "Sweden": "SE",
+            "Norway": "NO",
+            "Denmark": "DK"
+        ]
+
+        return countryMappings[countryName] ?? "Unknown"
     }
 
     // MARK: - UserDefaults

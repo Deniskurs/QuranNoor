@@ -77,6 +77,37 @@ struct SettingsView: View {
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
+            .onAppear {
+                // Sync toggle state with actual notification service
+                notificationsEnabled = prayerVM.notificationService.notificationsEnabled
+            }
+            .onChange(of: notificationsEnabled) { oldValue, newValue in
+                // React to notification toggle changes
+                Task {
+                    do {
+                        if newValue {
+                            // User wants to enable notifications
+                            if !prayerVM.notificationService.isAuthorized {
+                                // Request permission first
+                                let granted = try await prayerVM.notificationService.requestPermission()
+                                if !granted {
+                                    // Permission denied, revert toggle
+                                    notificationsEnabled = false
+                                    return
+                                }
+                            }
+                        }
+
+                        // Toggle notifications (schedules or cancels)
+                        await prayerVM.toggleNotifications()
+
+                    } catch {
+                        // Error occurred, revert toggle
+                        notificationsEnabled = oldValue
+                        print("⚠️ Failed to toggle notifications: \(error.localizedDescription)")
+                    }
+                }
+            }
         }
         .sheet(isPresented: $showPrayerCalcInfo) {
             NavigationStack {
