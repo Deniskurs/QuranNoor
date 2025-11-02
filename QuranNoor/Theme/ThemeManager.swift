@@ -60,6 +60,10 @@ class ThemeManager: ObservableObject {
     }
 
     private func saveTheme() {
-        UserDefaults.standard.set(currentTheme.rawValue, forKey: "themeMode")
+        let theme = currentTheme.rawValue
+        // Perform UserDefaults write on background queue to avoid blocking UI
+        Task.detached(priority: .utility) {
+            UserDefaults.standard.set(theme, forKey: "themeMode")
+        }
     }
 }

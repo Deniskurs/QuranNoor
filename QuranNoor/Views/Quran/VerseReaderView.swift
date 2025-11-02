@@ -159,13 +159,6 @@ struct VerseReaderView: View {
                     await loadVerses()
                 }
             }
-            .onChange(of: viewModel.readingProgress) { oldValue, newValue in
-                // Reload verse read states when progress changes from QuranService
-                if newValue?.totalVersesRead != oldValue?.totalVersesRead {
-                    loadVerseReadStates()
-                    print("🔄 VerseReaderView: Reloaded verse read states due to progress change")
-                }
-            }
         }
     }
 

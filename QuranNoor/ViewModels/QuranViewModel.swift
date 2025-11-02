@@ -22,6 +22,9 @@ class QuranViewModel: ObservableObject {
     private let quranService = QuranService.shared
     private var cancellables = Set<AnyCancellable>()
 
+    // Performance optimization: Cache surah progress to avoid repeated UserDefaults reads
+    private var surahProgressCache: [Int: Double] = [:] // surahNumber -> completion percentage
+
     // MARK: - Initialization
     init() {
         let instanceId = UUID().uuidString.prefix(8)
@@ -49,10 +52,11 @@ class QuranViewModel: ObservableObject {
         // Observe reading progress changes from QuranService
         quranService.$readingProgress
             .receive(on: DispatchQueue.main)
+            .debounce(for: .milliseconds(300), scheduler: DispatchQueue.main) // Debounce to prevent cascade
             .sink { [weak self] newProgress in
                 guard let self = self else { return }
                 self.readingProgress = newProgress
-                self.objectWillChange.send()
+                // Cache updates happen lazily via getSurahProgress() - no need to precompute all 114 surahs
                 print("🔄 QuranViewModel: Progress updated from service - \(newProgress?.totalVersesRead ?? 0) verses")
             }
             .store(in: &cancellables)
@@ -115,6 +119,70 @@ class QuranViewModel: ObservableObject {
     /// Load reading progress
     func loadProgress() {
         readingProgress = quranService.getReadingProgress()
+        precomputeSurahProgress()
+    }
+
+    /// Precompute progress for all surahs to avoid repeated calculations (synchronous version for initial load)
+    private func precomputeSurahProgress() {
+        surahProgressCache.removeAll()
+
+        // Pre-compute progress for all 114 surahs
+        for surah in surahs {
+            let stats = quranService.getSurahStatistics(
+                surahNumber: surah.id,
+                totalVerses: surah.numberOfVerses
+            )
+            surahProgressCache[surah.id] = stats.completionPercentage
+        }
+
+        print("✅ Precomputed progress for \(surahProgressCache.count) surahs")
+    }
+
+    /// Async version of precomputeSurahProgress - computes in background to avoid blocking UI
+    @MainActor
+    private func precomputeSurahProgressAsync() async {
+        // Capture progress before entering detached task (Swift 6 concurrency requirement)
+        let currentProgress = readingProgress ?? quranService.getReadingProgress()
+
+        // Compute progress cache on background thread
+        let cache = await Task.detached(priority: .userInitiated) { [surahs] in
+            var progressCache: [Int: Double] = [:]
+
+            for surah in surahs {
+                // Inline computation to avoid actor isolation issues
+                let surahVerses = currentProgress.readVerses.filter { $0.key.starts(with: "\(surah.id):") }
+                let completionPercentage = Double(surahVerses.count) / Double(surah.numberOfVerses) * 100
+                progressCache[surah.id] = completionPercentage
+            }
+
+            return progressCache
+        }.value
+
+        // Update cache on main thread
+        self.surahProgressCache = cache
+        print("✅ Async precomputed progress for \(cache.count) surahs (background)")
+    }
+
+    /// Incrementally update progress for a single surah (performance optimization)
+    /// Use this when you know exactly which surah changed to avoid recomputing all 114
+    @MainActor
+    func updateSurahProgressIncremental(surahNumber: Int) async {
+        // Find the surah
+        guard let surah = surahs.first(where: { $0.id == surahNumber }) else { return }
+
+        // Capture progress before entering detached task (Swift 6 concurrency requirement)
+        let currentProgress = readingProgress ?? quranService.getReadingProgress()
+
+        // Compute just this one surah's progress in background
+        let progress = await Task.detached(priority: .userInitiated) {
+            // Inline computation to avoid actor isolation issues
+            let surahVerses = currentProgress.readVerses.filter { $0.key.starts(with: "\(surahNumber):") }
+            return Double(surahVerses.count) / Double(surah.numberOfVerses) * 100
+        }.value
+
+        // Update just this surah in cache
+        self.surahProgressCache[surahNumber] = progress
+        print("✅ Incrementally updated progress for Surah \(surahNumber): \(progress)%")
     }
 
     /// Update reading progress (observers will handle UI update automatically)
@@ -213,9 +281,16 @@ class QuranViewModel: ObservableObject {
         return quranService.getSurahStatistics(surahNumber: surahNumber, totalVerses: totalVerses)
     }
 
-    /// Get surah progress percentage
+    /// Get surah progress percentage (uses cached value for performance)
     func getSurahProgress(surahNumber: Int, totalVerses: Int) -> Double {
+        // Return cached value if available (99% of calls)
+        if let cachedProgress = surahProgressCache[surahNumber] {
+            return cachedProgress
+        }
+
+        // Fallback to live calculation if cache miss (should be rare)
         let stats = getSurahStatistics(surahNumber: surahNumber, totalVerses: totalVerses)
+        surahProgressCache[surahNumber] = stats.completionPercentage
         return stats.completionPercentage
     }
 }

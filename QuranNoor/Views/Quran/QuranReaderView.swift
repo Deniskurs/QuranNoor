@@ -254,16 +254,18 @@ struct QuranReaderView: View {
     private var surahList: some View {
         VStack(spacing: 12) {
             ForEach(viewModel.filteredSurahs) { surah in
+                let progress = viewModel.getSurahProgress(
+                    surahNumber: surah.id,
+                    totalVerses: surah.numberOfVerses
+                )
+
                 Button {
                     viewModel.selectSurah(surah)
                     showingVerseReader = true
                 } label: {
                     SurahCard(
                         surah: surah,
-                        progress: viewModel.getSurahProgress(
-                            surahNumber: surah.id,
-                            totalVerses: surah.numberOfVerses
-                        )
+                        progress: progress
                     )
                 }
                 .contextMenu {
@@ -275,7 +277,7 @@ struct QuranReaderView: View {
                         Label("View Progress Details", systemImage: "chart.bar")
                     }
 
-                    if viewModel.getSurahProgress(surahNumber: surah.id, totalVerses: surah.numberOfVerses) > 0 {
+                    if progress > 0 {
                         Button(role: .destructive) {
                             selectedSurahForReset = surah
                             showingResetConfirmation = true

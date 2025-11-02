@@ -8,7 +8,7 @@
 import Foundation
 
 // MARK: - Surah
-struct Surah: Identifiable, Codable {
+struct Surah: Identifiable, Codable, Sendable {
     let id: Int  // Surah number (1-114)
     let name: String  // Arabic name
     let englishName: String
@@ -23,7 +23,7 @@ struct Surah: Identifiable, Codable {
 }
 
 // MARK: - Verse
-struct Verse: Identifiable, Codable {
+struct Verse: Identifiable, Codable, Sendable {
     let id: UUID
     let number: Int  // Absolute verse number (1-6236)
     let surahNumber: Int
@@ -42,7 +42,7 @@ struct Verse: Identifiable, Codable {
 }
 
 // MARK: - Translation
-struct Translation: Identifiable, Codable {
+struct Translation: Identifiable, Codable, Sendable {
     let id: UUID
     let verseNumber: Int
     let language: String
@@ -59,7 +59,7 @@ struct Translation: Identifiable, Codable {
 }
 
 // MARK: - Bookmark
-struct Bookmark: Identifiable, Codable {
+struct Bookmark: Identifiable, Codable, Sendable {
     let id: UUID
     let surahNumber: Int
     let verseNumber: Int
@@ -77,7 +77,7 @@ struct Bookmark: Identifiable, Codable {
 
 // MARK: - Verse Read Data
 /// Detailed information about a verse read event
-struct VerseReadData: Codable, Equatable {
+struct VerseReadData: Codable, Equatable, Sendable {
     let timestamp: Date  // When verse was first read
     var readCount: Int   // How many times verse has been read
     let source: ReadSource  // How the verse was marked as read
@@ -91,7 +91,7 @@ struct VerseReadData: Codable, Equatable {
 
 // MARK: - Progress Snapshot
 /// Snapshot for undo/redo functionality
-struct ProgressSnapshot: Codable, Identifiable, Equatable {
+struct ProgressSnapshot: Codable, Identifiable, Equatable, Sendable {
     let id: UUID
     let timestamp: Date
     let actionType: ProgressAction
@@ -139,13 +139,13 @@ struct SurahProgressStats: Identifiable {
 }
 
 // MARK: - Reading Progress
-struct ReadingProgress: Codable, Equatable {
+struct ReadingProgress: Codable, Equatable, Sendable {
     var lastReadSurah: Int
     var lastReadVerse: Int
     var readVerses: [String: VerseReadData]  // Changed from Set<String> to Dictionary with metadata
     var streakDays: Int
     var lastReadDate: Date
-    var progressHistory: [ProgressSnapshot]  // For undo/redo (limit to 50)
+    // progressHistory moved to ProgressHistoryManager (FileManager-backed storage)
 
     // Computed property - total unique verses read
     var totalVersesRead: Int {
@@ -163,15 +163,13 @@ struct ReadingProgress: Codable, Equatable {
         lastReadVerse: Int = 1,
         readVerses: [String: VerseReadData] = [:],
         streakDays: Int = 0,
-        lastReadDate: Date = Date.distantPast,
-        progressHistory: [ProgressSnapshot] = []
+        lastReadDate: Date = Date.distantPast
     ) {
         self.lastReadSurah = lastReadSurah
         self.lastReadVerse = lastReadVerse
         self.readVerses = readVerses
         self.streakDays = streakDays
         self.lastReadDate = lastReadDate
-        self.progressHistory = progressHistory
     }
 
     // MARK: - Helper Methods
@@ -220,7 +218,12 @@ struct ReadingProgress: Codable, Equatable {
         lastReadVerse = try container.decodeIfPresent(Int.self, forKey: .lastReadVerse) ?? 1
         streakDays = try container.decodeIfPresent(Int.self, forKey: .streakDays) ?? 0
         lastReadDate = try container.decodeIfPresent(Date.self, forKey: .lastReadDate) ?? Date.distantPast
-        progressHistory = try container.decodeIfPresent([ProgressSnapshot].self, forKey: .progressHistory) ?? []
+
+        // Migration: Extract progressHistory and move to ProgressHistoryManager
+        if let oldHistory = try? container.decodeIfPresent([ProgressSnapshot].self, forKey: .progressHistory), !oldHistory.isEmpty {
+            print("⚠️ Found \(oldHistory.count) snapshots in old format - will migrate to ProgressHistoryManager")
+            // ProgressHistoryManager will handle this migration in QuranService
+        }
 
         // Migration logic: Handle both old Set<String> and new [String: VerseReadData]
         if let newFormat = try? container.decode([String: VerseReadData].self, forKey: .readVerses) {
@@ -257,7 +260,7 @@ struct ReadingProgress: Codable, Equatable {
         try container.encode(readVerses, forKey: .readVerses)
         try container.encode(streakDays, forKey: .streakDays)
         try container.encode(lastReadDate, forKey: .lastReadDate)
-        try container.encode(progressHistory, forKey: .progressHistory)
+        // progressHistory is no longer stored here - moved to ProgressHistoryManager
         // Don't encode totalVersesRead - it's computed
     }
 }

@@ -152,6 +152,10 @@ class QuranService: ObservableObject {
         // Load initial data from UserDefaults
         self.readingProgress = loadProgressFromDefaults()
         self.bookmarks = loadBookmarksFromDefaults()
+
+        // Migrate old progress history to ProgressHistoryManager (one-time migration)
+        migrateProgressHistoryIfNeeded()
+
         print("✅ QuranService.shared initialized")
     }
 
@@ -168,6 +172,51 @@ class QuranService: ObservableObject {
         } catch {
             print("❌ Failed to decode progress: \(error)")
             return nil
+        }
+    }
+
+    /// Migrate old progressHistory from UserDefaults to ProgressHistoryManager (one-time migration)
+    private func migrateProgressHistoryIfNeeded() {
+        // Check if we've already migrated
+        let migrationKey = "progressHistoryMigrated_v2"
+        guard !userDefaults.bool(forKey: migrationKey) else {
+            print("ℹ️ Progress history already migrated to ProgressHistoryManager")
+            return
+        }
+
+        // Try to load old format with progressHistory
+        guard let data = userDefaults.data(forKey: progressKey) else { return }
+
+        do {
+            // Temporarily decode to a structure that includes progressHistory
+            struct OldReadingProgress: Codable {
+                var readVerses: [String: VerseReadData]
+                var progressHistory: [ProgressSnapshot]?
+            }
+
+            let decoder = JSONDecoder()
+            let oldFormat = try decoder.decode(OldReadingProgress.self, from: data)
+
+            if let history = oldFormat.progressHistory, !history.isEmpty {
+                print("🔄 Migrating \(history.count) snapshots to ProgressHistoryManager...")
+
+                // Migrate to FileManager
+                ProgressHistoryManager.shared.migrateFromUserDefaults(oldHistory: history)
+
+                // Re-save progress without history (will be much smaller)
+                if var progress = readingProgress {
+                    saveProgress(progress)
+                    print("✅ Saved cleaned progress to UserDefaults (removed \(history.count) snapshots)")
+                }
+            }
+
+            // Mark migration as complete
+            userDefaults.set(true, forKey: migrationKey)
+            print("✅ Progress history migration complete")
+        } catch {
+            // If decoding fails, it's already in the new format
+            print("ℹ️ No old progress history to migrate: \(error.localizedDescription)")
+            userDefaults.set(true, forKey: migrationKey)
         }
     }
 
@@ -372,13 +421,22 @@ class QuranService: ObservableObject {
     }
 
     private func saveBookmarks(_ bookmarks: [Bookmark]) {
-        if let encoded = try? JSONEncoder().encode(bookmarks) {
-            userDefaults.set(encoded, forKey: bookmarksKey)
+        // Update @Published property immediately for UI responsiveness
+        self.bookmarks = bookmarks
 
-            // Update @Published property to notify all observers
-            self.bookmarks = bookmarks
-            print("✅ Bookmarks saved and published: \(bookmarks.count) bookmarks")
+        // Capture values needed for background task
+        let key = bookmarksKey
+        let count = bookmarks.count
+
+        // Perform encoding and UserDefaults write on background queue
+        Task.detached(priority: .utility) {
+            if let encoded = try? JSONEncoder().encode(bookmarks) {
+                UserDefaults.standard.set(encoded, forKey: key)
+                print("✅ Bookmarks saved to disk: \(count) bookmarks")
+            }
         }
+
+        print("✅ Bookmarks published to observers: \(count) bookmarks")
     }
 
     // MARK: - Reading Progress
@@ -479,7 +537,7 @@ class QuranService: ObservableObject {
         var progress = getReadingProgress()
         let verseId = "\(surahNumber):\(verseNumber)"
 
-        // Create snapshot if manual action
+        // Create snapshot if manual action (stored in ProgressHistoryManager - FileManager-backed)
         if manual {
             let snapshot = ProgressSnapshot(
                 actionType: .manualMarkRead,
@@ -487,7 +545,7 @@ class QuranService: ObservableObject {
                 streakDays: progress.streakDays,
                 lastReadDate: progress.lastReadDate
             )
-            addSnapshotToHistory(&progress, snapshot)
+            ProgressHistoryManager.shared.addSnapshot(snapshot)
         }
 
         if let existingData = progress.readVerses[verseId] {
@@ -515,14 +573,14 @@ class QuranService: ObservableObject {
         var progress = getReadingProgress()
         let verseId = "\(surahNumber):\(verseNumber)"
 
-        // Create snapshot
+        // Create snapshot (stored in ProgressHistoryManager - FileManager-backed)
         let snapshot = ProgressSnapshot(
             actionType: .manualMarkUnread,
             readVerses: progress.readVerses,
             streakDays: progress.streakDays,
             lastReadDate: progress.lastReadDate
         )
-        addSnapshotToHistory(&progress, snapshot)
+        ProgressHistoryManager.shared.addSnapshot(snapshot)
 
         progress.readVerses.removeValue(forKey: verseId)
         saveProgress(progress)
@@ -548,10 +606,11 @@ class QuranService: ObservableObject {
             lastReadVerse: 1,
             readVerses: [:],
             streakDays: 0,
-            lastReadDate: Date.distantPast,
-            progressHistory: []
+            lastReadDate: Date.distantPast
+            // progressHistory is now managed by ProgressHistoryManager
         )
         saveProgress(progress)
+        ProgressHistoryManager.shared.clearHistory()  // Also clear undo history
         print("🔄 All reading progress reset")
     }
 
@@ -559,14 +618,14 @@ class QuranService: ObservableObject {
     func resetSurahProgress(surahNumber: Int) {
         var progress = getReadingProgress()
 
-        // Create snapshot
+        // Create snapshot (stored in ProgressHistoryManager - FileManager-backed)
         let snapshot = ProgressSnapshot(
             actionType: .resetSurah,
             readVerses: progress.readVerses,
             streakDays: progress.streakDays,
             lastReadDate: progress.lastReadDate
         )
-        addSnapshotToHistory(&progress, snapshot)
+        ProgressHistoryManager.shared.addSnapshot(snapshot)
 
         // Remove all verses from this surah
         progress.readVerses = progress.readVerses.filter { verseId, _ in
@@ -581,14 +640,14 @@ class QuranService: ObservableObject {
     func resetVerseRange(surahNumber: Int, fromVerse: Int, toVerse: Int) {
         var progress = getReadingProgress()
 
-        // Create snapshot
+        // Create snapshot (stored in ProgressHistoryManager - FileManager-backed)
         let snapshot = ProgressSnapshot(
             actionType: .resetSurah,
             readVerses: progress.readVerses,
             streakDays: progress.streakDays,
             lastReadDate: progress.lastReadDate
         )
-        addSnapshotToHistory(&progress, snapshot)
+        ProgressHistoryManager.shared.addSnapshot(snapshot)
 
         // Remove verses in range
         for verseNumber in fromVerse...toVerse {
@@ -603,40 +662,42 @@ class QuranService: ObservableObject {
     /// Undo last progress action
     @discardableResult
     func undoLastAction() -> Bool {
-        var progress = getReadingProgress()
-
-        guard let lastSnapshot = progress.progressHistory.popLast() else {
+        guard let lastSnapshot = ProgressHistoryManager.shared.getLastSnapshot() else {
             print("⚠️ No actions to undo")
             return false
         }
 
         // Restore from snapshot
-        progress.readVerses = lastSnapshot.readVerses
-        progress.streakDays = lastSnapshot.streakDays
-        progress.lastReadDate = lastSnapshot.lastReadDate
+        var progress = ReadingProgress(
+            lastReadSurah: lastSnapshot.readVerses.keys.compactMap { verseId -> Int? in
+                let components = verseId.split(separator: ":")
+                return components.first.flatMap { Int($0) }
+            }.max() ?? 1,
+            lastReadVerse: 1,
+            readVerses: lastSnapshot.readVerses,
+            streakDays: lastSnapshot.streakDays,
+            lastReadDate: lastSnapshot.lastReadDate
+        )
 
         saveProgress(progress)
+        ProgressHistoryManager.shared.removeLastSnapshot()
         print("⏪ Undone action: \(lastSnapshot.actionType.rawValue)")
         return true
     }
 
     /// Check if undo is available
     func canUndo() -> Bool {
-        let progress = getReadingProgress()
-        return !progress.progressHistory.isEmpty
+        return ProgressHistoryManager.shared.getLastSnapshot() != nil
     }
 
     /// Get undo history count
     func undoHistoryCount() -> Int {
-        let progress = getReadingProgress()
-        return progress.progressHistory.count
+        return ProgressHistoryManager.shared.history.count
     }
 
     /// Clear undo history (to save space)
     func clearUndoHistory() {
-        var progress = getReadingProgress()
-        progress.progressHistory = []
-        saveProgress(progress)
+        ProgressHistoryManager.shared.clearHistory()
         print("🗑️ Cleared undo history")
     }
 
@@ -654,7 +715,8 @@ class QuranService: ObservableObject {
 
     /// Get surah-specific statistics
     func getSurahStatistics(surahNumber: Int, totalVerses: Int) -> SurahProgressStats {
-        let progress = getReadingProgress()
+        // Use cached readingProgress to avoid repeated UserDefaults reads (performance optimization)
+        let progress = readingProgress ?? getReadingProgress()
         return progress.surahProgress(surahNumber: surahNumber, totalVerses: totalVerses)
     }
 
@@ -662,25 +724,27 @@ class QuranService: ObservableObject {
 
     /// Save progress to UserDefaults and publish changes
     private func saveProgress(_ progress: ReadingProgress) {
+        // Update @Published property immediately for UI responsiveness
+        self.readingProgress = progress
+
+        // Capture values needed for background task
+        let key = progressKey
+        let count = progress.readVerses.count
+
+        // Encode on main thread (required for Encodable conformance)
         do {
             let encoded = try JSONEncoder().encode(progress)
-            userDefaults.set(encoded, forKey: progressKey)
 
-            // Update @Published property to notify all observers
-            self.readingProgress = progress
-            print("✅ Progress saved and published: \(progress.readVerses.count) verses")
+            // Perform UserDefaults write on background queue (encoding already done)
+            Task.detached(priority: .utility) {
+                UserDefaults.standard.set(encoded, forKey: key)
+                print("✅ Progress saved to disk: \(count) verses")
+            }
         } catch {
             print("❌ Failed to encode progress: \(error)")
         }
-    }
 
-    /// Add snapshot to history with limit of 50
-    private func addSnapshotToHistory(_ progress: inout ReadingProgress, _ snapshot: ProgressSnapshot) {
-        progress.progressHistory.append(snapshot)
-        // Limit history to 50 snapshots to prevent memory issues
-        if progress.progressHistory.count > 50 {
-            progress.progressHistory.removeFirst()
-        }
+        print("✅ Progress published to observers: \(count) verses")
     }
 
     // MARK: - Fallback Sample Data

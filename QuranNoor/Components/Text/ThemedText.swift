@@ -26,6 +26,22 @@ struct ThemedText: View {
     let italic: Bool
     let color: Color?
 
+    // Performance optimization: Cache font availability check
+    private static let hasCustomTitleFont: Bool = {
+        UIFont(name: "PPEditorialNew-Ultralight", size: 32) != nil
+    }()
+
+    // Cache computed fonts to avoid repeated lookups
+    private static let cachedFonts: [TextStyleType: Font] = [
+        .title: hasCustomTitleFont
+            ? .custom("PPEditorialNew-Ultralight", size: 32)
+            : .system(size: 32, weight: .ultraLight, design: .default),
+        .heading: .system(size: 24, weight: .semibold, design: .default),
+        .body: .system(size: 16, weight: .regular, design: .default),
+        .caption: .system(size: 14, weight: .regular, design: .default),
+        .arabic: .system(size: 20, weight: .regular, design: .default)
+    ]
+
     // MARK: - Initializer
     init(
         _ text: String,
@@ -49,27 +65,8 @@ struct ThemedText: View {
 
     // MARK: - Font Selection
     private var fontForStyle: Font {
-        switch style {
-        case .title:
-            // Try to use PP Editorial New Ultralight, fallback to SF Pro Display Ultralight
-            if let _ = UIFont(name: "PPEditorialNew-Ultralight", size: 32) {
-                return .custom("PPEditorialNew-Ultralight", size: 32)
-            } else {
-                return .system(size: 32, weight: .ultraLight, design: .default)
-            }
-
-        case .heading:
-            return .system(size: 24, weight: .semibold, design: .default)
-
-        case .body:
-            return .system(size: 16, weight: .regular, design: .default)
-
-        case .caption:
-            return .system(size: 14, weight: .regular, design: .default)
-
-        case .arabic:
-            return .system(size: 20, weight: .regular, design: .default)
-        }
+        // Use cached font for performance (avoids repeated UIFont lookups)
+        return Self.cachedFonts[style] ?? .body
     }
 
     // MARK: - Theme-Aware Color

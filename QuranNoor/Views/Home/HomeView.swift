@@ -24,26 +24,29 @@ struct HomeView: View {
                 // Background gradient
                 GradientBackground(style: .home, opacity: 0.25)
 
-                ScrollView {
-                    VStack(spacing: 24) {
-                        // Welcome header
-                        welcomeHeader
+                // TimelineView updates every second for live countdown and progress
+                TimelineView(.periodic(from: Date(), by: 1.0)) { context in
+                    ScrollView {
+                        VStack(spacing: 24) {
+                            // Welcome header
+                            welcomeHeader
 
-                        // Next prayer countdown card
-                        if let nextPrayer = prayerViewModel.nextPrayer {
-                            nextPrayerCountdownCard(nextPrayer)
+                            // Next prayer countdown card
+                            if let nextPrayer = prayerViewModel.nextPrayer {
+                                nextPrayerCountdownCard(nextPrayer)
+                            }
+
+                            // Daily verse card
+                            dailyVerseCard
+
+                            // Quick actions
+                            quickActionsGrid
+
+                            // Hijri date card
+                            hijriDateCard
                         }
-
-                        // Daily verse card
-                        dailyVerseCard
-
-                        // Quick actions
-                        quickActionsGrid
-
-                        // Hijri date card
-                        hijriDateCard
+                        .padding()
                     }
-                    .padding()
                 }
             }
             .navigationTitle("Home")
@@ -114,13 +117,13 @@ struct HomeView: View {
 
                     Spacer()
 
-                    // Progress ring
+                    // Progress ring (changes to orange when urgent)
                     ProgressRing(
-                        progress: prayerViewModel.getProgressToNextPrayer(),
+                        progress: prayerViewModel.periodProgress,
                         lineWidth: 6,
                         size: 90,
                         showPercentage: false,
-                        color: AppColors.primary.green
+                        color: prayerViewModel.isUrgent ? .orange : AppColors.primary.green
                     )
                 }
             }

@@ -178,7 +178,13 @@ class PrayerViewModel {
 
             // Step 4: Schedule notifications (if enabled)
             if notificationService.isAuthorized && notificationService.notificationsEnabled {
-                try await notificationService.schedulePrayerNotifications(prayerTimes)
+                // Get location info for rich notifications
+                let locationInfo = getLocationInfo()
+                try await notificationService.schedulePrayerNotifications(
+                    prayerTimes,
+                    city: locationInfo.city,
+                    countryCode: locationInfo.countryCode
+                )
             }
 
             isLoadingPrayerTimes = false
@@ -228,6 +234,9 @@ class PrayerViewModel {
         )
 
         print("📅 Prayer period recalculated: \(currentPrayerPeriod?.state.description ?? "Unknown")")
+        print("⏱️ Countdown: \(countdownString)")
+        print("📊 Progress: \(String(format: "%.1f%%", periodProgress * 100))")
+        print("🚨 Urgent: \(isUrgent)")
 
         // Check and schedule urgent notifications
         checkAndScheduleUrgentNotification()

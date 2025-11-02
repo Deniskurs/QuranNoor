@@ -232,6 +232,12 @@ struct SettingsView: View {
                 VStack(spacing: 16) {
                     ForEach(ThemeMode.allCases) { mode in
                         Button {
+                            // Haptic feedback for better UX
+                            #if canImport(UIKit)
+                            let generator = UIImpactFeedbackGenerator(style: .light)
+                            generator.impactOccurred()
+                            #endif
+
                             withAnimation {
                                 themeManager.currentTheme = mode
                             }

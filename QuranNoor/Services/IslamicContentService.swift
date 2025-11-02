@@ -404,9 +404,28 @@ class IslamicContentService {
 
     /// Fetch verse text from QuranService
     private func fetchVerseText(surah: Int, verse: Int) async -> String {
-        // Try to fetch from QuranService
-        // For now, return a fallback - this will be enhanced when QuranService is integrated
-        return "Establish prayer, for prayer has been enjoined upon the believers at fixed times."
+        do {
+            // Create temporary Verse object for QuranService API lookup
+            let tempVerse = Verse(
+                number: 0, // Not needed for translation API
+                surahNumber: surah,
+                verseNumber: verse,
+                text: "", // Not needed
+                juz: 1 // Not needed
+            )
+
+            // Fetch translation from QuranService (English - Sahih International)
+            // Uses alquran.cloud API with automatic caching
+            let translation = try await QuranService.shared.getTranslation(forVerse: tempVerse)
+
+            return translation.text
+
+        } catch {
+            print("⚠️ Failed to fetch verse \(surah):\(verse) from QuranService: \(error.localizedDescription)")
+
+            // Fallback to generic prayer verse
+            return "Establish prayer, for prayer has been enjoined upon the believers at fixed times."
+        }
     }
 
     /// Reset content rotation (useful for testing or user preference)

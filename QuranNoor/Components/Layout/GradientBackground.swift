@@ -8,7 +8,7 @@
 import SwiftUI
 
 // MARK: - Gradient Style
-public enum BackgroundGradientStyle {
+public enum BackgroundGradientStyle: Hashable {
     case prayer     // Peaceful green-to-midnight for prayer times
     case quran      // Elegant gold-to-midnight for Quran reading
     case home       // Welcoming teal-to-green for home screen
@@ -24,6 +24,34 @@ struct GradientBackground: View {
 
     let style: BackgroundGradientStyle
     let opacity: Double
+
+    // Performance optimization: Precompute all gradients once
+    private static let cachedGradients: [BackgroundGradientStyle: Gradient] = [
+        .prayer: Gradient(colors: [
+            AppColors.primary.green.opacity(0.4),
+            AppColors.primary.midnight
+        ]),
+        .quran: Gradient(colors: [
+            AppColors.primary.gold.opacity(0.3),
+            AppColors.primary.midnight
+        ]),
+        .home: Gradient(colors: [
+            AppColors.primary.teal.opacity(0.3),
+            AppColors.primary.green.opacity(0.5)
+        ]),
+        .serenity: Gradient(colors: [
+            AppColors.neutral.cream.opacity(0.6),
+            Color.gray.opacity(0.4)
+        ]),
+        .night: Gradient(colors: [
+            AppColors.primary.midnight,
+            Color.black
+        ]),
+        .settings: Gradient(colors: [
+            AppColors.primary.green.opacity(0.2),
+            AppColors.primary.midnight.opacity(0.7)
+        ])
+    ]
 
     // MARK: - Initializer
     init(
@@ -47,43 +75,8 @@ struct GradientBackground: View {
 
     // MARK: - Gradient Colors
     private var gradientColors: Gradient {
-        switch style {
-        case .prayer:
-            return Gradient(colors: [
-                AppColors.primary.green.opacity(0.4),
-                AppColors.primary.midnight
-            ])
-
-        case .quran:
-            return Gradient(colors: [
-                AppColors.primary.gold.opacity(0.3),
-                AppColors.primary.midnight
-            ])
-
-        case .home:
-            return Gradient(colors: [
-                AppColors.primary.teal.opacity(0.3),
-                AppColors.primary.green.opacity(0.5)
-            ])
-
-        case .serenity:
-            return Gradient(colors: [
-                AppColors.neutral.cream.opacity(0.6),
-                Color.gray.opacity(0.4)
-            ])
-
-        case .night:
-            return Gradient(colors: [
-                AppColors.primary.midnight,
-                Color.black
-            ])
-
-        case .settings:
-            return Gradient(colors: [
-                AppColors.primary.green.opacity(0.2),
-                AppColors.primary.midnight.opacity(0.7)
-            ])
-        }
+        // Use cached gradient for performance (avoids repeated color array creation)
+        return Self.cachedGradients[style] ?? Self.cachedGradients[.home]!
     }
 }
 

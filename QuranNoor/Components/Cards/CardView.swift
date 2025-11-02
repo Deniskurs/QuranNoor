@@ -28,6 +28,7 @@ struct CardView<Content: View>: View {
     var body: some View {
         ZStack {
             // Background with neumorphic shadows
+            // Using drawingGroup() to rasterize and cache shadow rendering for better performance
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .fill(cardBackgroundColor)
                 .shadow(
@@ -42,6 +43,7 @@ struct CardView<Content: View>: View {
                     x: 5,
                     y: 5
                 )
+                .drawingGroup() // Cache shadow rendering to reduce GPU overhead
 
             // Optional Islamic pattern watermark
             if showPattern {

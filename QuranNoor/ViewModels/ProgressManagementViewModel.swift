@@ -150,10 +150,11 @@ class ProgressManagementViewModel: ObservableObject {
         // Observe reading progress changes from QuranService
         quranService.$readingProgress
             .receive(on: DispatchQueue.main)
+            .debounce(for: .milliseconds(500), scheduler: DispatchQueue.main) // Debounce to prevent cascade
             .sink { [weak self] newProgress in
                 guard let self = self else { return }
                 self.readingProgress = newProgress
-                self.updateSurahStatistics()
+                // Statistics update happens lazily when ProgressManagementView requests data
                 print("🔄 ProgressManagementViewModel: Progress updated from service - \(newProgress?.totalVersesRead ?? 0) verses")
             }
             .store(in: &cancellables)
@@ -182,6 +183,35 @@ class ProgressManagementViewModel: ObservableObject {
         }
 
         applyFiltersAndSorting()
+    }
+
+    /// Async version of updateSurahStatistics - computes in background to avoid blocking UI
+    @MainActor
+    private func updateSurahStatisticsAsync() async {
+        guard !surahs.isEmpty else { return }
+
+        // Capture progress before entering detached task (Swift 6 concurrency requirement)
+        let currentProgress = readingProgress ?? quranService.getReadingProgress()
+
+        // Compute statistics on background thread
+        let stats = await Task.detached(priority: .userInitiated) { [surahs] in
+            surahs.map { surah in
+                // Inline computation to avoid actor isolation issues
+                let surahVerses = currentProgress.readVerses.filter { $0.key.starts(with: "\(surah.id):") }
+                return SurahProgressStats(
+                    surahNumber: surah.id,
+                    totalVerses: surah.numberOfVerses,
+                    readVerses: surahVerses.count,
+                    completionPercentage: Double(surahVerses.count) / Double(surah.numberOfVerses) * 100,
+                    lastReadDate: surahVerses.values.map(\.timestamp).max(),
+                    firstReadDate: surahVerses.values.map(\.timestamp).min()
+                )
+            }
+        }.value
+
+        // Update UI on main thread
+        self.surahStats = stats
+        self.applyFiltersAndSorting()
     }
 
     // MARK: - Search and Filter
@@ -409,8 +439,8 @@ class ProgressManagementViewModel: ObservableObject {
                     lastReadVerse: currentProgress.lastReadVerse,
                     readVerses: mergedVerses,
                     streakDays: max(currentProgress.streakDays, importedProgress.streakDays),
-                    lastReadDate: max(currentProgress.lastReadDate, importedProgress.lastReadDate),
-                    progressHistory: currentProgress.progressHistory
+                    lastReadDate: max(currentProgress.lastReadDate, importedProgress.lastReadDate)
+                    // progressHistory is now managed by ProgressHistoryManager
                 )
 
             case .addOnly:
@@ -432,8 +462,8 @@ class ProgressManagementViewModel: ObservableObject {
                     lastReadVerse: currentProgress.lastReadVerse,
                     readVerses: updatedVerses,
                     streakDays: currentProgress.streakDays,
-                    lastReadDate: currentProgress.lastReadDate,
-                    progressHistory: currentProgress.progressHistory
+                    lastReadDate: currentProgress.lastReadDate
+                    // progressHistory is now managed by ProgressHistoryManager
                 )
             }
 
