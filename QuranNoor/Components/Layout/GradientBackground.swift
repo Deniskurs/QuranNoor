@@ -17,6 +17,32 @@ public enum BackgroundGradientStyle: Hashable {
     case settings   // Subtle gradient for settings screen
 }
 
+// MARK: - Gradient Cache (Performance Optimization)
+@MainActor
+class GradientCache {
+    static let shared = GradientCache()
+    private var cache: [CacheKey: Gradient] = [:]
+
+    struct CacheKey: Hashable {
+        let style: BackgroundGradientStyle
+        let theme: ThemeMode
+    }
+
+    func gradient(for style: BackgroundGradientStyle, theme: ThemeMode) -> Gradient? {
+        let key = CacheKey(style: style, theme: theme)
+        return cache[key]
+    }
+
+    func setGradient(_ gradient: Gradient, for style: BackgroundGradientStyle, theme: ThemeMode) {
+        let key = CacheKey(style: style, theme: theme)
+        cache[key] = gradient
+    }
+
+    func clearCache() {
+        cache.removeAll()
+    }
+}
+
 // MARK: - Gradient Background Component
 struct GradientBackground: View {
     // MARK: - Properties
@@ -25,33 +51,67 @@ struct GradientBackground: View {
     let style: BackgroundGradientStyle
     let opacity: Double
 
-    // Performance optimization: Precompute all gradients once
-    private static let cachedGradients: [BackgroundGradientStyle: Gradient] = [
-        .prayer: Gradient(colors: [
-            AppColors.primary.green.opacity(0.4),
-            AppColors.primary.midnight
-        ]),
-        .quran: Gradient(colors: [
-            AppColors.primary.gold.opacity(0.3),
-            AppColors.primary.midnight
-        ]),
-        .home: Gradient(colors: [
-            AppColors.primary.teal.opacity(0.3),
-            AppColors.primary.green.opacity(0.5)
-        ]),
-        .serenity: Gradient(colors: [
-            AppColors.neutral.cream.opacity(0.6),
-            Color.gray.opacity(0.4)
-        ]),
-        .night: Gradient(colors: [
-            AppColors.primary.midnight,
-            Color.black
-        ]),
-        .settings: Gradient(colors: [
-            AppColors.primary.green.opacity(0.2),
-            AppColors.primary.midnight.opacity(0.7)
-        ])
-    ]
+    // MARK: - Computed Gradient Colors (Theme-Reactive)
+    private func gradientForStyle(_ style: BackgroundGradientStyle, theme: ThemeMode) -> Gradient {
+        // For sepia theme, no gradients (reading comfort)
+        if !theme.supportsGradients {
+            return Gradient(colors: [theme.backgroundColor, theme.backgroundColor])
+        }
+
+        // For night theme, use pure black (OLED optimization)
+        if theme == .night {
+            return Gradient(colors: [Color.black, Color.black])
+        }
+
+        // Use theme-appropriate gradient colors with safe opacity limits
+        let isLight = theme == .light || theme == .sepia
+
+        switch style {
+        case .prayer:
+            return Gradient(colors: [
+                AppColors.primary.green.opacity(theme.gradientOpacity(for: AppColors.primary.green)),
+                theme == .dark ? AppColors.primary.midnight.opacity(0.6) : theme.backgroundColor
+            ])
+
+        case .quran:
+            return Gradient(colors: [
+                AppColors.primary.gold.opacity(theme.gradientOpacity(for: AppColors.primary.gold)),
+                theme == .dark ? AppColors.primary.midnight.opacity(0.7) : theme.backgroundColor
+            ])
+
+        case .home:
+            return Gradient(colors: [
+                AppColors.primary.teal.opacity(theme.gradientOpacity(for: AppColors.primary.teal)),
+                AppColors.primary.green.opacity(theme.gradientOpacity(for: AppColors.primary.green))
+            ])
+
+        case .serenity:
+            // Fixed: No cream on light backgrounds!
+            if isLight {
+                return Gradient(colors: [
+                    Color.gray.opacity(0.08),  // Subtle gray instead of cream
+                    Color.gray.opacity(0.03)
+                ])
+            } else {
+                return Gradient(colors: [
+                    AppColors.neutral.cream.opacity(0.15),
+                    Color.gray.opacity(0.10)
+                ])
+            }
+
+        case .night:
+            return Gradient(colors: [
+                AppColors.primary.midnight.opacity(0.3),
+                Color.black
+            ])
+
+        case .settings:
+            return Gradient(colors: [
+                AppColors.primary.green.opacity(isLight ? 0.06 : 0.18),
+                theme == .dark ? AppColors.primary.midnight.opacity(0.7) : theme.backgroundColor
+            ])
+        }
+    }
 
     // MARK: - Initializer
     init(
@@ -69,14 +129,33 @@ struct GradientBackground: View {
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
-        .opacity(opacity)
+        .opacity(effectiveOpacity)
+        .drawingGroup()  // Render to offscreen buffer for performance
         .ignoresSafeArea()
     }
 
-    // MARK: - Gradient Colors
+    // MARK: - Gradient Colors (Theme-Aware with Caching)
     private var gradientColors: Gradient {
-        // Use cached gradient for performance (avoids repeated color array creation)
-        return Self.cachedGradients[style] ?? Self.cachedGradients[.home]!
+        let theme = themeManager.currentTheme
+
+        // Check cache first
+        if let cached = GradientCache.shared.gradient(for: style, theme: theme) {
+            return cached
+        }
+
+        // Compute and cache gradient
+        let gradient = gradientForStyle(style, theme: theme)
+        GradientCache.shared.setGradient(gradient, for: style, theme: theme)
+        return gradient
+    }
+
+    // MARK: - Effective Opacity (Adjusted for Night Theme)
+    private var effectiveOpacity: Double {
+        // For night theme, suppress gradient almost entirely (pure black for OLED)
+        if themeManager.currentTheme == .night {
+            return 0.0  // No gradient overlay in night mode
+        }
+        return opacity
     }
 }
 

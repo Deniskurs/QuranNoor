@@ -65,7 +65,8 @@ struct CurrentPrayerHeader: View {
 
                     Text(countdownLabel)
                         .font(.system(size: 15, weight: .medium))
-                        .foregroundColor(themeManager.currentTheme.textColor.opacity(0.8))
+                        .foregroundColor(themeManager.currentTheme.textPrimary)
+                        .opacity(themeManager.currentTheme.secondaryOpacity)
 
                     Spacer()
 
@@ -77,7 +78,7 @@ struct CurrentPrayerHeader: View {
                 .padding(.vertical, 12)
                 .background(
                     RoundedRectangle(cornerRadius: 12)
-                        .fill((isUrgent ? Color.orange : AppColors.primary.teal).opacity(0.1))
+                        .fill((isUrgent ? Color.orange : AppColors.primary.teal).opacity(themeManager.currentTheme.gradientOpacity(for: AppColors.primary.teal) * 2))
                 )
             }
         }
@@ -116,7 +117,7 @@ struct CurrentPrayerHeader: View {
             }
             return prayerColor(prayer)
         case .betweenPrayers(_, let next, _):
-            return prayerColor(next).opacity(0.7)
+            return prayerColor(next).opacity(themeManager.currentTheme.secondaryOpacity)
         case .afterIsha:
             return AppColors.primary.midnight
         }

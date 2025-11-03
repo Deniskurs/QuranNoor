@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import Combine
 
 // MARK: - Surah
 struct Surah: Identifiable, Codable, Sendable {

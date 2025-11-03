@@ -46,7 +46,7 @@ class PrayerViewModel {
 
     // MARK: - Services
 
-    private let locationService = LocationService()
+    private let locationService = LocationService.shared
     private let prayerTimeService = PrayerTimeService()
     private let mosqueFinderService = MosqueFinderService()
     let notificationService = NotificationService() // Public for notification toggle

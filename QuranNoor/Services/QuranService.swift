@@ -204,7 +204,7 @@ class QuranService: ObservableObject {
                 ProgressHistoryManager.shared.migrateFromUserDefaults(oldHistory: history)
 
                 // Re-save progress without history (will be much smaller)
-                if var progress = readingProgress {
+                if let progress = readingProgress {
                     saveProgress(progress)
                     print("✅ Saved cleaned progress to UserDefaults (removed \(history.count) snapshots)")
                 }
@@ -668,7 +668,7 @@ class QuranService: ObservableObject {
         }
 
         // Restore from snapshot
-        var progress = ReadingProgress(
+        let progress = ReadingProgress(
             lastReadSurah: lastSnapshot.readVerses.keys.compactMap { verseId -> Int? in
                 let components = verseId.split(separator: ":")
                 return components.first.flatMap { Int($0) }

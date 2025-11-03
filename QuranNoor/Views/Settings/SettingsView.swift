@@ -44,7 +44,11 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // Background gradient
+                // Base theme background (ensures pure black in night mode for OLED)
+                themeManager.currentTheme.backgroundColor
+                    .ignoresSafeArea()
+
+                // Gradient overlay (automatically suppressed in night mode)
                 GradientBackground(style: BackgroundGradientStyle.settings, opacity: 0.25)
 
                 ScrollView {
@@ -69,6 +73,11 @@ struct SettingsView: View {
 
                         // About Section
                         aboutSection
+
+                        #if DEBUG
+                        // Developer Tools Section (only visible in debug builds)
+                        developerToolsSection
+                        #endif
                     }
                     .padding()
                 }
@@ -125,6 +134,8 @@ struct SettingsView: View {
                 .navigationTitle("Prayer Time Rules")
                 .toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Done") { showPrayerCalcInfo = false } } }
             }
+            .presentationDetents([.medium])
+            .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showMethodSheet) {
             NavigationStack {
@@ -148,6 +159,8 @@ struct SettingsView: View {
                 .navigationTitle("Calculation Method")
                 .toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Done") { showMethodSheet = false } } }
             }
+            .presentationDetents([.medium])
+            .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showMadhabSheet) {
             NavigationStack {
@@ -171,6 +184,8 @@ struct SettingsView: View {
                 .navigationTitle("Madhab")
                 .toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Done") { showMadhabSheet = false } } }
             }
+            .presentationDetents([.medium])
+            .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showDeveloperInfo) {
             NavigationStack {
@@ -190,10 +205,14 @@ struct SettingsView: View {
                 .navigationTitle("Developer")
                 .toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button("Done") { showDeveloperInfo = false } } }
             }
+            .presentationDetents([.medium])
+            .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showProgressManagement) {
             ProgressManagementView()
                 .environmentObject(themeManager)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
         }
         .alert("Coming Soon", isPresented: $showLanguageAlert) {
             Button("OK", role: .cancel) {}
@@ -219,7 +238,7 @@ struct SettingsView: View {
                 .foregroundColor(AppColors.primary.green)
 
             ThemedText.caption("Customize your experience")
-                .opacity(0.7)
+                // Caption style already uses textTertiary - no additional opacity needed
         }
         .padding(.top, 8)
     }
@@ -251,7 +270,7 @@ struct SettingsView: View {
                                 VStack(alignment: .leading, spacing: 2) {
                                     ThemedText.body(mode.rawValue)
                                     ThemedText.caption(mode.description)
-                                        .opacity(0.6)
+                                        // Caption style already uses textTertiary - no additional opacity needed
                                 }
 
                                 Spacer()
@@ -311,7 +330,7 @@ struct SettingsView: View {
                                 GeometryReader { geometry in
                                     ZStack(alignment: .leading) {
                                         Rectangle()
-                                            .fill(Color.secondary.opacity(0.2))
+                                            .fill(themeManager.currentTheme.textTertiary.opacity(themeManager.currentTheme.disabledOpacity))
                                             .frame(height: 3)
 
                                         Rectangle()
@@ -340,14 +359,15 @@ struct SettingsView: View {
                                     }
                                     .foregroundColor(AppColors.primary.gold)
                                 }
-                                .opacity(0.8)
+                                .opacity(themeManager.currentTheme.secondaryOpacity)
                             }
 
                             Spacer()
 
                             Image(systemName: "chevron.right")
                                 .font(.system(size: 14))
-                                .opacity(0.3)
+                                .foregroundColor(themeManager.currentTheme.textTertiary)
+                                .opacity(themeManager.currentTheme.disabledOpacity)
                         }
 
                         IslamicDivider(style: .simple)
@@ -386,11 +406,11 @@ struct SettingsView: View {
                 .foregroundColor(color)
 
             ThemedText.caption(title)
-                .opacity(0.7)
+                // Caption style already uses textTertiary - no additional opacity needed
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 8)
-        .background(color.opacity(0.1))
+        .background(color.opacity(themeManager.currentTheme.gradientOpacity(for: color) * 2))
         .cornerRadius(8)
     }
 
@@ -414,7 +434,7 @@ struct SettingsView: View {
 
                     // Subtitle for Calculation Method
                     ThemedText.caption("Determines Fajr/Isha angles and other parameters used to compute daily prayer times.")
-                        .opacity(0.7)
+                        // Caption style already uses textTertiary - no additional opacity needed
                         .padding(.leading, 44)
 
                     IslamicDivider(style: .simple)
@@ -433,7 +453,7 @@ struct SettingsView: View {
 
                     // Subtitle for Madhab
                     ThemedText.caption("Affects Asr time: Shafi/Standard uses shadow length = 1x; Hanafi uses 2x.")
-                        .opacity(0.7)
+                        // Caption style already uses textTertiary - no additional opacity needed
                         .padding(.leading, 44)
 
                     // Learn more link
@@ -466,11 +486,11 @@ struct SettingsView: View {
                             VStack(alignment: .leading, spacing: 2) {
                                 ThemedText.body("Prayer Reminders")
                                 ThemedText.caption("Get notified before prayer times")
-                                    .opacity(0.6)
+                                    // Caption style already uses textTertiary - no additional opacity needed
                             }
                         }
                     }
-                    .tint(AppColors.primary.green)
+                    .tint(themeManager.currentTheme.accentColor)
 
                     IslamicDivider(style: .simple)
 
@@ -484,13 +504,13 @@ struct SettingsView: View {
                             VStack(alignment: .leading, spacing: 2) {
                                 ThemedText.body("Sound Alerts")
                                 ThemedText.caption("Play adhan when prayer time arrives")
-                                    .opacity(0.6)
+                                    // Caption style already uses textTertiary - no additional opacity needed
                             }
                         }
                     }
-                    .tint(AppColors.primary.green)
+                    .tint(themeManager.currentTheme.accentColor)
                     .disabled(!notificationsEnabled)
-                    .opacity(notificationsEnabled ? 1.0 : 0.5)
+                    .opacity(notificationsEnabled ? 1.0 : themeManager.currentTheme.disabledOpacity)
                 }
             }
         }
@@ -558,13 +578,95 @@ struct SettingsView: View {
 
                             Image(systemName: "chevron.right")
                                 .font(.system(size: 14))
-                                .opacity(0.5)
+                                .foregroundColor(themeManager.currentTheme.textTertiary)
+                                .opacity(themeManager.currentTheme.disabledOpacity)
                         }
                     }
                 }
             }
         }
     }
+
+    #if DEBUG
+    // MARK: - Developer Tools Section (Debug Only)
+
+    private var developerToolsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionHeader(title: "Developer Tools", icon: "hammer.fill")
+
+            CardView {
+                VStack(spacing: 16) {
+                    Button(role: .destructive) {
+                        resetOnboarding()
+                    } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: "arrow.counterclockwise")
+                                .font(.system(size: 20))
+                                .foregroundColor(.red)
+                                .frame(width: 32)
+
+                            ThemedText.body("Reset Onboarding")
+                                .foregroundColor(.red)
+
+                            Spacer()
+
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .font(.system(size: 14))
+                                .foregroundColor(.orange)
+                        }
+                    }
+
+                    IslamicDivider(style: .simple)
+
+                    Button {
+                        testAudioPlayback()
+                    } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: "speaker.wave.3.fill")
+                                .font(.system(size: 20))
+                                .foregroundColor(AppColors.primary.teal)
+                                .frame(width: 32)
+
+                            ThemedText.body("Test Audio Playback")
+
+                            Spacer()
+
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 14))
+                                .foregroundColor(themeManager.currentTheme.textTertiary)
+                                .opacity(themeManager.currentTheme.disabledOpacity)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Developer Actions
+
+    private func resetOnboarding() {
+        UserDefaults.standard.removeObject(forKey: "hasCompletedOnboarding")
+        AudioHapticCoordinator.shared.playSuccess()
+
+        // Show alert
+        #if DEBUG
+        print("✅ Onboarding reset! Restart the app to see onboarding again.")
+        #endif
+    }
+
+    private func testAudioPlayback() {
+        AudioHapticCoordinator.shared.playNotification()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            AudioHapticCoordinator.shared.playConfirm()
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+            AudioHapticCoordinator.shared.playBack()
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) {
+            AudioHapticCoordinator.shared.playStartup()
+        }
+    }
+    #endif
 
     // MARK: - Helper Views
 
@@ -593,11 +695,12 @@ struct SettingsView: View {
 
             ThemedText.body(value)
                 .foregroundColor(color)
-                .opacity(0.8)
+                .opacity(themeManager.currentTheme.secondaryOpacity)
 
             Image(systemName: "chevron.right")
                 .font(.system(size: 14))
-                .opacity(0.3)
+                .foregroundColor(themeManager.currentTheme.textTertiary)
+                .opacity(themeManager.currentTheme.tertiaryOpacity)
         }
     }
 
@@ -618,12 +721,7 @@ struct SettingsView: View {
     private func rateApp() {
         #if os(iOS)
         if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-            if #available(iOS 18.0, *) {
-                AppStore.requestReview(in: scene)
-            } else {
-                // Fallback for iOS < 18
-                SKStoreReviewController.requestReview(in: scene)
-            }
+            AppStore.requestReview(in: scene)
             return
         }
         #endif

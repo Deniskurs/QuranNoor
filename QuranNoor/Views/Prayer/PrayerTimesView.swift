@@ -27,12 +27,21 @@ struct PrayerTimesView: View {
     @State private var showPrayerReminder: Bool = false
     @State private var hasShownReminderThisSession: Bool = false
 
+    // Toast state for prayer completion
+    @State private var showCompletionToast: Bool = false
+    @State private var completedPrayerName: String = ""
+    @State private var lastCompletedPrayer: PrayerName? = nil
+
     // MARK: - Body
 
     var body: some View {
         NavigationStack {
             ZStack {
-                // Background gradient
+                // Base theme background (ensures pure black in night mode for OLED)
+                themeManager.currentTheme.backgroundColor
+                    .ignoresSafeArea()
+
+                // Gradient overlay (automatically suppressed in night mode)
                 GradientBackground(style: .prayer, opacity: 0.3)
 
                 // Main content with TimelineView for automatic updates
@@ -148,13 +157,35 @@ struct PrayerTimesView: View {
             }
             .sheet(isPresented: $showMosqueList) {
                 mosqueListSheet
+                    .presentationDetents([.medium, .large])
+                    .presentationDragIndicator(.visible)
             }
             .sheet(isPresented: $showMethodPicker) {
                 methodPickerSheet
+                    .presentationDetents([.medium])
+                    .presentationDragIndicator(.visible)
             }
             .sheet(isPresented: $showMadhabPicker) {
                 madhabPickerSheet
+                    .presentationDetents([.medium])
+                    .presentationDragIndicator(.visible)
             }
+            .toast(
+                message: EncouragingMessages.prayerComplete(prayerName: completedPrayerName),
+                style: .spiritual,
+                isPresented: $showCompletionToast,
+                showUndo: true,
+                onUndo: {
+                    // Play back sound for undo action
+                    AudioHapticCoordinator.shared.playBack()
+
+                    // Undo the completion
+                    if let prayer = lastCompletedPrayer {
+                        completionService.toggleCompletion(prayer)
+                        lastCompletedPrayer = nil
+                    }
+                }
+            )
         }
     }
 
@@ -178,7 +209,7 @@ struct PrayerTimesView: View {
         .padding()
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(themeManager.currentTheme.cardColor.opacity(0.5))
+                .fill(themeManager.currentTheme.cardColor)
         )
     }
 
@@ -190,7 +221,7 @@ struct PrayerTimesView: View {
                 Spacer()
                 Text(Date().formatted(date: .abbreviated, time: .omitted))
                     .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(themeManager.currentTheme.textColor.opacity(0.6))
+                    .foregroundColor(themeManager.currentTheme.textTertiary)
             }
             .padding(.bottom, 12)
 
@@ -205,7 +236,23 @@ struct PrayerTimesView: View {
                         relatedSpecialTimes: getRelatedSpecialTimes(for: prayer, from: times),
                         canCheckOff: prayer.hasStarted, // Only allow checking off past/current prayers
                         onCompletionToggle: {
+                            // Store prayer for undo
+                            lastCompletedPrayer = prayer.name
+
+                            // Check if marking complete or incomplete
+                            let isMarkingComplete = !completionService.isCompleted(prayer.name)
+
+                            // Toggle completion
                             completionService.toggleCompletion(prayer.name)
+
+                            // Show encouraging toast only when marking complete
+                            if isMarkingComplete {
+                                completedPrayerName = prayer.name.displayName
+                                showCompletionToast = true
+
+                                // Play toast notification sound
+                                AudioHapticCoordinator.shared.playToast()
+                            }
                         }
                     )
                     .id(prayer.name.rawValue) // For smooth animations
@@ -278,7 +325,7 @@ struct PrayerTimesView: View {
                     .padding(.vertical, 10)
                     .background(
                         Capsule()
-                            .fill(AppColors.primary.gold.opacity(0.15))
+                            .fill(AppColors.primary.gold.opacity(themeManager.currentTheme.gradientOpacity(for: AppColors.primary.gold) * 2.5))
                     )
                     .transition(.scale.combined(with: .opacity))
                 }
@@ -299,7 +346,7 @@ struct PrayerTimesView: View {
 
             Text(label)
                 .font(.system(size: 12, weight: .medium))
-                .foregroundColor(themeManager.currentTheme.textColor.opacity(0.6))
+                .foregroundColor(themeManager.currentTheme.textTertiary)
         }
         .frame(maxWidth: .infinity)
     }
@@ -354,7 +401,8 @@ struct PrayerTimesView: View {
 
             Image(systemName: "chevron.right")
                 .font(.system(size: 14))
-                .opacity(0.3)
+                .foregroundColor(themeManager.currentTheme.textTertiary)
+                .opacity(themeManager.currentTheme.tertiaryOpacity)
         }
         .padding()
         .background(
@@ -409,7 +457,7 @@ struct PrayerTimesView: View {
             ThemedText.heading("No Mosques Found")
             ThemedText.body("Try adjusting your location or search radius")
                 .multilineTextAlignment(.center)
-                .opacity(0.7)
+                // Body style already uses textSecondary - no additional opacity needed
         }
         .padding()
     }
@@ -429,7 +477,7 @@ struct PrayerTimesView: View {
                             }
 
                             ThemedText.caption(mosque.address)
-                                .opacity(0.7)
+                                // Caption style already uses textTertiary - no additional opacity needed
 
                             if let phone = mosque.phoneNumber {
                                 HStack(spacing: 8) {
@@ -478,7 +526,7 @@ struct PrayerTimesView: View {
                                     RoundedRectangle(cornerRadius: 12)
                                         .fill(
                                             method == viewModel.selectedCalculationMethod
-                                                ? AppColors.primary.green.opacity(0.1)
+                                                ? AppColors.primary.green.opacity(themeManager.currentTheme.gradientOpacity(for: AppColors.primary.green) * 2)
                                                 : themeManager.currentTheme.cardColor
                                         )
                                 )
@@ -521,7 +569,7 @@ struct PrayerTimesView: View {
 
                                 Text("Only Asr calculation time is affected. Standard covers Shafi, Maliki, and Hanbali schools (shadow = object). Hanafi uses different calculation (shadow = 2× object).")
                                     .font(.system(size: 12, weight: .regular))
-                                    .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
+                                    .foregroundColor(themeManager.currentTheme.textSecondary)
                                     .fixedSize(horizontal: false, vertical: true)
                             }
 
@@ -530,7 +578,7 @@ struct PrayerTimesView: View {
                         .padding()
                         .background(
                             RoundedRectangle(cornerRadius: 12)
-                                .fill(AppColors.primary.gold.opacity(0.1))
+                                .fill(AppColors.primary.gold.opacity(themeManager.currentTheme.gradientOpacity(for: AppColors.primary.gold) * 2))
                         )
 
                         // Madhab options
@@ -549,7 +597,8 @@ struct PrayerTimesView: View {
 
                                             Text(madhab.technicalNote)
                                                 .font(.system(size: 12, weight: .regular))
-                                                .foregroundColor(AppColors.primary.teal.opacity(0.8))
+                                                .foregroundColor(AppColors.primary.teal)
+                                                .opacity(themeManager.currentTheme.secondaryOpacity)
                                         }
 
                                         Spacer()
@@ -564,7 +613,7 @@ struct PrayerTimesView: View {
                                     // Explanation
                                     Text(madhab.explanation)
                                         .font(.system(size: 11, weight: .regular))
-                                        .foregroundColor(themeManager.currentTheme.textColor.opacity(0.6))
+                                        .foregroundColor(themeManager.currentTheme.textTertiary)
                                         .fixedSize(horizontal: false, vertical: true)
                                 }
                                 .padding()
@@ -572,7 +621,7 @@ struct PrayerTimesView: View {
                                     RoundedRectangle(cornerRadius: 12)
                                         .fill(
                                             madhab == viewModel.selectedMadhab
-                                                ? AppColors.primary.teal.opacity(0.1)
+                                                ? AppColors.primary.teal.opacity(themeManager.currentTheme.gradientOpacity(for: AppColors.primary.teal) * 2)
                                                 : themeManager.currentTheme.cardColor
                                         )
                                 )

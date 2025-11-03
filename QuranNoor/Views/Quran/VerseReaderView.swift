@@ -516,9 +516,11 @@ struct VerseReaderView: View {
             // Find and remove bookmark
             if let bookmark = viewModel.bookmarks.first(where: { $0.surahNumber == surah.id && $0.verseNumber == verse.verseNumber }) {
                 quranService.removeBookmark(id: bookmark.id)
+                HapticManager.shared.triggerPattern(.bookmarkRemoved)
             }
         } else {
             quranService.addBookmark(surahNumber: surah.id, verseNumber: verse.verseNumber)
+            HapticManager.shared.triggerPattern(.bookmarkAdded)
         }
         viewModel.loadBookmarks()
     }

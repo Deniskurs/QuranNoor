@@ -21,7 +21,11 @@ struct QuranReaderView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // Background gradient
+                // Base theme background (ensures pure black in night mode for OLED)
+                themeManager.currentTheme.backgroundColor
+                    .ignoresSafeArea()
+
+                // Gradient overlay (automatically suppressed in night mode)
                 GradientBackground(style: .quran, opacity: 0.3)
 
                 ScrollView {
@@ -70,10 +74,13 @@ struct QuranReaderView: View {
                 if let surah = viewModel.selectedSurah {
                     VerseReaderView(surah: surah, viewModel: viewModel)
                 }
+                // Full screen presentation is appropriate for reading
             }
             .sheet(isPresented: $showProgressManagement) {
                 ProgressManagementView()
                     .environmentObject(themeManager)
+                    .presentationDetents([.large])
+                    .presentationDragIndicator(.visible)
             }
             .confirmationDialog(
                 "Reset Progress",
@@ -125,7 +132,7 @@ struct QuranReaderView: View {
 
                     ThemedText.caption("Tap to manage →")
                         .foregroundColor(AppColors.primary.teal)
-                        .opacity(0.8)
+                        .opacity(themeManager.currentTheme.secondaryOpacity)
                 }
 
                 Spacer()
@@ -135,7 +142,8 @@ struct QuranReaderView: View {
                 } label: {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 20))
-                        .foregroundColor(themeManager.currentTheme.textColor.opacity(0.3))
+                        .foregroundColor(themeManager.currentTheme.textTertiary)
+                        .opacity(themeManager.currentTheme.disabledOpacity)
                 }
                 .buttonStyle(.plain)
             }
@@ -143,8 +151,8 @@ struct QuranReaderView: View {
             .background(
                 LinearGradient(
                     colors: [
-                        AppColors.primary.teal.opacity(0.1),
-                        AppColors.primary.green.opacity(0.05)
+                        AppColors.primary.teal.opacity(themeManager.currentTheme.gradientOpacity(for: AppColors.primary.teal) * 2.5),
+                        AppColors.primary.green.opacity(themeManager.currentTheme.gradientOpacity(for: AppColors.primary.green))
                     ],
                     startPoint: .leading,
                     endPoint: .trailing
@@ -153,7 +161,7 @@ struct QuranReaderView: View {
             .cornerRadius(12)
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke(AppColors.primary.teal.opacity(0.3), lineWidth: 1)
+                    .stroke(AppColors.primary.teal.opacity(themeManager.currentTheme.gradientOpacity(for: AppColors.primary.teal) * 5), lineWidth: 1)
             )
         }
         .buttonStyle(.plain)
@@ -170,7 +178,7 @@ struct QuranReaderView: View {
 
             ThemedText.caption("Read and reflect upon the words of Allah")
                 .multilineTextAlignment(.center)
-                .opacity(0.7)
+                // Caption style already uses textTertiary - no additional opacity needed
         }
         .padding(.top, 8)
     }
@@ -208,7 +216,7 @@ struct QuranReaderView: View {
                     Image(systemName: "bookmark.fill")
                         .foregroundColor(AppColors.primary.gold)
                     ThemedText.caption("Last read: \(viewModel.getLastReadSurahName())")
-                        .opacity(0.7)
+                        // Caption style already uses textTertiary - no additional opacity needed
                     Spacer()
                 }
             }
@@ -307,9 +315,10 @@ struct SurahCard: View {
                             .font(.system(size: 40))
                             .foregroundColor(
                                 progress >= 100
-                                    ? AppColors.primary.green.opacity(0.3)
-                                    : AppColors.primary.gold.opacity(0.3)
+                                    ? AppColors.primary.green
+                                    : AppColors.primary.gold
                             )
+                            .opacity(themeManager.currentTheme.gradientOpacity(for: AppColors.primary.gold) * 5)
 
                         if progress < 100 {
                             ThemedText("\(surah.id)", style: .body)
@@ -328,7 +337,7 @@ struct SurahCard: View {
                             .foregroundColor(themeManager.currentTheme.textColor)
 
                         ThemedText.caption(surah.englishNameTranslation)
-                            .opacity(0.7)
+                            // Caption style already uses textTertiary - no additional opacity needed
 
                         HStack(spacing: 8) {
                             Label("\(surah.numberOfVerses) verses", systemImage: "doc.text")
@@ -364,7 +373,7 @@ struct SurahCard: View {
                             ZStack(alignment: .leading) {
                                 // Background
                                 Rectangle()
-                                    .fill(themeManager.currentTheme.textColor.opacity(0.1))
+                                    .fill(themeManager.currentTheme.textTertiary.opacity(themeManager.currentTheme.disabledOpacity))
                                     .frame(height: 4)
                                     .cornerRadius(2)
 
@@ -392,7 +401,7 @@ struct SurahCard: View {
                         HStack {
                             ThemedText.caption("\(Int(progress))% complete")
                                 .foregroundColor(AppColors.primary.teal)
-                                .opacity(0.8)
+                                .opacity(themeManager.currentTheme.secondaryOpacity)
 
                             Spacer()
                         }
@@ -405,6 +414,8 @@ struct SurahCard: View {
 
 // MARK: - Filter Button
 struct FilterButton: View {
+    @EnvironmentObject var themeManager: ThemeManager
+
     let title: String
     let isSelected: Bool
     let action: () -> Void
@@ -418,13 +429,13 @@ struct FilterButton: View {
                 .padding(.vertical, 8)
                 .background(
                     isSelected
-                        ? AppColors.primary.green.opacity(0.2)
+                        ? AppColors.primary.green.opacity(themeManager.currentTheme.gradientOpacity(for: AppColors.primary.green) * 3)
                         : Color.clear
                 )
                 .foregroundColor(
                     isSelected
                         ? AppColors.primary.green
-                        : .secondary
+                        : themeManager.currentTheme.textSecondary
                 )
                 .cornerRadius(8)
                 .overlay(
@@ -432,7 +443,7 @@ struct FilterButton: View {
                         .stroke(
                             isSelected
                                 ? AppColors.primary.green
-                                : Color.secondary.opacity(0.3),
+                                : themeManager.currentTheme.textTertiary.opacity(themeManager.currentTheme.disabledOpacity),
                             lineWidth: 1
                         )
                 )

@@ -14,12 +14,36 @@ enum TextStyleType {
     case body            // SF Pro Text Regular - 16pt
     case caption         // SF Pro Text Regular - 14pt
     case arabic          // SF Arabic Regular - 20pt
+
+    /// Maps text style to semantic color level
+    var colorLevel: ColorLevel {
+        switch self {
+        case .title, .heading, .arabic:
+            return .primary      // Always full contrast
+        case .body:
+            return .secondary    // Medium contrast
+        case .caption:
+            return .tertiary     // Lower contrast (for metadata)
+        }
+    }
+}
+
+// MARK: - Color Level
+enum ColorLevel {
+    case primary    // Main content, headings, Arabic text - full contrast
+    case secondary  // Body text, labels - medium contrast
+    case tertiary   // Captions, timestamps - lower contrast
+    case disabled   // Inactive elements
 }
 
 // MARK: - ThemedText Component
 struct ThemedText: View {
     // MARK: - Properties
     @EnvironmentObject var themeManager: ThemeManager
+
+    // Accessibility support
+    @Environment(\.sizeCategory) var sizeCategory
+    @Environment(\.colorSchemeContrast) var contrast
 
     let text: String
     let style: TextStyleType
@@ -59,8 +83,11 @@ struct ThemedText: View {
     var body: some View {
         Text(text)
             .font(fontForStyle)
-            .foregroundColor(color ?? textColorForStyle)
+            .foregroundColor(color ?? effectiveTextColor)
             .italic(italic)
+            .minimumScaleFactor(0.8)  // Graceful text scaling for accessibility
+            .lineLimit(nil)  // Support multi-line for Dynamic Type
+            .dynamicTypeSize(.xSmall ... .accessibility5)  // Support all accessibility sizes
     }
 
     // MARK: - Font Selection
@@ -69,17 +96,25 @@ struct ThemedText: View {
         return Self.cachedFonts[style] ?? .body
     }
 
-    // MARK: - Theme-Aware Color
-    private var textColorForStyle: Color {
-        switch style {
-        case .title, .heading:
-            return themeManager.currentTheme.textColor
+    // MARK: - Theme-Aware Color with Accessibility Support
+    private var effectiveTextColor: Color {
+        let theme = themeManager.currentTheme
 
-        case .body, .caption:
-            return themeManager.currentTheme.textColor.opacity(0.85)
+        // High contrast mode: always use primary color for maximum readability
+        if contrast == .increased {
+            return theme.textPrimary
+        }
 
-        case .arabic:
-            return themeManager.currentTheme.textColor
+        // Use semantic color hierarchy based on style
+        switch style.colorLevel {
+        case .primary:
+            return theme.textPrimary      // Full contrast: title, heading, Arabic
+        case .secondary:
+            return theme.textSecondary    // Medium contrast: body text
+        case .tertiary:
+            return theme.textTertiary     // Lower contrast: captions, metadata
+        case .disabled:
+            return theme.textDisabled     // Very low contrast: inactive elements
         }
     }
 }

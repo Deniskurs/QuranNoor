@@ -22,6 +22,10 @@ struct SmartPrayerRow: View {
 
     @EnvironmentObject var themeManager: ThemeManager
 
+    // Animation state
+    @State private var scale: CGFloat = 1.0
+    @State private var checkmarkScale: CGFloat = 0.8
+
     // MARK: - Body
 
     var body: some View {
@@ -30,11 +34,31 @@ struct SmartPrayerRow: View {
             HStack(spacing: 0) {
                 // Completion checkbox - Large tap area
                 Button {
-                    let generator = UIImpactFeedbackGenerator(style: .medium)
-                    generator.impactOccurred()
+                    // Play audio + haptic feedback for checkbox tap
+                    AudioHapticCoordinator.shared.playPrayerCheckbox()
 
+                    // Scale animation on tap
+                    withAnimation(.spring(response: 0.2, dampingFraction: 0.6)) {
+                        scale = 0.95
+                    }
+
+                    // Spring back with delay
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                            scale = 1.0
+                        }
+                    }
+
+                    // Trigger completion with animation
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
                         onCompletionToggle()
+                    }
+
+                    // Success audio + haptic pattern when completing (not uncompleting)
+                    if !isCompleted {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                            AudioHapticCoordinator.shared.playPrayerComplete()
+                        }
                     }
                 } label: {
                     ZStack {
@@ -46,7 +70,18 @@ struct SmartPrayerRow: View {
                             Image(systemName: "checkmark")
                                 .font(.system(size: 16, weight: .bold))
                                 .foregroundColor(.white)
+                                .scaleEffect(checkmarkScale)
+                                .shadow(color: AppColors.primary.green.opacity(0.5), radius: 4)
                                 .transition(.scale.combined(with: .opacity))
+                                .onAppear {
+                                    // Checkmark pop animation
+                                    withAnimation(.spring(response: 0.4, dampingFraction: 0.5)) {
+                                        checkmarkScale = 1.0
+                                    }
+                                }
+                                .onDisappear {
+                                    checkmarkScale = 0.8
+                                }
                         }
                     }
                     .background(
@@ -105,18 +140,20 @@ struct SmartPrayerRow: View {
                                 HStack(spacing: 8) {
                                     Image(systemName: specialTime.type.icon)
                                         .font(.system(size: 12))
-                                        .foregroundColor(AppColors.primary.gold.opacity(0.6))
+                                        .foregroundColor(AppColors.primary.gold)
+                                        .opacity(themeManager.currentTheme.secondaryOpacity)
                                         .frame(width: 20)
 
                                     Text(specialTime.type.displayName)
                                         .font(.system(size: 13, weight: .medium))
-                                        .foregroundColor(themeManager.currentTheme.textColor.opacity(0.6))
+                                        .foregroundColor(themeManager.currentTheme.textSecondary)
 
                                     Spacer()
 
                                     Text(specialTime.displayTime)
                                         .font(.system(size: 13, weight: .regular, design: .rounded))
-                                        .foregroundColor(AppColors.primary.gold.opacity(0.8))
+                                        .foregroundColor(AppColors.primary.gold)
+                                        .opacity(themeManager.currentTheme.secondaryOpacity)
                                 }
                                 .padding(.leading, 48) // Indent under icon
                             }
@@ -129,6 +166,7 @@ struct SmartPrayerRow: View {
             }
             .background(rowBackground)
         }
+        .scaleEffect(scale)  // Apply scale animation to entire row
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityLabel)
@@ -139,41 +177,41 @@ struct SmartPrayerRow: View {
     private var prayerIconColor: Color {
         if !canCheckOff {
             // Future prayer - dimmed
-            return themeManager.currentTheme.textColor.opacity(0.3)
+            return themeManager.currentTheme.textDisabled
         } else if isCompleted {
-            return AppColors.primary.green.opacity(0.5)
+            return AppColors.primary.green.opacity(themeManager.currentTheme.secondaryOpacity)
         } else if isCurrentPrayer {
             return AppColors.primary.green
         } else if isNextPrayer {
             return AppColors.primary.teal
         } else {
-            return themeManager.currentTheme.textColor.opacity(0.6)
+            return themeManager.currentTheme.textSecondary
         }
     }
 
     private var prayerTextColor: Color {
         if !canCheckOff {
             // Future prayer - dimmed
-            return themeManager.currentTheme.textColor.opacity(0.4)
+            return themeManager.currentTheme.textDisabled
         } else if isCompleted {
-            return themeManager.currentTheme.textColor.opacity(0.5)
+            return themeManager.currentTheme.textColor.opacity(themeManager.currentTheme.secondaryOpacity)
         } else if isCurrentPrayer || isNextPrayer {
             return themeManager.currentTheme.textColor
         } else {
-            return themeManager.currentTheme.textColor.opacity(0.8)
+            return themeManager.currentTheme.textPrimary.opacity(themeManager.currentTheme.secondaryOpacity)
         }
     }
 
     private var checkboxColor: Color {
         if !canCheckOff {
             // Future prayer - very dimmed
-            return themeManager.currentTheme.textColor.opacity(0.15)
+            return themeManager.currentTheme.textColor.opacity(themeManager.currentTheme.disabledOpacity)
         } else if isCompleted {
             return AppColors.primary.green
         } else if isCurrentPrayer {
             return AppColors.primary.green
         } else {
-            return themeManager.currentTheme.textColor.opacity(0.3)
+            return themeManager.currentTheme.textColor.opacity(themeManager.currentTheme.tertiaryOpacity)
         }
     }
 
@@ -181,17 +219,17 @@ struct SmartPrayerRow: View {
         Group {
             if isCurrentPrayer {
                 RoundedRectangle(cornerRadius: 16)
-                    .fill(AppColors.primary.green.opacity(0.1))
+                    .fill(AppColors.primary.green.opacity(themeManager.currentTheme.gradientOpacity(for: AppColors.primary.green) * 2))
                     .overlay(
                         RoundedRectangle(cornerRadius: 16)
-                            .stroke(AppColors.primary.green.opacity(0.3), lineWidth: 2)
+                            .stroke(AppColors.primary.green.opacity(themeManager.currentTheme.gradientOpacity(for: AppColors.primary.green) * 2.5), lineWidth: 2)
                     )
             } else if isNextPrayer {
                 RoundedRectangle(cornerRadius: 16)
-                    .fill(AppColors.primary.teal.opacity(0.08))
+                    .fill(AppColors.primary.teal.opacity(themeManager.currentTheme.gradientOpacity(for: AppColors.primary.teal) * 2))
                     .overlay(
                         RoundedRectangle(cornerRadius: 16)
-                            .stroke(AppColors.primary.teal.opacity(0.2), lineWidth: 1)
+                            .stroke(AppColors.primary.teal.opacity(themeManager.currentTheme.gradientOpacity(for: AppColors.primary.teal) * 2), lineWidth: 1)
                     )
             } else {
                 RoundedRectangle(cornerRadius: 16)

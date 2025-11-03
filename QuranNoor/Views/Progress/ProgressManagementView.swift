@@ -129,8 +129,11 @@ struct ProgressManagementView: View {
                 }
             }
             .toast(
+                message: viewModel.toastMessage,
+                style: viewModel.toastStyle,
                 isPresented: $viewModel.showToast,
-                config: viewModel.toastConfig ?? ToastConfig(message: "")
+                showUndo: false,
+                onUndo: nil
             )
         }
     }

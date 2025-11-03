@@ -18,11 +18,19 @@ struct QiblaCompassView: View {
     @State private var normalizedCompassRotation: Double = 0
     @State private var normalizedNeedleRotation: Double = 0
 
+    // Haptic feedback state for alignment
+    @State private var wasAligned: Bool = false
+    @State private var hasTriggeredAlignmentHaptic: Bool = false
+
     // MARK: - Body
     var body: some View {
         NavigationStack {
             ZStack {
-                // Background gradient
+                // Base theme background (ensures pure black in night mode for OLED)
+                themeManager.currentTheme.backgroundColor
+                    .ignoresSafeArea()
+
+                // Gradient overlay (automatically suppressed in night mode)
                 GradientBackground(style: .serenity, opacity: 0.3)
 
                 ScrollView {
@@ -136,6 +144,8 @@ struct QiblaCompassView: View {
             }
             .sheet(isPresented: $viewModel.showLocationPicker) {
                 LocationPickerView(viewModel: viewModel)
+                    .presentationDetents([.medium, .large])
+                    .presentationDragIndicator(.visible)
             }
             .onChange(of: viewModel.deviceHeading) { oldValue, newValue in
                 // Update compass ring rotation (normalize to prevent glitch at 0°/360°)
@@ -198,17 +208,18 @@ struct QiblaCompassView: View {
         ZStack {
             // Background fill - clean and simple
             Circle()
-                .fill(themeManager.currentTheme.cardColor.opacity(0.7))
+                .fill(themeManager.currentTheme.cardColor)
+                .opacity(themeManager.currentTheme.secondaryOpacity)
                 .frame(width: 260, height: 260)
 
             // Single outer ring - emerald green
             Circle()
-                .stroke(AppColors.primary.green.opacity(0.5), lineWidth: 3)
+                .stroke(AppColors.primary.green.opacity(themeManager.currentTheme.gradientOpacity(for: AppColors.primary.green) * 3), lineWidth: 3)
                 .frame(width: 260, height: 260)
 
             // Inner subtle ring
             Circle()
-                .stroke(AppColors.primary.green.opacity(0.2), lineWidth: 1)
+                .stroke(AppColors.primary.green.opacity(themeManager.currentTheme.gradientOpacity(for: AppColors.primary.green) * 1.5), lineWidth: 1)
                 .frame(width: 200, height: 200)
 
             // Cardinal directions (N, E, S, W) - Clean and minimal
@@ -216,7 +227,7 @@ struct QiblaCompassView: View {
                 VStack(spacing: 2) {
                     ThemedText(direction, style: .heading)
                         .font(.system(size: 20, weight: .semibold))
-                        .foregroundColor(direction == "N" ? AppColors.primary.gold : themeManager.currentTheme.textColor.opacity(0.6))
+                        .foregroundColor(direction == "N" ? AppColors.primary.gold : themeManager.currentTheme.textSecondary)
 
                     if direction == "N" {
                         Image(systemName: "arrow.up")
@@ -234,7 +245,7 @@ struct QiblaCompassView: View {
                 let isCardinal = index % 3 == 0
 
                 Rectangle()
-                    .fill(AppColors.primary.green.opacity(isCardinal ? 0.5 : 0.2))
+                    .fill(AppColors.primary.green.opacity(themeManager.currentTheme.gradientOpacity(for: AppColors.primary.green) * (isCardinal ? 3 : 1.5)))
                     .frame(width: isCardinal ? 2 : 1, height: isCardinal ? 16 : 10)
                     .offset(y: -130)
                     .rotationEffect(.degrees(angle))
@@ -251,7 +262,7 @@ struct QiblaCompassView: View {
                     LinearGradient(
                         gradient: Gradient(colors: [
                             AppColors.primary.gold,
-                            AppColors.primary.gold.opacity(0.7)
+                            AppColors.primary.gold.opacity(themeManager.currentTheme.secondaryOpacity)
                         ]),
                         startPoint: .top,
                         endPoint: .bottom
@@ -295,6 +306,23 @@ struct QiblaCompassView: View {
         let normalizedAngle = relativeAngle < 0 ? relativeAngle + 360 : relativeAngle
         let isAligned = abs(normalizedAngle) < 5 || abs(normalizedAngle - 360) < 5
 
+        // Trigger haptic when alignment changes from false to true
+        DispatchQueue.main.async {
+            if isAligned && !wasAligned && !hasTriggeredAlignmentHaptic {
+                HapticManager.shared.triggerPattern(.qiblaAligned)
+                hasTriggeredAlignmentHaptic = true
+            } else if !isAligned {
+                // Reset haptic flag when not aligned (allow triggering again)
+                if hasTriggeredAlignmentHaptic {
+                    // Add delay to prevent spam if user is on the boundary
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                        hasTriggeredAlignmentHaptic = false
+                    }
+                }
+            }
+            wasAligned = isAligned
+        }
+
         return HStack(spacing: 12) {
             Image(systemName: isAligned ? "checkmark.circle.fill" : "arrow.clockwise.circle.fill")
                 .font(.system(size: 24))
@@ -308,7 +336,7 @@ struct QiblaCompassView: View {
 
                 if !isAligned {
                     ThemedText.caption(getAlignmentInstruction(normalizedAngle))
-                        .opacity(0.7)
+                        // Caption style already uses textTertiary - no additional opacity needed
                 }
             }
 
@@ -317,11 +345,11 @@ struct QiblaCompassView: View {
         .padding()
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(isAligned ? AppColors.primary.green.opacity(0.1) : themeManager.currentTheme.cardColor)
+                .fill(isAligned ? AppColors.primary.green.opacity(themeManager.currentTheme.gradientOpacity(for: AppColors.primary.green) * 2) : themeManager.currentTheme.cardColor)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(isAligned ? AppColors.primary.green : AppColors.primary.teal.opacity(0.3), lineWidth: 2)
+                .stroke(isAligned ? AppColors.primary.green : AppColors.primary.teal.opacity(themeManager.currentTheme.gradientOpacity(for: AppColors.primary.teal) * 2), lineWidth: 2)
         )
         .animation(.easeInOut(duration: 0.3), value: isAligned)
     }
@@ -376,7 +404,8 @@ struct QiblaCompassView: View {
 
                     Image(systemName: "safari")
                         .font(.system(size: 40))
-                        .foregroundColor(AppColors.primary.green.opacity(0.6))
+                        .foregroundColor(AppColors.primary.green)
+                        .opacity(themeManager.currentTheme.secondaryOpacity)
                 }
 
                 IslamicDivider(style: .simple)
@@ -410,7 +439,7 @@ struct QiblaCompassView: View {
                     ThemedText(viewModel.getDistanceText(), style: .heading)
                         .foregroundColor(AppColors.primary.gold)
                     ThemedText.caption("From your location")
-                        .opacity(0.6)
+                        // Caption style already uses textTertiary - no additional opacity needed
                 }
 
                 Spacer()

@@ -80,8 +80,8 @@ struct PrayerReminderPopup: View {
                 HStack(spacing: 16) {
                     // Not Yet button
                     Button {
-                        let generator = UIImpactFeedbackGenerator(style: .light)
-                        generator.impactOccurred()
+                        // Play back sound + haptic for "Not Yet"
+                        AudioHapticCoordinator.shared.playBack()
                         dismiss()
                     } label: {
                         Text("Not Yet")
@@ -97,8 +97,8 @@ struct PrayerReminderPopup: View {
 
                     // Yes, Alhamdulillah button
                     Button {
-                        let generator = UINotificationFeedbackGenerator()
-                        generator.notificationOccurred(.success)
+                        // Play confirm sound + success haptic for "Yes"
+                        AudioHapticCoordinator.shared.playSuccess()
 
                         withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
                             onComplete()
@@ -139,6 +139,9 @@ struct PrayerReminderPopup: View {
             .opacity(opacity)
         }
         .onAppear {
+            // Play popup appearance sound + haptic
+            AudioHapticCoordinator.shared.playPrayerReminderAppear()
+
             // Entrance animation
             withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
                 scale = 1.0

@@ -10,7 +10,7 @@ import CoreLocation
 import MapKit
 import Combine
 
-// Using CLGeocoder for primary reverse geocoding to obtain city and country
+// Using MapKit (MKReverseGeocodingRequest) for reverse geocoding to obtain city and country
 
 // MARK: - Location Service Error
 enum LocationServiceError: LocalizedError {
@@ -33,6 +33,9 @@ enum LocationServiceError: LocalizedError {
 // MARK: - Location Service
 @MainActor
 class LocationService: NSObject, ObservableObject {
+    // MARK: - Singleton
+    static let shared = LocationService()
+
     // MARK: - Published Properties
     @Published var authorizationStatus: CLAuthorizationStatus = .notDetermined
     @Published var currentLocation: LocationCoordinates?
@@ -56,7 +59,7 @@ class LocationService: NSObject, ObservableObject {
     private var locationContinuation: CheckedContinuation<CLLocation, Error>?
 
     // MARK: - Initializer
-    override init() {
+    private override init() {
         super.init()
         locationManager.delegate = self
         locationManager.desiredAccuracy = kCLLocationAccuracyHundredMeters
@@ -103,76 +106,31 @@ class LocationService: NSObject, ObservableObject {
         let coordinates = try await getCurrentLocation()
         let location = CLLocation(latitude: coordinates.latitude, longitude: coordinates.longitude)
 
-        // Reverse geocoding: Use MapKit for iOS 26+, CLGeocoder for earlier versions
-        if #available(iOS 26.0, *) {
-            // iOS 26+: Use new MapKit MKReverseGeocodingRequest
-            do {
-                guard let request = MKReverseGeocodingRequest(location: location) else {
-                    throw LocationServiceError.geocodingFailed
-                }
-
-                let mapItems = try await request.mapItems
-
-                if let addressRep = mapItems.first?.addressRepresentations {
-                    // MKAddressRepresentations provides cityName and regionName (country)
-                    let city = addressRep.cityName ?? "Unknown City"
-                    let country = addressRep.regionName ?? ""
-
-                    // Update published properties
-                    self.cityName = city
-                    self.countryName = country
-
-                    // Cache the values
-                    cacheLocation(coordinates, city: city, country: country)
-
-                    return (coordinates, city)
-                }
-            } catch {
-                // Geocoding failed, but we still have coordinates
-                print("⚠️ Reverse geocoding failed: \(error.localizedDescription)")
+        // Reverse geocoding: Use MapKit (iOS 26+ only app)
+        do {
+            guard let request = MKReverseGeocodingRequest(location: location) else {
+                throw LocationServiceError.geocodingFailed
             }
-        } else {
-            // iOS < 26: Use CLGeocoder
-            do {
-                let placemarks: [CLPlacemark] = try await withCheckedThrowingContinuation { continuation in
-                    CLGeocoder().reverseGeocodeLocation(location) { placemarks, error in
-                        if let error = error {
-                            continuation.resume(throwing: error)
-                            return
-                        }
-                        continuation.resume(returning: placemarks ?? [])
-                    }
-                }
 
-                if let placemark = placemarks.first {
-                    var city = "Unknown City"
-                    var country = ""
+            let mapItems = try await request.mapItems
 
-                    if let locality = placemark.locality, !locality.isEmpty {
-                        city = locality
-                    } else if let subAdmin = placemark.subAdministrativeArea, !subAdmin.isEmpty {
-                        city = subAdmin
-                    } else if let admin = placemark.administrativeArea, !admin.isEmpty {
-                        city = admin
-                    }
+            if let addressRep = mapItems.first?.addressRepresentations {
+                // MKAddressRepresentations provides cityName and regionName (country)
+                let city = addressRep.cityName ?? "Unknown City"
+                let country = addressRep.regionName ?? ""
 
-                    if let countryName = placemark.country, !countryName.isEmpty {
-                        country = countryName
-                    }
+                // Update published properties
+                self.cityName = city
+                self.countryName = country
 
-                    // Update published properties
-                    self.cityName = city
-                    self.countryName = country
+                // Cache the values
+                cacheLocation(coordinates, city: city, country: country)
 
-                    // Cache the values
-                    cacheLocation(coordinates, city: city, country: country)
-
-                    return (coordinates, city)
-                }
-            } catch {
-                // Geocoding failed, but we still have coordinates
-                print("⚠️ Reverse geocoding failed: \(error.localizedDescription)")
+                return (coordinates, city)
             }
+        } catch {
+            // Geocoding failed, but we still have coordinates
+            print("⚠️ Reverse geocoding failed: \(error.localizedDescription)")
         }
 
         // If geocoding failed, return cached city if available
@@ -180,7 +138,8 @@ class LocationService: NSObject, ObservableObject {
             return (coordinates, cachedCity)
         }
 
-        throw LocationServiceError.geocodingFailed
+        // No cached city and geocoding failed - return coordinates with fallback city
+        return (coordinates, "Unknown City")
     }
 
     /// Check if location services are enabled (derived from authorization status to avoid blocking calls on main thread)

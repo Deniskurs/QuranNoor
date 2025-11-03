@@ -29,6 +29,7 @@ struct SecondaryButton: View {
     let action: () -> Void
     let isDisabled: Bool
     let isLoading: Bool
+    let playSound: Bool
 
     @State private var isPressed: Bool = false
 
@@ -39,6 +40,7 @@ struct SecondaryButton: View {
         style: SecondaryButtonStyleType = .gold,
         isDisabled: Bool = false,
         isLoading: Bool = false,
+        playSound: Bool = true,
         action: @escaping () -> Void
     ) {
         self.title = title
@@ -47,6 +49,7 @@ struct SecondaryButton: View {
         self.action = action
         self.isDisabled = isDisabled
         self.isLoading = isLoading
+        self.playSound = playSound
     }
 
     // MARK: - Body
@@ -121,18 +124,15 @@ struct SecondaryButton: View {
         isPressed ? borderColor.opacity(0.1) : Color.clear
     }
 
-    // MARK: - Haptic Feedback
+    // MARK: - Audio & Haptic Feedback
     private func handleTap() {
-        triggerHapticFeedback()
+        if playSound {
+            AudioHapticCoordinator.shared.playButtonTap(customVolume: 0.3)
+        } else {
+            // Haptic only if sound is disabled
+            HapticManager.shared.trigger(.light)
+        }
         action()
-    }
-
-    private func triggerHapticFeedback() {
-        #if canImport(UIKit)
-        let haptic = UIImpactFeedbackGenerator(style: .light)
-        haptic.prepare()
-        haptic.impactOccurred()
-        #endif
     }
 }
 
@@ -143,6 +143,7 @@ struct TertiaryButton: View {
     let icon: String?
     let color: Color
     let action: () -> Void
+    let playSound: Bool
 
     @State private var isPressed: Bool = false
 
@@ -151,11 +152,13 @@ struct TertiaryButton: View {
         _ title: String,
         icon: String? = nil,
         color: Color = AppColors.primary.green,
+        playSound: Bool = false,
         action: @escaping () -> Void
     ) {
         self.title = title
         self.icon = icon
         self.color = color
+        self.playSound = playSound
         self.action = action
     }
 
@@ -182,12 +185,14 @@ struct TertiaryButton: View {
         )
     }
 
-    // MARK: - Haptic Feedback
+    // MARK: - Audio & Haptic Feedback
     private func handleTap() {
-        #if canImport(UIKit)
-        let haptic = UIImpactFeedbackGenerator(style: .light)
-        haptic.impactOccurred()
-        #endif
+        if playSound {
+            AudioHapticCoordinator.shared.playButtonTap(customVolume: 0.2)
+        } else {
+            // Haptic only if sound is disabled (default for tertiary)
+            HapticManager.shared.trigger(.light)
+        }
         action()
     }
 }

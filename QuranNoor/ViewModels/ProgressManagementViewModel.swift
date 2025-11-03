@@ -29,7 +29,9 @@ class ProgressManagementViewModel: ObservableObject {
     @Published var isImporting = false
     @Published var exportURL: URL?
     @Published var importError: String?
-    @Published var toastConfig: ToastConfig?
+    // Toast properties (new API)
+    @Published var toastMessage: String = ""
+    @Published var toastStyle: ToastStyle = .success
     @Published var showToast = false
 
     // MARK: - Private Properties
@@ -532,25 +534,13 @@ class ProgressManagementViewModel: ObservableObject {
     // MARK: - Toast Methods
 
     private func showResetToast(for surahName: String, surahNumber: Int) {
-        let config = ToastConfig(
-            message: "Progress reset for \(surahName)",
-            icon: "arrow.counterclockwise.circle.fill",
-            color: AppColors.primary.teal,
-            duration: 3.0,
-            showUndo: true,
-            onUndo: { [weak self] in
-                self?.undoSurahReset()
-            }
-        )
-
-        toastConfig = config
+        // Use new Toast API
+        toastMessage = "Progress reset for \(surahName)"
+        toastStyle = .info
         showToast = true
 
-        // Haptic feedback
-        #if os(iOS)
-        let generator = UINotificationFeedbackGenerator()
-        generator.notificationOccurred(.success)
-        #endif
+        // Haptic feedback using HapticManager
+        HapticManager.shared.trigger(.success)
     }
 
     private func undoSurahReset() {
@@ -574,23 +564,13 @@ class ProgressManagementViewModel: ObservableObject {
 
         // Show confirmation toast
         if let surah = getSurah(forNumber: surahNumber) {
-            let config = ToastConfig(
-                message: "Restored \(surah.englishName)",
-                icon: "checkmark.circle.fill",
-                color: AppColors.primary.green,
-                duration: 2.0,
-                showUndo: false
-            )
-
-            toastConfig = config
+            toastMessage = "Restored \(surah.englishName)"
+            toastStyle = .success
             showToast = true
         }
 
-        // Haptic feedback
-        #if os(iOS)
-        let generator = UINotificationFeedbackGenerator()
-        generator.notificationOccurred(.success)
-        #endif
+        // Haptic feedback using HapticManager
+        HapticManager.shared.trigger(.success)
 
         // Clear undo state
         lastResetSurah = nil

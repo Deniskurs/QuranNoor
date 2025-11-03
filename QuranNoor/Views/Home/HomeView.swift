@@ -2,7 +2,7 @@
 //  HomeView.swift
 //  QuranNoor
 //
-//  Home dashboard with prayer countdown and quick actions
+//  Main home screen with quick access to core features
 //
 
 import SwiftUI
@@ -10,273 +10,244 @@ import SwiftUI
 struct HomeView: View {
     // MARK: - Properties
     @EnvironmentObject var themeManager: ThemeManager
-    @State private var prayerViewModel = PrayerViewModel()
-
-    // Hijri calendar
-    private let hijriService = HijriCalendarService()
-    @State private var hijriDate: HijriDate?
-    @State private var isLoadingHijri = true
+    @State private var prayerVM = PrayerViewModel()
+    @State private var quranVM = QuranViewModel()
 
     // MARK: - Body
     var body: some View {
         NavigationStack {
             ZStack {
-                // Background gradient
-                GradientBackground(style: .home, opacity: 0.25)
+                // Base theme background (ensures pure black in night mode for OLED)
+                themeManager.currentTheme.backgroundColor
+                    .ignoresSafeArea()
 
-                // TimelineView updates every second for live countdown and progress
-                TimelineView(.periodic(from: Date(), by: 1.0)) { context in
-                    ScrollView {
-                        VStack(spacing: 24) {
-                            // Welcome header
-                            welcomeHeader
+                // Gradient overlay (automatically suppressed in night mode)
+                GradientBackground(style: .home, opacity: 0.3)
 
-                            // Next prayer countdown card
-                            if let nextPrayer = prayerViewModel.nextPrayer {
-                                nextPrayerCountdownCard(nextPrayer)
-                            }
+                ScrollView {
+                    VStack(spacing: 20) {
+                        // Header
+                        headerSection
 
-                            // Daily verse card
-                            dailyVerseCard
+                        // Quick Stats
+                        quickStatsSection
 
-                            // Quick actions
-                            quickActionsGrid
+                        // Next Prayer Card
+                        nextPrayerCard
 
-                            // Hijri date card
-                            hijriDateCard
-                        }
-                        .padding()
+                        // Reading Progress Card
+                        readingProgressCard
+
+                        // Quick Actions
+                        quickActionsSection
                     }
+                    .padding()
                 }
             }
             .navigationTitle("Home")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
-            .task {
-                await prayerViewModel.initialize()
-                await loadHijriDate()
-            }
         }
     }
 
     // MARK: - Components
 
-    private var welcomeHeader: some View {
+    private var headerSection: some View {
         VStack(spacing: 8) {
-            ThemedText.title("Qur'an Noor", italic: false)
-                .foregroundColor(AppColors.primary.green)
-
-            ThemedText("Assalamu Alaikum", style: .heading)
+            Image(systemName: "moon.stars.fill")
+                .font(.system(size: 50))
                 .foregroundColor(AppColors.primary.gold)
 
-            ThemedText.body("Welcome to your spiritual journey")
-                .multilineTextAlignment(.center)
-                .opacity(0.7)
+            ThemedText("Welcome to Qur'an Noor", style: .heading)
+                .foregroundColor(AppColors.primary.gold)
+
+            ThemedText.caption("Your spiritual companion")
+                // Caption style already uses textTertiary - no additional opacity needed
         }
         .padding(.top, 8)
     }
 
-    private func nextPrayerCountdownCard(_ prayer: PrayerTime) -> some View {
-        CardView(showPattern: true) {
-            VStack(alignment: .leading, spacing: 16) {
-                // Header
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        ThemedText.caption("NEXT PRAYER")
-                        ThemedText(prayer.name.displayName, style: .heading)
-                            .foregroundColor(AppColors.primary.green)
-                    }
+    private var quickStatsSection: some View {
+        HStack(spacing: 12) {
+            // Reading streak
+            HomeStatCard(
+                icon: "flame.fill",
+                value: "\(quranVM.readingProgress?.streakDays ?? 0)",
+                label: "Day Streak",
+                color: AppColors.primary.gold
+            )
 
-                    Spacer()
-
-                    Image(systemName: prayer.name.icon)
-                        .font(.system(size: 40))
-                        .foregroundColor(AppColors.primary.green.opacity(0.6))
-                }
-
-                IslamicDivider(style: .ornamental, color: AppColors.primary.gold.opacity(0.3))
-
-                // Time and countdown
-                HStack(alignment: .bottom) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(prayer.displayTime)
-                            .font(.system(size: 48, weight: .ultraLight))
-                            .foregroundColor(themeManager.currentTheme.textColor)
-
-                        if !prayerViewModel.countdown.isEmpty {
-                            HStack(spacing: 6) {
-                                Image(systemName: "clock.fill")
-                                    .font(.system(size: 14))
-                                Text("in \(prayerViewModel.countdown)")
-                                    .font(.system(size: 16, weight: .medium))
-                            }
-                            .foregroundColor(AppColors.primary.teal)
-                        }
-                    }
-
-                    Spacer()
-
-                    // Progress ring (changes to orange when urgent)
-                    ProgressRing(
-                        progress: prayerViewModel.periodProgress,
-                        lineWidth: 6,
-                        size: 90,
-                        showPercentage: false,
-                        color: prayerViewModel.isUrgent ? .orange : AppColors.primary.green
-                    )
-                }
-            }
+            // Verses read
+            HomeStatCard(
+                icon: "book.fill",
+                value: "\(quranVM.readingProgress?.totalVersesRead ?? 0)",
+                label: "Verses",
+                color: AppColors.primary.green
+            )
         }
     }
 
-    private var dailyVerseCard: some View {
+    private var nextPrayerCard: some View {
         CardView {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
-                    ThemedText("Daily Verse", style: .heading)
+                    Image(systemName: "clock.fill")
+                        .font(.system(size: 24))
+                        .foregroundColor(AppColors.primary.teal)
+
+                    ThemedText("Next Prayer", style: .heading)
+
                     Spacer()
-                    Image(systemName: "book.fill")
-                        .font(.system(size: 20))
-                        .foregroundColor(AppColors.primary.gold)
                 }
 
-                IslamicDivider(style: .crescent, color: AppColors.primary.gold.opacity(0.3))
+                if let nextPrayer = prayerVM.nextPrayer {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            ThemedText(nextPrayer.name.displayName, style: .body)
+                                .foregroundColor(AppColors.primary.green)
 
-                // Arabic verse
-                ThemedText.arabic("وَمَا خَلَقْتُ الْجِنَّ وَالْإِنسَ إِلَّا لِيَعْبُدُونِ")
-                    .multilineTextAlignment(.trailing)
-                    .padding(.vertical, 8)
+                            ThemedText.caption(nextPrayer.displayTime)
+                                // Caption style already uses textTertiary - no additional opacity needed
+                        }
 
-                // Translation
-                ThemedText.caption("\"And I did not create the jinn and mankind except to worship Me.\" - Surah Adh-Dhariyat (51:56)")
-                    .opacity(0.7)
-                    .italic()
+                        Spacer()
+
+                        ThemedText(prayerVM.countdown, style: .heading)
+                            .foregroundColor(AppColors.primary.teal)
+                    }
+                } else {
+                    ThemedText.caption("Loading prayer times...")
+                        // Caption style already uses textTertiary - no additional opacity needed
+                }
             }
         }
     }
 
-    private var quickActionsGrid: some View {
-        VStack(spacing: 12) {
-            HStack {
-                ThemedText("Quick Actions", style: .heading)
-                Spacer()
-            }
-
-            LazyVGrid(columns: [
-                GridItem(.flexible()),
-                GridItem(.flexible())
-            ], spacing: 12) {
-                QuickActionCard(
-                    icon: "book.fill",
-                    title: "Read Quran",
-                    color: AppColors.primary.green
-                )
-
-                QuickActionCard(
-                    icon: "location.north.fill",
-                    title: "Qibla",
-                    color: AppColors.primary.teal
-                )
-
-                QuickActionCard(
-                    icon: "building.columns.fill",
-                    title: "Find Mosque",
-                    color: AppColors.primary.gold
-                )
-
-                QuickActionCard(
-                    icon: "hand.raised.fill",
-                    title: "Duas",
-                    color: AppColors.primary.midnight
-                )
-            }
-        }
-    }
-
-    private var hijriDateCard: some View {
+    private var readingProgressCard: some View {
         CardView {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    ThemedText.caption("TODAY")
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Image(systemName: "book.fill")
+                        .font(.system(size: 24))
+                        .foregroundColor(AppColors.primary.gold)
 
-                    if isLoadingHijri {
-                        ThemedText("Loading...", style: .body)
-                            .foregroundColor(AppColors.primary.green)
-                    } else if let hijriDate = hijriDate {
-                        ThemedText(hijriService.getFormattedHijriDate(hijriDate: hijriDate), style: .body)
-                            .foregroundColor(AppColors.primary.green)
+                    ThemedText("Reading Progress", style: .heading)
 
-                        // Show Arabic date
-                        ThemedText.arabic(hijriService.getFormattedHijriDateArabic(hijriDate: hijriDate))
-                            .font(.system(size: 14))
-                            .foregroundColor(AppColors.primary.gold)
-                            .opacity(0.8)
-                    } else {
-                        ThemedText("Islamic Calendar", style: .body)
+                    Spacer()
+
+                    ProgressRing(
+                        progress: quranVM.getProgressPercentage() / 100,
+                        lineWidth: 4,
+                        size: 40,
+                        showPercentage: false,
+                        color: AppColors.primary.green
+                    )
+                }
+
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        ThemedText.caption("VERSES READ")
+                        ThemedText("\(quranVM.readingProgress?.totalVersesRead ?? 0)", style: .body)
                             .foregroundColor(AppColors.primary.green)
                     }
 
-                    ThemedText.caption(Date().formatted(date: .long, time: .omitted))
-                        .opacity(0.6)
+                    Spacer()
+
+                    VStack(alignment: .trailing, spacing: 4) {
+                        ThemedText.caption("PROGRESS")
+                        ThemedText("\(Int(quranVM.getProgressPercentage()))%", style: .body)
+                            .foregroundColor(AppColors.primary.teal)
+                    }
                 }
-
-                Spacer()
-
-                Image(systemName: "moon.stars.fill")
-                    .font(.system(size: 32))
-                    .foregroundColor(AppColors.primary.gold.opacity(0.6))
             }
         }
     }
 
-    // MARK: - Private Methods
+    private var quickActionsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            ThemedText("Quick Actions", style: .heading)
 
-    private func loadHijriDate() async {
-        // Try to load from cache first
-        if let cachedDate = hijriService.getCachedHijriDate() {
-            hijriDate = cachedDate
-            isLoadingHijri = false
-        }
+            HStack(spacing: 12) {
+                QuickActionButton(
+                    icon: "book.pages.fill",
+                    title: "Continue Reading",
+                    color: AppColors.primary.gold
+                ) {
+                    // Navigate to Quran tab
+                }
 
-        // Then fetch from API
-        do {
-            let fetchedDate = try await hijriService.getCurrentHijriDate()
-            hijriDate = fetchedDate
-            isLoadingHijri = false
-        } catch {
-            print("Failed to fetch Hijri date: \(error)")
-            isLoadingHijri = false
+                QuickActionButton(
+                    icon: "location.north.fill",
+                    title: "Find Qibla",
+                    color: AppColors.primary.teal
+                ) {
+                    // Navigate to Qibla tab
+                }
+            }
         }
     }
 }
 
-// MARK: - Quick Action Card
-struct QuickActionCard: View {
+// MARK: - Home Stat Card Component
+struct HomeStatCard: View {
+    @EnvironmentObject var themeManager: ThemeManager
+
     let icon: String
-    let title: String
+    let value: String
+    let label: String
     let color: Color
 
     var body: some View {
-        Button {
-            // Action will be implemented later
-        } label: {
-            VStack(spacing: 12) {
+        VStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: 24))
+                .foregroundColor(color)
+
+            ThemedText(value, style: .heading)
+                .foregroundColor(color)
+
+            ThemedText.caption(label)
+                // Caption style already uses textTertiary - no additional opacity needed
+        }
+        .frame(maxWidth: .infinity)
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(themeManager.currentTheme.cardColor)
+        )
+    }
+}
+
+// MARK: - Quick Action Button Component
+struct QuickActionButton: View {
+    @EnvironmentObject var themeManager: ThemeManager
+
+    let icon: String
+    let title: String
+    let color: Color
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 8) {
                 Image(systemName: icon)
-                    .font(.system(size: 32))
+                    .font(.system(size: 28))
                     .foregroundColor(color)
 
-                ThemedText.body(title)
+                ThemedText.caption(title)
+                    .foregroundColor(color)
+                    .multilineTextAlignment(.center)
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 20)
+            .padding()
             .background(
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(color.opacity(0.1))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(color.opacity(0.3), lineWidth: 1)
-                    )
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(color.opacity(themeManager.currentTheme.gradientOpacity(for: color) * 2))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(color.opacity(themeManager.currentTheme.gradientOpacity(for: color) * 3), lineWidth: 1)
             )
         }
     }

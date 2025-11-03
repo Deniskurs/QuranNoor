@@ -19,6 +19,7 @@ struct PrimaryButton: View {
     let action: () -> Void
     let isDisabled: Bool
     let isLoading: Bool
+    let playSound: Bool
 
     @State private var isPressed: Bool = false
 
@@ -28,6 +29,7 @@ struct PrimaryButton: View {
         icon: String? = nil,
         isDisabled: Bool = false,
         isLoading: Bool = false,
+        playSound: Bool = true,
         action: @escaping () -> Void
     ) {
         self.title = title
@@ -35,6 +37,7 @@ struct PrimaryButton: View {
         self.action = action
         self.isDisabled = isDisabled
         self.isLoading = isLoading
+        self.playSound = playSound
     }
 
     // MARK: - Body
@@ -94,18 +97,15 @@ struct PrimaryButton: View {
         )
     }
 
-    // MARK: - Haptic Feedback
+    // MARK: - Audio & Haptic Feedback
     private func handleTap() {
-        triggerHapticFeedback()
+        if playSound {
+            AudioHapticCoordinator.shared.playButtonTap()
+        } else {
+            // Haptic only if sound is disabled
+            HapticManager.shared.trigger(.medium)
+        }
         action()
-    }
-
-    private func triggerHapticFeedback() {
-        #if canImport(UIKit)
-        let haptic = UIImpactFeedbackGenerator(style: .medium)
-        haptic.prepare()
-        haptic.impactOccurred()
-        #endif
     }
 }
 

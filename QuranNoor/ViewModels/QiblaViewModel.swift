@@ -44,7 +44,7 @@ class QiblaViewModel: ObservableObject {
     }
 
     // MARK: - Private Properties
-    private let locationService = LocationService()
+    private let locationService = LocationService.shared
     private let qiblaService = QiblaService()
     private var cancellables = Set<AnyCancellable>()
     private var previousAlignmentState = false

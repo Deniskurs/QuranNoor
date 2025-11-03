@@ -53,7 +53,7 @@ struct IslamicDivider: View {
 
     // MARK: - Theme-Aware Color
     private var dividerColor: Color {
-        color ?? themeManager.currentTheme.textColor.opacity(0.2)
+        color ?? themeManager.currentTheme.textTertiary.opacity(themeManager.currentTheme.tertiaryOpacity)
     }
 }
 
@@ -226,7 +226,7 @@ struct SectionDivider: View {
 
             if let title = title {
                 ThemedText(title, style: .caption)
-                    .opacity(0.6)
+                    // Caption style already uses textTertiary - no additional opacity needed
             }
 
             IslamicDivider(style: .ornamental)

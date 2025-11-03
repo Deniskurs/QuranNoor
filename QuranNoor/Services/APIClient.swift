@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import Combine
 
 // MARK: - API Error
 enum APIError: LocalizedError {
