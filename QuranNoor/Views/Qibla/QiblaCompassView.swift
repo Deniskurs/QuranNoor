@@ -562,6 +562,16 @@ struct QiblaCompassView: View {
     }
 }
 
+// MARK: - Card Press Style
+/// Reusable button style for card press effects with subtle scale
+struct CardPressStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
+            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: configuration.isPressed)
+    }
+}
+
 // MARK: - Preview
 #Preview {
     QiblaCompassView()
