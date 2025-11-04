@@ -172,8 +172,10 @@ class QiblaViewModel: ObservableObject {
             }
             .store(in: &cancellables)
 
-        // Observe compass heading updates
+        // Observe compass heading updates with throttling and deduplication
         locationService.$heading
+            .throttle(for: .milliseconds(100), scheduler: DispatchQueue.main, latest: true)
+            .removeDuplicates { abs($0 - $1) < 0.5 }  // Only update if change > 0.5°
             .sink { [weak self] heading in
                 guard let self = self else { return }
                 self.deviceHeading = heading
@@ -254,6 +256,24 @@ class QiblaViewModel: ObservableObject {
         return qiblaService.formatDistance(distanceToKaaba)
     }
 
+    func getAlignmentInstruction() -> String {
+        let relativeAngle = (qiblaDirection - deviceHeading).truncatingRemainder(dividingBy: 360)
+        let normalizedAngle = relativeAngle < 0 ? relativeAngle + 360 : relativeAngle
+
+        if normalizedAngle < 180 {
+            return "Turn right \(Int(normalizedAngle))°"
+        } else {
+            return "Turn left \(Int(360 - normalizedAngle))°"
+        }
+    }
+
+    /// Trigger haptic feedback when device aligns with Qibla
+    private func triggerAlignmentHaptic() {
+        #if canImport(UIKit)
+        hapticGenerator.notificationOccurred(.success)
+        #endif
+    }
+
     // MARK: - Storage Methods
 
     private func loadSavedLocations() {
@@ -290,13 +310,6 @@ class QiblaViewModel: ObservableObject {
 
     private func saveManualLocationPreference(_ isManual: Bool) {
         UserDefaults.standard.set(isManual, forKey: "is_using_manual_location")
-    }
-
-    /// Trigger haptic feedback when device aligns with Qibla
-    private func triggerAlignmentHaptic() {
-        #if canImport(UIKit)
-        hapticGenerator.notificationOccurred(.success)
-        #endif
     }
 }
 
