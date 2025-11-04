@@ -116,7 +116,9 @@ struct DailyStats: Codable, Hashable {
 
     /// Progress percentage as string (0-100%)
     var progressPercentage: String {
-        let percentage = Int(overallCompletion * 100)
+        // overallCompletion is already 0-100 (e.g., 5.5 for 5.5%)
+        // Don't multiply by 100 again!
+        let percentage = Int(overallCompletion)
         return "\(percentage)%"
     }
 

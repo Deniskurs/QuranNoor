@@ -31,7 +31,7 @@ struct SpiritualNourishmentCarousel: View {
 
             // Scrollable carousel
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: Spacing.sm) { // Enhanced from 16
+                HStack(spacing: Spacing.sm) { // 16pt spacing between cards
                     // Verse of the day
                     if let verse = verseOfDay {
                         SpiritualContentCard(
@@ -59,7 +59,7 @@ struct SpiritualNourishmentCarousel: View {
                         }
                     }
                 }
-                // Note: Horizontal padding removed - inherited from parent HomeView
+                .padding(.vertical, 20) // Give space for card shadows (radius 12 + offset 6 = 18pt needed)
             }
             .scrollTargetBehavior(.viewAligned)
         }
@@ -71,6 +71,7 @@ struct SpiritualNourishmentCarousel: View {
 struct SpiritualContentCard: View {
     @EnvironmentObject var themeManager: ThemeManager
     @ObservedObject private var bookmarkService = SpiritualBookmarkService.shared
+    @Environment(\.dynamicTypeSize) var dynamicTypeSize
 
     let icon: String
     let title: String
@@ -80,75 +81,91 @@ struct SpiritualContentCard: View {
     @State private var showDetailSheet = false
     @State private var showShareSheet = false
     @State private var isBookmarked = false
+    @State private var isTapped = false
+
+    // Dynamic Type support with @ScaledMetric
+    @ScaledMetric(relativeTo: .body) private var cardWidth: CGFloat = 310
+    @ScaledMetric(relativeTo: .body) private var cardHeight: CGFloat = 380
+    @ScaledMetric(relativeTo: .body) private var contentAreaHeight: CGFloat = 220
 
     var body: some View {
         CardView(showPattern: false) {
-            VStack(alignment: .leading, spacing: Spacing.cardSpacing) {
-                // Header - refined
+            VStack(alignment: .leading, spacing: 14) {
+                // Header - refined with reduced emphasis
                 HStack(spacing: Spacing.xs) {
                     Image(systemName: icon)
-                        .font(.title3)
-                        .foregroundColor(accentColor)
+                        .font(.system(size: 16)) // Reduced from title3 (~20pt) to 16pt
+                        .foregroundColor(accentColor.opacity(0.8))
 
                     Text(title)
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(themeManager.currentTheme.textSecondary)
+                        .font(.system(size: 11, weight: .semibold)) // Reduced from 12pt
+                        .foregroundColor(themeManager.currentTheme.textTertiary) // Reduced prominence
                         .textCase(.uppercase)
-                        .tracking(0.5)
+                        .tracking(0.6) // Increased letter spacing
 
                     Spacer()
                 }
-                .frame(height: 32) // Fixed header height
+                .frame(height: 28) // Reduced from 32pt for tighter layout
 
                 // Content text area with better spacing
-                ZStack(alignment: .bottomLeading) {
-                    VStack(alignment: .leading, spacing: Spacing.xs) {
-                        // Content text - enhanced readability
-                        Text(content.text)
-                            .font(.system(size: 18, weight: .regular)) // Enhanced from 17 to 18pt
-                            .lineSpacing(8) // Enhanced from 6 to 8pt
-                            .lineLimit(7) // Enhanced from 5 to 7 lines
-                            .multilineTextAlignment(.leading)
-                            .foregroundColor(themeManager.currentTheme.textPrimary)
+                VStack(alignment: .leading, spacing: Spacing.xs) {
+                    // Content text - enhanced readability with Dynamic Type support
+                    Text(content.text)
+                        .font(.body) // Dynamic Type support
+                        .lineSpacing(9)
+                        .lineLimit(maxLines) // Dynamic line limit based on text size
+                        .multilineTextAlignment(.leading)
+                        .foregroundColor(themeManager.currentTheme.textPrimary)
+                        .dynamicTypeSize(...DynamicTypeSize.xxxLarge) // Cap at xxxLarge
 
-                        Spacer(minLength: 0)
+                    Spacer(minLength: 0)
 
-                        // Source reference
-                        Text(content.source)
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(themeManager.currentTheme.textTertiary)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .frame(height: 220) // Fixed content area height
-
+                    // Source reference
+                    Text(content.source)
+                        .font(.subheadline) // Dynamic Type support
+                        .italic()
+                        .foregroundColor(themeManager.currentTheme.textSecondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(height: min(contentAreaHeight, 280)) // Dynamic height with cap
+                .overlay(alignment: .bottom) {
                     // Fade gradient overlay when text is truncated
                     if isTextTruncated {
-                        VStack(spacing: 4) {
+                        VStack(spacing: 0) {
+                            // Smart gradient with delayed fade start
                             LinearGradient(
-                                gradient: Gradient(colors: [
-                                    themeManager.currentTheme.cardColor.opacity(0),
-                                    themeManager.currentTheme.cardColor.opacity(0.8),
-                                    themeManager.currentTheme.cardColor
+                                gradient: Gradient(stops: [
+                                    .init(color: .clear, location: 0.0),
+                                    .init(color: .clear, location: 0.5),
+                                    .init(color: themeManager.currentTheme.cardColor.opacity(0.7), location: 0.85),
+                                    .init(color: themeManager.currentTheme.cardColor, location: 1.0)
                                 ]),
                                 startPoint: .top,
                                 endPoint: .bottom
                             )
-                            .frame(height: 60)
+                            .frame(height: 80) // Increased from 60pt for smoother transition
+                            .allowsHitTesting(false) // Don't interfere with taps
 
-                            // "Tap to read more" hint
-                            HStack {
-                                Spacer()
-                                Text("Tap to read more")
-                                    .font(.system(size: 11, weight: .medium))
-                                    .foregroundColor(accentColor)
-                                    .padding(.horizontal, Spacing.xs)
-                                    .padding(.vertical, 4)
-                                    .background(
-                                        Capsule()
-                                            .fill(accentColor.opacity(0.15))
-                                    )
-                                Spacer()
+                            // "Read More" badge positioned outside gradient flow
+                            HStack(spacing: 6) {
+                                Image(systemName: "arrow.down.circle.fill")
+                                    .font(.system(size: 13))
+                                Text("Read Full Content")
+                                    .font(.system(size: 12, weight: .semibold))
                             }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .background(
+                                Capsule()
+                                    .fill(accentColor.opacity(0.12))
+                                    .overlay(
+                                        Capsule()
+                                            .strokeBorder(accentColor.opacity(0.35), lineWidth: 1)
+                                    )
+                            )
+                            .foregroundColor(accentColor)
+                            .shadow(color: accentColor.opacity(0.15), radius: 4, y: 2)
+                            .offset(y: -12) // Lift into gradient area
                         }
                     }
                 }
@@ -156,22 +173,25 @@ struct SpiritualContentCard: View {
                 Divider()
                     .opacity(0.3)
 
-                // Action buttons row
-                HStack(spacing: Spacing.sm) {
+                // Action buttons row with improved tap targets
+                HStack(spacing: 24) {
                     // Bookmark button
                     Button(action: {
                         toggleBookmark()
                     }) {
-                        VStack(spacing: 4) {
+                        VStack(spacing: 6) {
                             Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
-                                .font(.system(size: 18))
+                                .font(.system(size: 20)) // Increased from 18pt
                                 .foregroundColor(isBookmarked ? AppColors.primary.gold : accentColor)
+                                .symbolEffect(.bounce, value: isBookmarked) // iOS 17+ bounce effect
                             Text("Save")
-                                .font(.system(size: 10, weight: .medium))
+                                .font(.system(size: 11, weight: .medium)) // Increased from 10pt
                                 .foregroundColor(themeManager.currentTheme.textSecondary)
                         }
                     }
-                    .frame(width: 60, height: Spacing.tapTarget)
+                    .frame(width: 68, height: 52) // Increased tap target
+                    .accessibilityLabel(isBookmarked ? "Remove bookmark" : "Add bookmark")
+                    .accessibilityHint("Saves this \(title.lowercased()) to your bookmarks")
 
                     Spacer()
 
@@ -179,25 +199,42 @@ struct SpiritualContentCard: View {
                     Button(action: {
                         shareContent()
                     }) {
-                        VStack(spacing: 4) {
+                        VStack(spacing: 6) {
                             Image(systemName: "square.and.arrow.up")
-                                .font(.system(size: 18))
+                                .font(.system(size: 20)) // Increased from 18pt
                                 .foregroundColor(accentColor)
                             Text("Share")
-                                .font(.system(size: 10, weight: .medium))
+                                .font(.system(size: 11, weight: .medium)) // Increased from 10pt
                                 .foregroundColor(themeManager.currentTheme.textSecondary)
                         }
                     }
-                    .frame(width: 60, height: Spacing.tapTarget)
+                    .frame(width: 68, height: 52) // Increased tap target
+                    .accessibilityLabel("Share")
+                    .accessibilityHint("Share this \(title.lowercased()) with others")
                 }
-                .frame(height: 44)
+                .frame(height: 52) // Increased from 44pt
             }
-            .padding(Spacing.cardPadding)
         }
-        .frame(width: 320, height: 360) // Enhanced from 280 to 360 for better breathing room
+        .frame(
+            width: min(cardWidth, 400),
+            height: min(adaptiveCardHeight, 600)
+        ) // Base: 310×380pt with Dynamic Type support and caps
+        .scaleEffect(isTapped ? 0.98 : 1.0)
         .contentShape(Rectangle()) // Make entire card tappable
         .onTapGesture {
-            showDetailSheet = true
+            // Tap animation with haptic feedback
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                isTapped = true
+            }
+            HapticManager.shared.trigger(.light)
+
+            // Reset after brief delay and show sheet
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                    isTapped = false
+                }
+                showDetailSheet = true
+            }
         }
         .sheet(isPresented: $showDetailSheet) {
             SpiritualContentDetailSheet(
@@ -214,8 +251,10 @@ struct SpiritualContentCard: View {
             checkBookmarkStatus()
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(title). \(content.text). Source: \(content.source)")
-        .accessibilityHint("Double tap to read full content and bookmark or share")
+        .accessibilityLabel(title)
+        .accessibilityValue(content.text)
+        .accessibilityHint("Source: \(content.source). Double tap to read full content and access bookmark or share options")
+        .accessibilityAddTraits(.isButton)
     }
 
     // MARK: - Computed Properties
@@ -223,6 +262,34 @@ struct SpiritualContentCard: View {
     private var isTextTruncated: Bool {
         // Simple heuristic: if text is longer than ~200 characters, likely truncated at 7 lines
         content.text.count > 200
+    }
+
+    private var maxLines: Int {
+        // Adjust line limit based on Dynamic Type size
+        switch dynamicTypeSize {
+        case .xSmall, .small, .medium, .large, .xLarge:
+            return 7
+        case .xxLarge:
+            return 6
+        case .xxxLarge:
+            return 5
+        default:
+            return 7
+        }
+    }
+
+    private var adaptiveCardHeight: CGFloat {
+        // Adjust card height based on Dynamic Type size
+        switch dynamicTypeSize {
+        case .xSmall, .small, .medium, .large, .xLarge:
+            return 380
+        case .xxLarge:
+            return 440
+        case .xxxLarge:
+            return 500
+        default:
+            return 380
+        }
     }
 
     // MARK: - Actions
@@ -265,21 +332,72 @@ struct SpiritualContentCard: View {
 
 struct LoadingContentCard: View {
     @EnvironmentObject var themeManager: ThemeManager
+    @State private var animateGradient = false
 
     var body: some View {
         CardView(showPattern: false) {
-            VStack(spacing: 16) {
-                ProgressView()
-                    .tint(AppColors.primary.teal)
+            VStack(alignment: .leading, spacing: 16) {
+                // Header skeleton
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(skeletonGradient)
+                    .frame(width: 120, height: 16)
 
-                Text("Loading inspiration...")
-                    .font(.subheadline)
-                    .foregroundColor(themeManager.currentTheme.textSecondary)
+                // Content lines skeleton
+                VStack(alignment: .leading, spacing: 12) {
+                    ForEach(0..<6, id: \.self) { index in
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(skeletonGradient)
+                            .frame(
+                                width: index == 5 ? 200 : .infinity,
+                                height: 18
+                            )
+                    }
+                }
+
+                Spacer()
+
+                // Source skeleton
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(skeletonGradient)
+                    .frame(width: 100, height: 14)
+
+                // Divider
+                Rectangle()
+                    .fill(skeletonGradient.opacity(0.3))
+                    .frame(height: 1)
+
+                // Action buttons skeleton
+                HStack(spacing: 24) {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(skeletonGradient)
+                        .frame(width: 60, height: 48)
+
+                    Spacer()
+
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(skeletonGradient)
+                        .frame(width: 60, height: 48)
+                }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .padding(20)
         }
-        .frame(width: 300, height: 220)
+        .frame(width: 310, height: 380)
+        .onAppear {
+            withAnimation(.linear(duration: 1.5).repeatForever(autoreverses: false)) {
+                animateGradient = true
+            }
+        }
+    }
+
+    private var skeletonGradient: LinearGradient {
+        LinearGradient(
+            gradient: Gradient(colors: [
+                themeManager.currentTheme.textTertiary.opacity(0.1),
+                themeManager.currentTheme.textTertiary.opacity(0.2),
+                themeManager.currentTheme.textTertiary.opacity(0.1)
+            ]),
+            startPoint: animateGradient ? .leading : .trailing,
+            endPoint: animateGradient ? .trailing : .leading
+        )
     }
 }
 

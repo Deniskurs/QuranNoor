@@ -11,6 +11,7 @@ import SwiftUI
 struct ReadingProgressCard: View {
     @EnvironmentObject var themeManager: ThemeManager
     let stats: DailyStats
+    let onContinue: () -> Void
 
     var body: some View {
         CardView(showPattern: true) {
@@ -84,9 +85,7 @@ struct ReadingProgressCard: View {
                         Spacer()
 
                         // Continue reading button
-                        Button(action: {
-                            // Navigate to Quran tab and resume
-                        }) {
+                        Button(action: onContinue) {
                             HStack(spacing: 6) {
                                 Text("Continue")
                                     .font(.subheadline)
@@ -104,6 +103,14 @@ struct ReadingProgressCard: View {
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityText)
+        .onAppear {
+            #if DEBUG
+            print("📊 [ReadingProgressCard] Stats loaded:")
+            print("   - Total verses read: \(stats.totalVersesRead)")
+            print("   - Overall completion: \(stats.overallCompletion) (\(stats.progressPercentage))")
+            print("   - Calculated from ring: \(Double(stats.totalVersesRead) / 6236.0 * 100)%")
+            #endif
+        }
     }
 
     // MARK: - Helper Views
@@ -146,33 +153,41 @@ struct ReadingProgressCard: View {
 // MARK: - Preview
 
 #Preview("With Progress") {
-    ReadingProgressCard(stats: DailyStats.preview)
-        .environmentObject(ThemeManager())
-        .padding()
-        .background(Color(hex: "#F8F4EA"))
+    ReadingProgressCard(stats: DailyStats.preview, onContinue: {
+        print("Continue tapped")
+    })
+    .environmentObject(ThemeManager())
+    .padding()
+    .background(Color(hex: "#F8F4EA"))
 }
 
 #Preview("Active User") {
-    ReadingProgressCard(stats: DailyStats.activeUser)
-        .environmentObject(ThemeManager())
-        .padding()
-        .background(Color(hex: "#F8F4EA"))
+    ReadingProgressCard(stats: DailyStats.activeUser, onContinue: {
+        print("Continue tapped")
+    })
+    .environmentObject(ThemeManager())
+    .padding()
+    .background(Color(hex: "#F8F4EA"))
 }
 
 #Preview("Empty State") {
-    ReadingProgressCard(stats: DailyStats.emptyState)
-        .environmentObject(ThemeManager())
-        .padding()
-        .background(Color(hex: "#F8F4EA"))
+    ReadingProgressCard(stats: DailyStats.emptyState, onContinue: {
+        print("Continue tapped")
+    })
+    .environmentObject(ThemeManager())
+    .padding()
+    .background(Color(hex: "#F8F4EA"))
 }
 
 #Preview("Dark Mode") {
-    ReadingProgressCard(stats: DailyStats.preview)
-        .environmentObject({
-            let manager = ThemeManager()
-            manager.setTheme(.dark)
-            return manager
-        }())
-        .padding()
-        .background(Color(hex: "#1A2332"))
+    ReadingProgressCard(stats: DailyStats.preview, onContinue: {
+        print("Continue tapped")
+    })
+    .environmentObject({
+        let manager = ThemeManager()
+        manager.setTheme(.dark)
+        return manager
+    }())
+    .padding()
+    .background(Color(hex: "#1A2332"))
 }

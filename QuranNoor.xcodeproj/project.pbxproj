@@ -45,8 +45,8 @@
 		92813D362EB4E1580018C9BA = {
 			isa = PBXGroup;
 			children = (
-				92813D412EB4E1590018C9BA /* QuranNoor */,
 				92813D402EB4E1590018C9BA /* Products */,
+				92813D412EB4E1590018C9BA /* QuranNoor */,
 			);
 			sourceTree = "<group>";
 		};

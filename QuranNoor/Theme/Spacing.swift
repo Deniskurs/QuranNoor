@@ -55,6 +55,9 @@ struct Spacing {
     /// Screen edge padding (vertical): 20pt
     static let screenVertical: CGFloat = 20
 
+    /// Standard screen padding (all edges): 20pt
+    static let screenPadding: CGFloat = 20
+
     // MARK: - Grid Spacing
 
     /// Grid item spacing for 2-column layouts: 16pt (enhanced from 12pt)

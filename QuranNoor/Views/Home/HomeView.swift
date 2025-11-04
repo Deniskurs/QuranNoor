@@ -53,6 +53,22 @@ struct HomeView: View {
         .onAppear {
             homeVM.updateGreeting()
         }
+        .onChange(of: quranVM.readingProgress) { oldValue, newValue in
+            // Real-time update: recalculate stats when user reads verses
+            guard newValue != nil else { return }
+
+            homeVM.dailyStats = homeVM.calculateDailyStats(
+                from: quranVM,
+                prayerVM: prayerVM
+            )
+
+            // Update cache with fresh data
+            homeVM.cacheHomeData()
+
+            #if DEBUG
+            print("🔄 [HomeView] Progress updated - recalculated stats")
+            #endif
+        }
     }
 
     // MARK: - Main Content
@@ -114,8 +130,12 @@ struct HomeView: View {
 
                 // Reading progress card
                 if let stats = homeVM.dailyStats {
-                    ReadingProgressCard(stats: stats)
-                        .transition(.scale.combined(with: .opacity))
+                    ReadingProgressCard(stats: stats) {
+                        // Switch to Quran tab when Continue is tapped
+                        selectedTab = 1
+                        HapticManager.shared.trigger(.light)
+                    }
+                    .transition(.scale.combined(with: .opacity))
                 }
 
                 // Hijri calendar card
@@ -191,12 +211,14 @@ struct HomeView: View {
         await homeVM.initialize()
 
         // Calculate daily stats from other ViewModels
-        if quranVM.readingProgress != nil {
-            homeVM.dailyStats = homeVM.calculateDailyStats(
-                from: quranVM,
-                prayerVM: prayerVM
-            )
-        }
+        // ALWAYS recalculate to ensure fresh data (overwrites any stale cached data)
+        homeVM.dailyStats = homeVM.calculateDailyStats(
+            from: quranVM,
+            prayerVM: prayerVM
+        )
+
+        // Cache the fresh stats
+        homeVM.cacheHomeData()
 
         homeVM.isLoading = false
         isInitialized = true
@@ -213,13 +235,14 @@ struct HomeView: View {
             group.addTask { await self.homeVM.refresh() }
         }
 
-        // Recalculate stats
-        if quranVM.readingProgress != nil {
-            homeVM.dailyStats = homeVM.calculateDailyStats(
-                from: quranVM,
-                prayerVM: prayerVM
-            )
-        }
+        // Recalculate stats with fresh data
+        homeVM.dailyStats = homeVM.calculateDailyStats(
+            from: quranVM,
+            prayerVM: prayerVM
+        )
+
+        // Cache the fresh stats
+        homeVM.cacheHomeData()
     }
 
     /// Check if this is a first-time user
