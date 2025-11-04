@@ -159,6 +159,17 @@ class QiblaViewModel: ObservableObject {
         await updateQiblaDirection()
     }
 
+    /// Pause compass tracking (called when view disappears or tab is inactive)
+    func pause() {
+        locationService.stopHeadingUpdates()
+        previousAlignmentState = false  // Reset alignment state
+    }
+
+    /// Resume compass tracking (called when view appears or tab becomes active)
+    func resume() {
+        locationService.startHeadingUpdates()
+    }
+
     // MARK: - Private Methods
 
     private func setupLocationObserver() {
