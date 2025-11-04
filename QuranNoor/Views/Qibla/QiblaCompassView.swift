@@ -23,6 +23,20 @@ struct QiblaCompassView: View {
     @State private var normalizedCompassRotation: Double = 0
     @State private var normalizedNeedleRotation: Double = 0
 
+    // MARK: - Body
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                // Base theme background (ensures pure black in night mode for OLED)
+                themeManager.currentTheme.backgroundColor
+                    .ignoresSafeArea()
+
+                ScrollView {
+                    VStack(spacing: 16) {
+                        if viewModel.isLoading {
+                            LoadingView(size: .large, message: "Finding Qibla direction...")
+                        } else {
+                            // Compass
     // Haptic feedback state for alignment
     @State private var wasAligned: Bool = false
     @State private var hasTriggeredAlignmentHaptic: Bool = false
@@ -678,6 +692,14 @@ struct QiblaCompassView: View {
                 .frame(width: 30, height: 170)
                 .shadow(color: Color.black.opacity(0.15), radius: 2, x: 0, y: 1)
 
+            // Kaaba icon at the tip - minimal
+            ZStack {
+                Circle()
+                    .fill(AppColors.primary.green)
+                    .frame(width: 32, height: 32)
+
+                Text("🕋")
+                    .font(.system(size: 18))
             // Enlarged Kaaba icon with QIBLA label - stays upright with pulse on alignment
             VStack(spacing: 4) {
                 Image(systemName: "house.fill")
@@ -724,6 +746,19 @@ struct QiblaCompassView: View {
 
     /// Alignment indicator showing when device points toward Qibla
     private var alignmentIndicator: some View {
+        HStack(spacing: 12) {
+            Image(systemName: viewModel.isAlignedWithQibla ? "checkmark.circle.fill" : "arrow.clockwise.circle.fill")
+                .font(.system(size: 24))
+                .foregroundColor(viewModel.isAlignedWithQibla ? AppColors.primary.green : AppColors.primary.teal)
+
+            VStack(alignment: .leading, spacing: 2) {
+                ThemedText(viewModel.isAlignedWithQibla ? "Aligned with Qibla!" : "Rotate to align", style: .body)
+                    .foregroundColor(viewModel.isAlignedWithQibla ? AppColors.primary.green : themeManager.currentTheme.textColor)
+                    .fontWeight(viewModel.isAlignedWithQibla ? .bold : .regular)
+
+                if !viewModel.isAlignedWithQibla {
+                    ThemedText.caption(viewModel.getAlignmentInstruction())
+                        // Caption style already uses textTertiary - no additional opacity needed
         let relativeAngle = (viewModel.qiblaDirection - viewModel.deviceHeading).truncatingRemainder(dividingBy: 360)
         let normalizedAngle = relativeAngle < 0 ? relativeAngle + 360 : relativeAngle
         let isAligned = abs(normalizedAngle) < 5 || abs(normalizedAngle - 360) < 5
@@ -774,6 +809,14 @@ struct QiblaCompassView: View {
         }
         .padding(Spacing.md)
         .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(viewModel.isAlignedWithQibla ? AppColors.primary.green.opacity(themeManager.currentTheme.gradientOpacity(for: AppColors.primary.green) * 2) : themeManager.currentTheme.cardColor)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(viewModel.isAlignedWithQibla ? AppColors.primary.green : AppColors.primary.teal.opacity(themeManager.currentTheme.gradientOpacity(for: AppColors.primary.teal) * 2), lineWidth: 2)
+        )
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: viewModel.isAlignedWithQibla)
             ZStack {
                 if isAligned {
                     // Glass morphism for aligned state
@@ -823,14 +866,10 @@ struct QiblaCompassView: View {
     }
 
     private func getAccessibilityDescription() -> String {
-        let relativeAngle = (viewModel.qiblaDirection - viewModel.deviceHeading).truncatingRemainder(dividingBy: 360)
-        let normalizedAngle = relativeAngle < 0 ? relativeAngle + 360 : relativeAngle
-        let isAligned = abs(normalizedAngle) < 5 || abs(normalizedAngle - 360) < 5
-
-        if isAligned {
+        if viewModel.isAlignedWithQibla {
             return "Aligned with Qibla. You are facing the direction of the Kaaba."
         } else {
-            let instruction = getAlignmentInstruction(normalizedAngle)
+            let instruction = viewModel.getAlignmentInstruction()
             return "Qibla is at \(viewModel.getDirectionText()). \(instruction) to align."
         }
     }
@@ -1066,6 +1105,11 @@ struct QiblaCompassView: View {
         .accessibilityRemoveTraits(.isButton)
     }
 
+    private var distanceCard: some View {
+        CardView {
+            HStack(spacing: 16) {
+                Text("🕋")
+                    .font(.system(size: 50))
     private var locationCard: some View {
         Button {
             // Future: show location details
