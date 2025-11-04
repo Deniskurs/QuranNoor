@@ -230,7 +230,7 @@ struct ConfettiView: View {
     private func generateConfetti() {
         pieces.removeAll()
 
-        let screenWidth = UIScreen.main.bounds.width
+        let screenWidth = UIScreen.current?.bounds.width ?? 400
         let startY: CGFloat = 0
 
         // Create 50 confetti pieces

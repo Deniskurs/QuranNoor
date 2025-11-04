@@ -85,7 +85,7 @@ struct LocationManagementModal: View {
     // MARK: - Save Current Location Button
     private var saveCurrentLocationButton: some View {
         Button {
-            HapticManager.shared.triggerImpact(style: .light)
+            HapticManager.shared.trigger(.light)
             dismiss()
             // Trigger callback after modal dismisses
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
@@ -145,7 +145,7 @@ struct LocationManagementModal: View {
             SectionHeader(title: "Current Location", icon: "location.circle.fill")
 
             Button {
-                HapticManager.shared.triggerImpact(style: .medium)
+                HapticManager.shared.trigger(.medium)
                 Task {
                     await viewModel.useGPSLocation()
                     dismiss()
@@ -172,7 +172,7 @@ struct LocationManagementModal: View {
 
             ForEach(filteredLocations) { location in
                 Button {
-                    HapticManager.shared.triggerImpact(style: .medium)
+                    HapticManager.shared.trigger(.medium)
                     Task {
                         await viewModel.useSavedLocation(location)
                         dismiss()
@@ -203,7 +203,7 @@ struct LocationManagementModal: View {
     // MARK: - Manual Location Hint
     private var manualLocationHint: some View {
         Button {
-            HapticManager.shared.triggerImpact(style: .light)
+            HapticManager.shared.trigger(.light)
             viewModel.showLocationPicker = true
             dismiss()
         } label: {

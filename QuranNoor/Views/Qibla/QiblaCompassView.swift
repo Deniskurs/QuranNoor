@@ -123,109 +123,114 @@ struct QiblaCompassView: View {
         }
     }
 
+    // MARK: - Main Content
+    private var mainContent: some View {
+        ZStack {
+            // Base theme background (ensures pure black in night mode for OLED)
+            themeManager.currentTheme.backgroundColor
+                .ignoresSafeArea()
+
+            // Time-based dynamic gradient background
+            LinearGradient(
+                colors: timeBasedGradient,
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+            .animation(.linear(duration: 2.0), value: timeBasedGradient)
+
+            // Gradient overlay (automatically suppressed in night mode)
+            GradientBackground(style: .serenity, opacity: 0.3)
+
+            ScrollView {
+                VStack(spacing: Spacing.sectionSpacing) {
+                    if viewModel.isLoading {
+                        LoadingView(size: .large, message: "Finding Qibla direction...")
+                    } else {
+                        // Distance Card (moved to top for prominence)
+                        distanceCard
+
+                        // Compass with particle effects
+                        ZStack {
+                            compassSection
+
+                            // Star particles (respect reduce motion preference)
+                            if !reduceMotion {
+                                ParticleEmitterView(
+                                    isEmitting: viewModel.isAlignedWithQibla,
+                                    center: CGPoint(x: 140, y: 140)
+                                )
+                                .frame(width: compassSize, height: compassSize)
+                                .allowsHitTesting(false)
+                            }
+
+                            // Calibration accuracy ring
+                            if isCalibrating {
+                                Circle()
+                                    .stroke(
+                                        AppColors.primary.teal.opacity(0.4),
+                                        style: StrokeStyle(lineWidth: 2, dash: [5, 5])
+                                    )
+                                    .frame(width: 300, height: 300)
+                                    .scaleEffect(accuracyRingScale)
+                                    .opacity(accuracyRingOpacity)
+                            }
+
+                            // Loading overlay during calibration
+                            if isCalibrating {
+                                Circle()
+                                    .fill(themeManager.currentTheme.backgroundColor.opacity(0.3))
+                                    .frame(width: 280, height: 280)
+                                    .overlay(
+                                        ProgressView()
+                                            .tint(AppColors.primary.teal)
+                                            .scaleEffect(1.5)
+                                    )
+                            }
+                        }
+
+                        // Calibration button
+                        calibrationButton
+                            .padding(.horizontal, Spacing.screenPadding)
+
+                        // Calibration success message
+                        if showCalibrationSuccess {
+                            calibrationSuccessView
+                                .transition(.asymmetric(
+                                    insertion: .move(edge: .top).combined(with: .opacity),
+                                    removal: .move(edge: .bottom).combined(with: .opacity)
+                                ))
+                        }
+
+                        // Direction Info
+                        directionInfoSection
+
+                        // Location Card
+                        locationCard
+                    }
+                }
+                .padding(Spacing.screenPadding)
+            }
+
+            // Confetti overlay (full screen, respect reduce motion)
+            if showConfetti && !reduceMotion {
+                ConfettiView(show: showConfetti)
+                    .ignoresSafeArea()
+                    .allowsHitTesting(false)
+            }
+
+            // Tutorial overlay (Phase 4.3)
+            if showTutorial {
+                QiblaTutorialOverlay(isPresented: $showTutorial)
+                    .environmentObject(themeManager)
+            }
+        }
+    }
+
     // MARK: - Body
     var body: some View {
         NavigationStack {
-            ZStack {
-                // Base theme background (ensures pure black in night mode for OLED)
-                themeManager.currentTheme.backgroundColor
-                    .ignoresSafeArea()
-
-                // Time-based dynamic gradient background
-                LinearGradient(
-                    colors: timeBasedGradient,
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .ignoresSafeArea()
-                .animation(.linear(duration: 2.0), value: timeBasedGradient)
-
-                // Gradient overlay (automatically suppressed in night mode)
-                GradientBackground(style: .serenity, opacity: 0.3)
-
-                ScrollView {
-                    VStack(spacing: Spacing.sectionSpacing) {
-                        if viewModel.isLoading {
-                            LoadingView(size: .large, message: "Finding Qibla direction...")
-                        } else {
-                            // Distance Card (moved to top for prominence)
-                            distanceCard
-
-                            // Compass with particle effects
-                            ZStack {
-                                compassSection
-
-                                // Star particles (respect reduce motion preference)
-                                if !reduceMotion {
-                                    ParticleEmitterView(
-                                        isEmitting: viewModel.isAlignedWithQibla,
-                                        center: CGPoint(x: 140, y: 140)
-                                    )
-                                    .frame(width: compassSize, height: compassSize)
-                                    .allowsHitTesting(false)
-                                }
-
-                                // Calibration accuracy ring
-                                if isCalibrating {
-                                    Circle()
-                                        .stroke(
-                                            AppColors.primary.teal.opacity(0.4),
-                                            style: StrokeStyle(lineWidth: 2, dash: [5, 5])
-                                        )
-                                        .frame(width: 300, height: 300)
-                                        .scaleEffect(accuracyRingScale)
-                                        .opacity(accuracyRingOpacity)
-                                }
-
-                                // Loading overlay during calibration
-                                if isCalibrating {
-                                    Circle()
-                                        .fill(themeManager.currentTheme.backgroundColor.opacity(0.3))
-                                        .frame(width: 280, height: 280)
-                                        .overlay(
-                                            ProgressView()
-                                                .tint(AppColors.primary.teal)
-                                                .scaleEffect(1.5)
-                                        )
-                                }
-                            }
-
-                            // Calibration button
-                            calibrationButton
-                                .padding(.horizontal, Spacing.screenPadding)
-
-                            // Calibration success message
-                            if showCalibrationSuccess {
-                                calibrationSuccessView
-                                    .transition(.asymmetric(
-                                        insertion: .move(edge: .top).combined(with: .opacity),
-                                        removal: .move(edge: .bottom).combined(with: .opacity)
-                                    ))
-                            }
-
-                            // Direction Info
-                            directionInfoSection
-
-                            // Location Card
-                            locationCard
-                        }
-                    }
-                    .padding(Spacing.screenPadding)
-                }
-
-                // Confetti overlay (full screen, respect reduce motion)
-                if showConfetti && !reduceMotion {
-                    ConfettiView(show: showConfetti)
-                        .ignoresSafeArea()
-                        .allowsHitTesting(false)
-                }
-
-                // Tutorial overlay (Phase 4.3)
-                if showTutorial {
-                    QiblaTutorialOverlay(isPresented: $showTutorial)
-                        .environmentObject(themeManager)
-                }
-            }
+            mainContent
             .navigationTitle("")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
@@ -249,7 +254,7 @@ struct QiblaCompassView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
-                        HapticManager.shared.triggerImpact(style: .light)
+                        HapticManager.shared.trigger(.light)
                         showLocationModal = true
                         menuTrigger += 1
                     } label: {
@@ -545,16 +550,16 @@ struct QiblaCompassView: View {
                         center: .center,
                         angle: .degrees(gradientRotation)
                     )
-                    .overlay(
-                        RadialGradient(
-                            gradient: Gradient(stops: [
-                                .init(color: themeManager.currentTheme.cardColor.opacity(0.8), location: 0.0),
-                                .init(color: Color.clear, location: 0.6)
-                            ]),
-                            center: .center,
-                            startRadius: 0,
-                            endRadius: 140
-                        )
+                )
+                .overlay(
+                    RadialGradient(
+                        gradient: Gradient(stops: [
+                            .init(color: themeManager.currentTheme.cardColor.opacity(0.8), location: 0.0),
+                            .init(color: Color.clear, location: 0.6)
+                        ]),
+                        center: .center,
+                        startRadius: 0,
+                        endRadius: 140
                     )
                 )
                 .frame(width: 280, height: 280)
@@ -1225,7 +1230,7 @@ struct QiblaCompassView: View {
         accuracyRingOpacity = 1.0
 
         // Play success feedback
-        HapticManager.shared.triggerSuccess()
+        HapticManager.shared.trigger(.success)
         AudioHapticCoordinator.shared.playSuccess()
 
         // Show success message

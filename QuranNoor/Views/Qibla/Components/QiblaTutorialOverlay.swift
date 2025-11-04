@@ -157,7 +157,7 @@ struct QiblaTutorialOverlay: View {
             UserDefaults.standard.set(true, forKey: "hasSeenQiblaTutorial")
         }
 
-        HapticManager.shared.triggerLight()
+        HapticManager.shared.trigger(.light)
 
         withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
             isPresented = false
