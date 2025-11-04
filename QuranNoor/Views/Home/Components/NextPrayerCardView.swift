@@ -25,8 +25,14 @@ struct NextPrayerCardView: View {
                 }
             }
         }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            selectedTab = 2 // Navigate to Prayer tab
+            AudioHapticCoordinator.shared.playToast()
+        }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityLabel)
+        .accessibilityHint("Double tap to open Prayer Times")
     }
 
     // MARK: - Content Views
@@ -105,16 +111,11 @@ struct NextPrayerCardView: View {
                     .padding(.vertical, Spacing.xxxs) // Subtle spacing
             }
 
-            // Quick action button
-            PrimaryButton(
-                "View All Prayer Times",
-                icon: "list.bullet",
-                playSound: false,
-                action: {
-                    selectedTab = 2 // Navigate to Prayer tab
-                }
-            )
-            .frame(height: 44)
+            // Tap hint
+            Text("Tap card for all prayer times")
+                .font(.caption)
+                .foregroundColor(themeManager.currentTheme.textTertiary)
+                .padding(.top, Spacing.xxs)
         }
     }
 
@@ -166,77 +167,73 @@ struct NextPrayerCardView: View {
                 startPulsing()
             }
 
-            // Action buttons
-            HStack(spacing: 12) {
-                SecondaryButton(
-                    "Snooze 5min",
-                    icon: "clock.arrow.circlepath",
-                    action: {
-                        // Snooze notification
-                    }
-                )
-
-                PrimaryButton(
-                    "View Details",
-                    icon: "info.circle",
-                    action: {
-                        selectedTab = 2 // Navigate to Prayer tab
-                    }
-                )
-            }
-            .frame(height: 44)
+            // Tap hint
+            Text("Tap card for details")
+                .font(.caption)
+                .foregroundColor(themeManager.currentTheme.textTertiary)
         }
     }
 
     // Prayer window active (time to pray now)
     private func prayerWindowContent(prayer: PrayerName, period: PrayerPeriod) -> some View {
-        VStack(spacing: Spacing.md) { // Enhanced from 16 to 24
-            // Active prayer header
+        let isCompleted = PrayerCompletionService.shared.isCompleted(prayer)
+
+        return VStack(spacing: Spacing.md) {
+            // Active prayer header with completion status
             HStack {
                 Text("🕌")
                     .font(.title2)
-                    .foregroundColor(AppColors.primary.green)
 
                 Text("TIME FOR \(prayer.displayName.uppercased())")
                     .font(.headline)
                     .fontWeight(.bold)
-                    .foregroundColor(AppColors.primary.green)
+                    .foregroundColor(isCompleted ? AppColors.primary.green : AppColors.primary.gold)
 
                 Spacer()
+
+                // Completion indicator
+                if isCompleted {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.title2)
+                        .foregroundColor(AppColors.primary.green)
+                        .symbolEffect(.bounce, value: isCompleted)
+                }
             }
 
-            // Inspirational quote
-            Text("Prayer is better than sleep")
-                .font(.title3)
-                .italic()
-                .foregroundColor(themeManager.currentTheme.textSecondary)
-                .multilineTextAlignment(.center)
-                .padding(.vertical, 8)
+            // Prayer name (large)
+            Text(prayer.displayName)
+                .font(.system(size: 48, weight: .bold))
+                .tracking(-0.5)
+                .foregroundColor(themeManager.currentTheme.textPrimary)
+                .padding(.vertical, Spacing.xxs)
 
-            // Action buttons
-            VStack(spacing: 12) {
-                PrimaryButton(
-                    "I've Prayed",
-                    icon: "checkmark.circle.fill",
-                    action: {
-                        // Mark prayer as completed
-                    }
-                )
-                .frame(height: 50)
-
-                SecondaryButton(
-                    "Remind me in 10 minutes",
-                    icon: "clock.arrow.circlepath",
-                    action: {
-                        // Schedule reminder
-                    }
-                )
-                .frame(height: 44)
-            }
-
-            // Window duration
+            // Countdown to deadline
             if let nextPrayer = period.nextPrayer {
-                Text("Window closes at \(nextPrayer.time, formatter: timeFormatter)")
+                VStack(spacing: Spacing.xxs) {
+                    Text("Window ends in")
+                        .font(.subheadline)
+                        .foregroundColor(themeManager.currentTheme.textSecondary)
+
+                    Text(period.countdownString)
+                        .font(.system(size: 40, weight: .medium, design: .rounded))
+                        .foregroundColor(AppColors.primary.teal)
+                        .contentTransition(.numericText())
+                        .monospacedDigit()
+
+                    Text("at \(nextPrayer.time, formatter: timeFormatter)")
+                        .font(.caption)
+                        .foregroundColor(themeManager.currentTheme.textTertiary)
+                }
+                .padding(.vertical, Spacing.xs)
+            }
+
+            // Status message
+            if isCompleted {
+                Text("Prayer marked complete ✓")
+                    .font(.subheadline)
+                    .foregroundColor(AppColors.primary.green)
+            } else {
+                Text("Tap card to mark complete or set reminder")
                     .font(.caption)
                     .foregroundColor(themeManager.currentTheme.textTertiary)
             }
