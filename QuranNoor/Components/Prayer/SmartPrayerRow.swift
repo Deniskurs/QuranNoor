@@ -35,7 +35,7 @@ struct SmartPrayerRow: View {
                 // Completion checkbox - Large tap area
                 Button {
                     // Play audio + haptic feedback for checkbox tap
-                    AudioHapticCoordinator.shared.playPrayerCheckbox()
+                    // AudioHapticCoordinator.shared.playPrayerCheckbox() // Removed: button press sound
 
                     // Scale animation on tap
                     withAnimation(.spring(response: 0.2, dampingFraction: 0.6)) {

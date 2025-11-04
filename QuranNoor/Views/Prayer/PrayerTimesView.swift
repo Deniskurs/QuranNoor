@@ -177,7 +177,7 @@ struct PrayerTimesView: View {
                 showUndo: true,
                 onUndo: {
                     // Play back sound for undo action
-                    AudioHapticCoordinator.shared.playBack()
+                    // AudioHapticCoordinator.shared.playBack() // Removed: button press sound
 
                     // Undo the completion
                     if let prayer = lastCompletedPrayer {
