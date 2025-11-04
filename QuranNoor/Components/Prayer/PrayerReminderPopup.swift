@@ -81,7 +81,7 @@ struct PrayerReminderPopup: View {
                     // Not Yet button
                     Button {
                         // Play back sound + haptic for "Not Yet"
-                        AudioHapticCoordinator.shared.playBack()
+                        // AudioHapticCoordinator.shared.playBack() // Removed: button press sound
                         dismiss()
                     } label: {
                         Text("Not Yet")
@@ -98,7 +98,7 @@ struct PrayerReminderPopup: View {
                     // Yes, Alhamdulillah button
                     Button {
                         // Play confirm sound + success haptic for "Yes"
-                        AudioHapticCoordinator.shared.playSuccess()
+                        // AudioHapticCoordinator.shared.playSuccess() // Removed: button press sound
 
                         withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
                             onComplete()
