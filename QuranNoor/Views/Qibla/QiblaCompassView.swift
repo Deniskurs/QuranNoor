@@ -227,122 +227,21 @@ struct QiblaCompassView: View {
         }
     }
 
-    // MARK: - Body
-    var body: some View {
-        NavigationStack {
-            mainContent
+    // MARK: - Configured Content with Lifecycle
+    private var contentWithLifecycle: some View {
+        mainContent
             .navigationTitle("")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
-            .toolbar {
-                ToolbarItem(placement: .principal) {
-                    VStack(spacing: 4) {
-                        Image(systemName: "safari")
-                            .font(.title3)
-                            .foregroundStyle(AppColors.primary.teal)
-                            .symbolRenderingMode(.hierarchical)
-                            .shadow(color: AppColors.primary.teal.opacity(0.3), radius: 8, x: 0, y: 2)
-                            .opacity(viewModel.isLoading ? searchPulse : 1.0)
-                            .scaleEffect(viewModel.isLoading ? searchPulse : 1.0)
+            .toolbar { toolbarContent }
+            .task { await viewModel.initialize() }
+            .onAppear { setupViewOnAppear() }
+    }
 
-                        Text("Qibla Direction")
-                            .font(.headline.weight(.semibold))
-                    }
-                }
-            }
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        HapticManager.shared.trigger(.light)
-                        showLocationModal = true
-                        menuTrigger += 1
-                    } label: {
-                        Image(systemName: "ellipsis.circle.fill")
-                            .font(.title3)
-                            .foregroundStyle(AppColors.primary.teal)
-                            .symbolEffect(.bounce, value: menuTrigger)
-                    }
-                    .frame(minWidth: 44, minHeight: 44)
-                    .accessibilityLabel("Location settings")
-                    .accessibilityHint("Manage saved locations and GPS settings")
-                }
-            }
-            .task {
-                await viewModel.initialize()
-            }
-            .onAppear {
-                isGlowing = true
-                displayDistance = viewModel.distanceToMakkah
-
-                // Staggered icon bounce-in animations (respect reduce motion)
-                if !reduceMotion {
-                    withAnimation(.spring(response: 0.6, dampingFraction: 0.6).delay(0.1)) {
-                        distanceIconScale = 1.0
-                    }
-                    withAnimation(.spring(response: 0.6, dampingFraction: 0.6).delay(0.15)) {
-                        locationIconScale = 1.0
-                    }
-                    withAnimation(.spring(response: 0.6, dampingFraction: 0.6).delay(0.2)) {
-                        directionIconScale = 1.0
-                    }
-
-                    // Cardinal directions fade in
-                    withAnimation(.spring(response: 0.6, dampingFraction: 0.7).delay(0.2)) {
-                        cardinalOpacity = 1.0
-                        cardinalScale = 1.0
-                    }
-                } else {
-                    // Instant appearance for reduce motion
-                    distanceIconScale = 1.0
-                    locationIconScale = 1.0
-                    directionIconScale = 1.0
-                    cardinalOpacity = 1.0
-                    cardinalScale = 1.0
-                }
-
-                // Dynamic gradient animations (Phase 3.3)
-
-                // 1. Initialize time-based background gradient (always show, informational)
-                timeBasedGradient = calculateTimeBasedGradient()
-
-                // Update gradient every 15 minutes
-                Timer.scheduledTimer(withTimeInterval: 900, repeats: true) { _ in
-                    timeBasedGradient = calculateTimeBasedGradient()
-                }
-
-                // Decorative animations (only if reduce motion is off)
-                if !reduceMotion {
-                    // 2. Rotating compass gradient (30-second cycle)
-                    withAnimation(.linear(duration: 30).repeatForever(autoreverses: false)) {
-                        gradientRotation = 360
-                    }
-
-                    // 3. Card gradient offset animation (4-second cycle)
-                    withAnimation(.easeInOut(duration: 4.0).repeatForever(autoreverses: true)) {
-                        cardGradientOffset = 50
-                    }
-
-                    // 4. Compass shadow depth animation (3-second cycle)
-                    withAnimation(.easeInOut(duration: 3.0).repeatForever(autoreverses: true)) {
-                        shadowDepth = 30
-                    }
-
-                    // 5. Distance card shimmer animation (3-second continuous)
-                    withAnimation(.linear(duration: 3.0).repeatForever(autoreverses: false)) {
-                        shimmerOffset = 2.0
-                    }
-                }
-
-                // 6. Check if tutorial should be shown (Phase 4.3)
-                if !UserDefaults.standard.bool(forKey: "hasSeenQiblaTutorial") {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                            showTutorial = true
-                        }
-                    }
-                }
-            }
+    // MARK: - Content with Alerts
+    private var contentWithAlerts: some View {
+        contentWithLifecycle
             .alert("Error", isPresented: $viewModel.showError) {
                 Button("OK", role: .cancel) {}
             } message: {
@@ -358,101 +257,90 @@ struct QiblaCompassView: View {
                         locationName = ""
                     }
                 }
-                Button("Cancel", role: .cancel) {
-                    locationName = ""
-                }
+                Button("Cancel", role: .cancel) { locationName = "" }
             } message: {
                 Text("Enter a name for this location")
             }
+    }
+
+    // MARK: - Content with Sheets
+    private var contentWithSheets: some View {
+        contentWithAlerts
             .sheet(isPresented: $viewModel.showLocationPicker) {
                 LocationPickerView(viewModel: viewModel)
                     .presentationDetents([.medium, .large])
                     .presentationDragIndicator(.visible)
             }
             .sheet(isPresented: $showLocationModal) {
-                LocationManagementModal(
-                    viewModel: viewModel,
-                    onSaveCurrentLocation: {
-                        showSaveLocationAlert = true
-                    }
-                )
+                LocationManagementModal(viewModel: viewModel) {
+                    showSaveLocationAlert = true
+                }
                 .environmentObject(themeManager)
             }
-            .onChange(of: viewModel.deviceHeading) { oldValue, newValue in
-                // Update compass ring rotation (normalize to prevent glitch at 0°/360°)
-                let diff = normalizeAngleDifference(current: normalizedCompassRotation, target: -newValue)
-                normalizedCompassRotation += diff
+    }
 
-                // Also update needle rotation since it depends on device heading
+    // MARK: - Configured Content
+    private var configuredContent: some View {
+        contentWithSheets
+            .onChange(of: viewModel.deviceHeading) { _, newValue in
+                handleDeviceHeadingChange(newValue)
+            }
+            .onChange(of: viewModel.qiblaDirection) { _, _ in
                 updateNeedleRotation()
             }
-            .onChange(of: viewModel.qiblaDirection) { oldValue, newValue in
-                // Update needle rotation when Qibla direction changes
-                updateNeedleRotation()
+            .onChange(of: viewModel.isAlignedWithQibla) { _, newValue in
+                handleAlignmentChange(newValue)
             }
-            .onChange(of: viewModel.isAlignedWithQibla) { oldValue, newValue in
-                // Trigger confetti on first alignment (respect reduce motion)
-                if newValue && !hasAlignedBefore {
-                    hasAlignedBefore = true
-                    if !reduceMotion {
-                        showConfetti = true
-
-                        // Hide confetti after 3.5 seconds
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 3.5) {
-                            showConfetti = false
-                        }
-                    }
-                }
-
-                // Pulse glow intensity when aligned (respect reduce motion)
-                if !reduceMotion {
-                    if newValue {
-                        withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
-                            glowIntensity = 0.8
-                        }
-                    } else {
-                        withAnimation(.easeInOut(duration: 0.5)) {
-                            glowIntensity = 0.4
-                        }
-                    }
-                }
-
-                // Accessibility announcement
-                if newValue {
-                    UIAccessibility.post(notification: .announcement, argument: "Aligned with Qibla")
-                }
-            }
-            .onChange(of: viewModel.distanceToMakkah) { oldValue, newValue in
-                // Animate distance change with count-up effect
+            .onChange(of: viewModel.distanceToKaaba) { _, newValue in
                 animateDistanceChange(to: newValue)
             }
-            .onChange(of: viewModel.isLoading) { oldValue, newValue in
-                // Pulse compass during loading
-                isPulsing = newValue
+            .onChange(of: viewModel.isLoading) { _, newValue in
+                handleLoadingChange(newValue)
+            }
+            .onChange(of: isCalibrating) { _, newValue in
+                handleCalibrationChange(newValue)
+            }
+    }
 
-                // Pulse search indicators when loading/searching (respect reduce motion)
-                if !reduceMotion {
-                    if newValue {
-                        withAnimation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) {
-                            searchPulse = 0.6
-                        }
-                    } else {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                            searchPulse = 1.0
-                        }
-                    }
-                } else {
-                    searchPulse = 1.0
-                }
+    // MARK: - Toolbar Content
+    @ToolbarContentBuilder
+    private var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .principal) {
+            VStack(spacing: 4) {
+                Image(systemName: "safari")
+                    .font(.title3)
+                    .foregroundStyle(AppColors.primary.teal)
+                    .symbolRenderingMode(.hierarchical)
+                    .shadow(color: AppColors.primary.teal.opacity(0.3), radius: 8, x: 0, y: 2)
+                    .opacity(viewModel.isLoading ? searchPulse : 1.0)
+                    .scaleEffect(viewModel.isLoading ? searchPulse : 1.0)
+
+                Text("Qibla Direction")
+                    .font(.headline.weight(.semibold))
             }
-            .onChange(of: isCalibrating) { oldValue, newValue in
-                // Accessibility announcement for calibration state
-                if newValue {
-                    UIAccessibility.post(notification: .announcement, argument: "Updating location")
-                } else {
-                    UIAccessibility.post(notification: .announcement, argument: "Location updated")
-                }
+        }
+
+        ToolbarItem(placement: .navigationBarTrailing) {
+            Button {
+                HapticManager.shared.trigger(.light)
+                showLocationModal = true
+                menuTrigger += 1
+            } label: {
+                Image(systemName: "ellipsis.circle.fill")
+                    .font(.title3)
+                    .foregroundStyle(AppColors.primary.teal)
+                    .symbolEffect(.bounce, value: menuTrigger)
             }
+            .frame(minWidth: 44, minHeight: 44)
+            .accessibilityLabel("Location settings")
+            .accessibilityHint("Manage saved locations and GPS settings")
+        }
+    }
+
+    // MARK: - Body
+    var body: some View {
+        NavigationStack {
+            configuredContent
         }
     }
 
@@ -477,6 +365,130 @@ struct QiblaCompassView: View {
             DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * 0.05) {
                 displayDistance += increment
             }
+        }
+    }
+
+    /// Setup animations and state when view appears
+    private func setupViewOnAppear() {
+        isGlowing = true
+        displayDistance = viewModel.distanceToKaaba
+
+        // Staggered icon bounce-in animations (respect reduce motion)
+        if !reduceMotion {
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.6).delay(0.1)) {
+                distanceIconScale = 1.0
+            }
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.6).delay(0.15)) {
+                locationIconScale = 1.0
+            }
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.6).delay(0.2)) {
+                directionIconScale = 1.0
+            }
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.7).delay(0.2)) {
+                cardinalOpacity = 1.0
+                cardinalScale = 1.0
+            }
+        } else {
+            distanceIconScale = 1.0
+            locationIconScale = 1.0
+            directionIconScale = 1.0
+            cardinalOpacity = 1.0
+            cardinalScale = 1.0
+        }
+
+        // Initialize time-based background gradient
+        timeBasedGradient = calculateTimeBasedGradient()
+        Timer.scheduledTimer(withTimeInterval: 900, repeats: true) { _ in
+            timeBasedGradient = calculateTimeBasedGradient()
+        }
+
+        // Decorative animations (only if reduce motion is off)
+        if !reduceMotion {
+            withAnimation(.linear(duration: 30).repeatForever(autoreverses: false)) {
+                gradientRotation = 360
+            }
+            withAnimation(.easeInOut(duration: 4.0).repeatForever(autoreverses: true)) {
+                cardGradientOffset = 50
+            }
+            withAnimation(.easeInOut(duration: 3.0).repeatForever(autoreverses: true)) {
+                shadowDepth = 30
+            }
+            withAnimation(.linear(duration: 3.0).repeatForever(autoreverses: false)) {
+                shimmerOffset = 2.0
+            }
+        }
+
+        // Check if tutorial should be shown
+        if !UserDefaults.standard.bool(forKey: "hasSeenQiblaTutorial") {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                    showTutorial = true
+                }
+            }
+        }
+    }
+
+    /// Handle device heading changes
+    private func handleDeviceHeadingChange(_ newValue: Double) {
+        let diff = normalizeAngleDifference(current: normalizedCompassRotation, target: -newValue)
+        normalizedCompassRotation += diff
+        updateNeedleRotation()
+    }
+
+    /// Handle Qibla alignment changes
+    private func handleAlignmentChange(_ newValue: Bool) {
+        if newValue && !hasAlignedBefore {
+            hasAlignedBefore = true
+            if !reduceMotion {
+                showConfetti = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3.5) {
+                    showConfetti = false
+                }
+            }
+        }
+
+        if !reduceMotion {
+            if newValue {
+                withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
+                    glowIntensity = 0.8
+                }
+            } else {
+                withAnimation(.easeInOut(duration: 0.5)) {
+                    glowIntensity = 0.4
+                }
+            }
+        }
+
+        if newValue {
+            UIAccessibility.post(notification: .announcement, argument: "Aligned with Qibla")
+        }
+    }
+
+    /// Handle loading state changes
+    private func handleLoadingChange(_ newValue: Bool) {
+        isPulsing = newValue
+
+        if !reduceMotion {
+            if newValue {
+                withAnimation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) {
+                    searchPulse = 0.6
+                }
+            } else {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                    searchPulse = 1.0
+                }
+            }
+        } else {
+            searchPulse = 1.0
+        }
+    }
+
+    /// Handle calibration state changes
+    private func handleCalibrationChange(_ newValue: Bool) {
+        if newValue {
+            UIAccessibility.post(notification: .announcement, argument: "Updating location")
+        } else {
+            UIAccessibility.post(notification: .announcement, argument: "Location updated")
         }
     }
 
