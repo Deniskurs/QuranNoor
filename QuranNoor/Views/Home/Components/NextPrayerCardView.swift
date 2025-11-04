@@ -111,11 +111,6 @@ struct NextPrayerCardView: View {
                     .padding(.vertical, Spacing.xxxs) // Subtle spacing
             }
 
-            // Tap hint
-            Text("Tap card for all prayer times")
-                .font(.caption)
-                .foregroundColor(themeManager.currentTheme.textTertiary)
-                .padding(.top, Spacing.xxs)
         }
     }
 
@@ -166,11 +161,6 @@ struct NextPrayerCardView: View {
             .task {
                 startPulsing()
             }
-
-            // Tap hint
-            Text("Tap card for details")
-                .font(.caption)
-                .foregroundColor(themeManager.currentTheme.textTertiary)
         }
     }
 
@@ -179,7 +169,7 @@ struct NextPrayerCardView: View {
         let isCompleted = PrayerCompletionService.shared.isCompleted(prayer)
 
         return VStack(spacing: Spacing.md) {
-            // Active prayer header with completion status
+            // Active prayer header
             HStack {
                 Text("🕌")
                     .font(.title2)
@@ -187,7 +177,7 @@ struct NextPrayerCardView: View {
                 Text("TIME FOR \(prayer.displayName.uppercased())")
                     .font(.headline)
                     .fontWeight(.bold)
-                    .foregroundColor(isCompleted ? AppColors.primary.green : AppColors.primary.gold)
+                    .foregroundColor(AppColors.primary.green)
 
                 Spacer()
 
@@ -196,46 +186,24 @@ struct NextPrayerCardView: View {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.title2)
                         .foregroundColor(AppColors.primary.green)
-                        .symbolEffect(.bounce, value: isCompleted)
                 }
             }
 
-            // Prayer name (large)
-            Text(prayer.displayName)
-                .font(.system(size: 48, weight: .bold))
-                .tracking(-0.5)
-                .foregroundColor(themeManager.currentTheme.textPrimary)
-                .padding(.vertical, Spacing.xxs)
-
-            // Countdown to deadline
+            // Large countdown
             if let nextPrayer = period.nextPrayer {
-                VStack(spacing: Spacing.xxs) {
-                    Text("Window ends in")
-                        .font(.subheadline)
-                        .foregroundColor(themeManager.currentTheme.textSecondary)
-
+                VStack(spacing: Spacing.xs) {
                     Text(period.countdownString)
-                        .font(.system(size: 40, weight: .medium, design: .rounded))
+                        .font(.system(size: 72, weight: .ultraLight, design: .rounded))
+                        .tracking(2)
                         .foregroundColor(AppColors.primary.teal)
                         .contentTransition(.numericText())
                         .monospacedDigit()
 
-                    Text("at \(nextPrayer.time, formatter: timeFormatter)")
-                        .font(.caption)
-                        .foregroundColor(themeManager.currentTheme.textTertiary)
+                    Text("until \(nextPrayer.name.displayName)")
+                        .font(.subheadline)
+                        .foregroundColor(themeManager.currentTheme.textSecondary)
                 }
-                .padding(.vertical, Spacing.xs)
-            }
-
-            // Status message
-            if isCompleted {
-                Text("Prayer marked complete ✓")
-                    .font(.subheadline)
-                    .foregroundColor(AppColors.primary.green)
-            } else {
-                Text("Tap card to mark complete or set reminder")
-                    .font(.caption)
-                    .foregroundColor(themeManager.currentTheme.textTertiary)
+                .padding(.vertical, Spacing.xxs)
             }
         }
     }
