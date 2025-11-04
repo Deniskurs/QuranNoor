@@ -33,7 +33,9 @@ final class AccessibilityHelper: ObservableObject {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            self?.isVoiceOverRunning = UIAccessibility.isVoiceOverRunning
+            DispatchQueue.main.async {
+                self?.isVoiceOverRunning = UIAccessibility.isVoiceOverRunning
+            }
         }
 
         NotificationCenter.default.addObserver(
@@ -41,7 +43,9 @@ final class AccessibilityHelper: ObservableObject {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            self?.isReduceMotionEnabled = UIAccessibility.isReduceMotionEnabled
+            DispatchQueue.main.async {
+                self?.isReduceMotionEnabled = UIAccessibility.isReduceMotionEnabled
+            }
         }
 
         NotificationCenter.default.addObserver(
@@ -49,7 +53,9 @@ final class AccessibilityHelper: ObservableObject {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            self?.isBoldTextEnabled = UIAccessibility.isBoldTextEnabled
+            DispatchQueue.main.async {
+                self?.isBoldTextEnabled = UIAccessibility.isBoldTextEnabled
+            }
         }
 
         NotificationCenter.default.addObserver(
@@ -57,7 +63,9 @@ final class AccessibilityHelper: ObservableObject {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            self?.isReduceTransparencyEnabled = UIAccessibility.isReduceTransparencyEnabled
+            DispatchQueue.main.async {
+                self?.isReduceTransparencyEnabled = UIAccessibility.isReduceTransparencyEnabled
+            }
         }
 
         NotificationCenter.default.addObserver(
@@ -65,7 +73,9 @@ final class AccessibilityHelper: ObservableObject {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            self?.isDarkerSystemColorsEnabled = UIAccessibility.isDarkerSystemColorsEnabled
+            DispatchQueue.main.async {
+                self?.isDarkerSystemColorsEnabled = UIAccessibility.isDarkerSystemColorsEnabled
+            }
         }
     }
 

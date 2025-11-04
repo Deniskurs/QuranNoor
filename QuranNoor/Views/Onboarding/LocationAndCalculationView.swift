@@ -413,13 +413,27 @@ struct LocationAndCalculationView: View {
             let response = try await search.start()
 
             // Get country code from first map item
-            if let mapItem = response.mapItems.first,
-               let countryCode = mapItem.placemark.isoCountryCode {
-                await MainActor.run {
-                    detectedCountry = countryCode
-                    // Auto-select recommended method
-                    let recommended = coordinator.recommendedCalculationMethod(for: countryCode)
-                    coordinator.selectedCalculationMethod = recommended
+            // iOS 26 Note: placemark is deprecated but addressRepresentations doesn't expose country codes
+            // Using device locale as fallback since Apple hasn't provided replacement API
+            if let mapItem = response.mapItems.first {
+                let countryCode: String?
+
+                // Try to get country from region name in addressRepresentations
+                // This gives us the country name, not code, so we'll use locale as fallback
+                if #available(iOS 26.0, *) {
+                    // Fallback to device's region code (best approximation available)
+                    countryCode = Locale.current.region?.identifier
+                } else {
+                    countryCode = mapItem.placemark.countryCode
+                }
+
+                if let countryCode = countryCode {
+                    await MainActor.run {
+                        detectedCountry = countryCode
+                        // Auto-select recommended method
+                        let recommended = coordinator.recommendedCalculationMethod(for: countryCode)
+                        coordinator.selectedCalculationMethod = recommended
+                    }
                 }
             }
         } catch {
