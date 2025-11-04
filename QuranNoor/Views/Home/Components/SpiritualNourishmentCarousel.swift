@@ -347,8 +347,8 @@ struct LoadingContentCard: View {
                     ForEach(0..<6, id: \.self) { index in
                         RoundedRectangle(cornerRadius: 4)
                             .fill(skeletonGradient)
-                            .frame(maxWidth: index == 5 ? 200 : .infinity, alignment: .leading)
                             .frame(height: 18)
+                            .frame(maxWidth: index == 5 ? 200 : nil, alignment: .leading)
                     }
                 }
 

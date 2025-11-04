@@ -23,20 +23,6 @@ struct QiblaCompassView: View {
     @State private var normalizedCompassRotation: Double = 0
     @State private var normalizedNeedleRotation: Double = 0
 
-    // MARK: - Body
-    var body: some View {
-        NavigationStack {
-            ZStack {
-                // Base theme background (ensures pure black in night mode for OLED)
-                themeManager.currentTheme.backgroundColor
-                    .ignoresSafeArea()
-
-                ScrollView {
-                    VStack(spacing: 16) {
-                        if viewModel.isLoading {
-                            LoadingView(size: .large, message: "Finding Qibla direction...")
-                        } else {
-                            // Compass
     // Haptic feedback state for alignment
     @State private var wasAligned: Bool = false
     @State private var hasTriggeredAlignmentHaptic: Bool = false
@@ -692,14 +678,6 @@ struct QiblaCompassView: View {
                 .frame(width: 30, height: 170)
                 .shadow(color: Color.black.opacity(0.15), radius: 2, x: 0, y: 1)
 
-            // Kaaba icon at the tip - minimal
-            ZStack {
-                Circle()
-                    .fill(AppColors.primary.green)
-                    .frame(width: 32, height: 32)
-
-                Text("🕋")
-                    .font(.system(size: 18))
             // Enlarged Kaaba icon with QIBLA label - stays upright with pulse on alignment
             VStack(spacing: 4) {
                 Image(systemName: "house.fill")
@@ -750,54 +728,20 @@ struct QiblaCompassView: View {
             Image(systemName: viewModel.isAlignedWithQibla ? "checkmark.circle.fill" : "arrow.clockwise.circle.fill")
                 .font(.system(size: 24))
                 .foregroundColor(viewModel.isAlignedWithQibla ? AppColors.primary.green : AppColors.primary.teal)
+                .symbolEffect(.bounce, value: viewModel.isAlignedWithQibla)
+                .shadow(color: (viewModel.isAlignedWithQibla ? AppColors.primary.green : AppColors.primary.teal).opacity(0.3), radius: 3, x: 0, y: 1)
 
             VStack(alignment: .leading, spacing: 2) {
                 ThemedText(viewModel.isAlignedWithQibla ? "Aligned with Qibla!" : "Rotate to align", style: .body)
                     .foregroundColor(viewModel.isAlignedWithQibla ? AppColors.primary.green : themeManager.currentTheme.textColor)
                     .fontWeight(viewModel.isAlignedWithQibla ? .bold : .regular)
-
-                if !viewModel.isAlignedWithQibla {
-                    ThemedText.caption(viewModel.getAlignmentInstruction())
-                        // Caption style already uses textTertiary - no additional opacity needed
-        let relativeAngle = (viewModel.qiblaDirection - viewModel.deviceHeading).truncatingRemainder(dividingBy: 360)
-        let normalizedAngle = relativeAngle < 0 ? relativeAngle + 360 : relativeAngle
-        let isAligned = abs(normalizedAngle) < 5 || abs(normalizedAngle - 360) < 5
-
-        // Trigger haptic when alignment changes from false to true
-        DispatchQueue.main.async {
-            if isAligned && !wasAligned && !hasTriggeredAlignmentHaptic {
-                HapticManager.shared.triggerPattern(.qiblaAligned)
-                hasTriggeredAlignmentHaptic = true
-            } else if !isAligned {
-                // Reset haptic flag when not aligned (allow triggering again)
-                if hasTriggeredAlignmentHaptic {
-                    // Add delay to prevent spam if user is on the boundary
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                        hasTriggeredAlignmentHaptic = false
-                    }
-                }
-            }
-            wasAligned = isAligned
-        }
-
-        return HStack(spacing: Spacing.sm) {
-            Image(systemName: isAligned ? "checkmark.circle.fill" : "arrow.clockwise.circle.fill")
-                .font(.system(size: 24))
-                .foregroundColor(isAligned ? AppColors.primary.green : AppColors.primary.teal)
-                .symbolEffect(.bounce, value: isAligned)
-                .shadow(color: (isAligned ? AppColors.primary.green : AppColors.primary.teal).opacity(0.3), radius: 3, x: 0, y: 1)
-
-            VStack(alignment: .leading, spacing: 2) {
-                ThemedText(isAligned ? "Aligned with Qibla!" : "Rotate to align", style: .body)
-                    .foregroundColor(isAligned ? AppColors.primary.green : themeManager.currentTheme.textColor)
-                    .fontWeight(isAligned ? .bold : .regular)
                     .transition(.asymmetric(
                         insertion: .move(edge: .leading).combined(with: .opacity),
                         removal: .move(edge: .trailing).combined(with: .opacity)
                     ))
 
-                if !isAligned {
-                    ThemedText.caption(getAlignmentInstruction(normalizedAngle))
+                if !viewModel.isAlignedWithQibla {
+                    ThemedText.caption(viewModel.getAlignmentInstruction())
                         .transition(.asymmetric(
                             insertion: .move(edge: .leading).combined(with: .opacity),
                             removal: .move(edge: .trailing).combined(with: .opacity)
@@ -809,16 +753,8 @@ struct QiblaCompassView: View {
         }
         .padding(Spacing.md)
         .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(viewModel.isAlignedWithQibla ? AppColors.primary.green.opacity(themeManager.currentTheme.gradientOpacity(for: AppColors.primary.green) * 2) : themeManager.currentTheme.cardColor)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(viewModel.isAlignedWithQibla ? AppColors.primary.green : AppColors.primary.teal.opacity(themeManager.currentTheme.gradientOpacity(for: AppColors.primary.teal) * 2), lineWidth: 2)
-        )
-        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: viewModel.isAlignedWithQibla)
             ZStack {
-                if isAligned {
+                if viewModel.isAlignedWithQibla {
                     // Glass morphism for aligned state
                     RoundedRectangle(cornerRadius: BorderRadius.lg)
                         .fill(.ultraThinMaterial)
@@ -839,29 +775,27 @@ struct QiblaCompassView: View {
                         .fill(themeManager.currentTheme.cardColor)
                 }
             }
-            .shadow(color: (isAligned ? AppColors.primary.teal : AppColors.primary.green).opacity(0.3), radius: 12, x: 0, y: 4)
-            .shadow(color: (isAligned ? Color.green : Color.black).opacity(0.2), radius: 24, x: 0, y: 8)
+            .shadow(color: (viewModel.isAlignedWithQibla ? AppColors.primary.teal : AppColors.primary.green).opacity(0.3), radius: 12, x: 0, y: 4)
+            .shadow(color: (viewModel.isAlignedWithQibla ? Color.green : Color.black).opacity(0.2), radius: 24, x: 0, y: 8)
         )
         .overlay(
             RoundedRectangle(cornerRadius: BorderRadius.lg)
                 .stroke(
-                    isAligned ? AppColors.primary.green : AppColors.primary.teal.opacity(themeManager.currentTheme.gradientOpacity(for: AppColors.primary.teal) * 2),
+                    viewModel.isAlignedWithQibla ? AppColors.primary.green : AppColors.primary.teal.opacity(themeManager.currentTheme.gradientOpacity(for: AppColors.primary.teal) * 2),
                     lineWidth: differentiateWithoutColor ? 3 : 2
                 )
         )
-        .scaleEffect(isAligned ? 1.0 : 0.98)
-        .offset(y: isAligned ? 0 : 5)
-        .animation(.spring(response: 0.5, dampingFraction: 0.6), value: isAligned)
+        .scaleEffect(viewModel.isAlignedWithQibla ? 1.0 : 0.98)
+        .offset(y: viewModel.isAlignedWithQibla ? 0 : 5)
+        .animation(.spring(response: 0.5, dampingFraction: 0.6), value: viewModel.isAlignedWithQibla)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Alignment status")
-        .accessibilityValue(isAligned ? "Aligned with Qibla" : "Not aligned")
-    }
-
-    private func getAlignmentInstruction(_ angle: Double) -> String {
-        if angle < 180 {
-            return "Turn right \(Int(angle))°"
-        } else {
-            return "Turn left \(Int(360 - angle))°"
+        .accessibilityValue(viewModel.isAlignedWithQibla ? "Aligned with Qibla" : "Not aligned")
+        .onChange(of: viewModel.isAlignedWithQibla) { _, newValue in
+            if newValue && !hasAlignedBefore {
+                HapticManager.shared.triggerPattern(.qiblaAligned)
+                hasAlignedBefore = true
+            }
         }
     }
 
@@ -1105,11 +1039,6 @@ struct QiblaCompassView: View {
         .accessibilityRemoveTraits(.isButton)
     }
 
-    private var distanceCard: some View {
-        CardView {
-            HStack(spacing: 16) {
-                Text("🕋")
-                    .font(.system(size: 50))
     private var locationCard: some View {
         Button {
             // Future: show location details
