@@ -95,7 +95,7 @@ struct HijriCalendarCard: View {
                     .padding(.vertical, 20)
                 }
             }
-            .padding(20)
+            .padding(Spacing.cardPadding) // Standardized to 24pt (was 20pt)
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityText)

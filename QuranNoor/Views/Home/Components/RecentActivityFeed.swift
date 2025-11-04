@@ -17,7 +17,7 @@ struct RecentActivityFeed: View {
 
     var body: some View {
         CardView(showPattern: false) {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: Spacing.cardSpacing) { // Enhanced from 16 to 20
                 // Header
                 HStack {
                     Image(systemName: "clock.arrow.circlepath")
@@ -42,7 +42,7 @@ struct RecentActivityFeed: View {
 
                 // Activity items
                 if hasActivity {
-                    VStack(alignment: .leading, spacing: 12) {
+                    VStack(alignment: .leading, spacing: Spacing.sm) { // Enhanced from 12 to 16
                         // Last read
                         if let surah = lastReadSurah, let verse = lastReadVerse {
                             ActivityRow(
@@ -96,7 +96,7 @@ struct RecentActivityFeed: View {
                     .padding(.vertical, 20)
                 }
             }
-            .padding(20)
+            .padding(Spacing.cardPadding) // Standardized to 24pt (was 20pt)
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Recent activity feed")
@@ -136,37 +136,37 @@ struct ActivityRow: View {
     let timestamp: String
 
     var body: some View {
-        HStack(spacing: 12) {
-            // Icon
+        HStack(spacing: Spacing.sm) { // Enhanced from 12 to 16
+            // Icon - larger and more refined
             ZStack {
                 Circle()
-                    .fill(iconColor.opacity(0.15))
-                    .frame(width: 40, height: 40)
+                    .fill(iconColor.opacity(0.12)) // Softer from 0.15
+                    .frame(width: 48, height: 48) // Enhanced from 40
 
                 Image(systemName: icon)
-                    .font(.system(size: 16))
+                    .font(.system(size: 18)) // Enhanced from 16
                     .foregroundColor(iconColor)
             }
 
-            // Content
-            VStack(alignment: .leading, spacing: 2) {
+            // Content - better hierarchy
+            VStack(alignment: .leading, spacing: Spacing.xxxs) { // Enhanced from 2 to 4
                 Text(title)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
+                    .font(.system(size: 15, weight: .semibold)) // Enhanced from subheadline
                     .foregroundColor(themeManager.currentTheme.textPrimary)
 
                 Text(subtitle)
-                    .font(.caption)
+                    .font(.system(size: 13, weight: .regular)) // Enhanced from caption
                     .foregroundColor(themeManager.currentTheme.textSecondary)
             }
 
             Spacer()
 
-            // Timestamp
+            // Timestamp - refined
             Text(timestamp)
-                .font(.caption2)
+                .font(.system(size: 11, weight: .medium)) // Enhanced from caption2
                 .foregroundColor(themeManager.currentTheme.textTertiary)
         }
+        .padding(.vertical, Spacing.xxxs) // Add vertical breathing room
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(title). \(subtitle). \(timestamp)")
     }

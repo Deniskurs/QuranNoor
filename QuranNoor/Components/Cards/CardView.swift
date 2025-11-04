@@ -27,34 +27,39 @@ struct CardView<Content: View>: View {
     // MARK: - Body
     var body: some View {
         ZStack {
-            // Background with neumorphic shadows
+            // Background with enhanced neumorphic shadows
             // Using drawingGroup() to rasterize and cache shadow rendering for better performance
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
+            RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous) // 16pt for sleeker look
                 .fill(cardBackgroundColor)
                 .shadow(
                     color: lightShadowColor,
-                    radius: 10,
-                    x: -5,
-                    y: -5
+                    radius: 12,    // Enhanced from 10
+                    x: -6,         // Enhanced from -5
+                    y: -6
                 )
                 .shadow(
                     color: darkShadowColor,
-                    radius: 10,
-                    x: 5,
-                    y: 5
+                    radius: 12,    // Enhanced from 10
+                    x: 6,          // Enhanced from 5
+                    y: 6
                 )
-                .drawingGroup() // Cache shadow rendering to reduce GPU overhead
+                // Add subtle border for definition
+                .overlay(
+                    RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous)
+                        .strokeBorder(borderColor, lineWidth: 0.5)
+                )
+                // Note: .drawingGroup() removed - it caused square shadow artifacts on rounded corners
 
             // Optional Islamic pattern watermark
             if showPattern {
                 IslamicPatternView()
                     .opacity(0.05)
-                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous))
             }
 
-            // Content
+            // Content with enhanced padding
             content
-                .padding(20)
+                .padding(Spacing.cardPadding) // 24pt for better breathing room
         }
     }
 
@@ -77,11 +82,24 @@ struct CardView<Content: View>: View {
     private var darkShadowColor: Color {
         switch themeManager.currentTheme {
         case .light, .sepia:
-            return Color.black.opacity(0.2)
+            return Color.black.opacity(0.12) // Softer shadow (was 0.2)
         case .dark:
-            return Color.black.opacity(0.4)
+            return Color.black.opacity(0.5)  // Deeper shadow (was 0.4)
         case .night:
-            return Color.black.opacity(0.6)
+            return Color.black.opacity(0.7)  // More depth (was 0.6)
+        }
+    }
+
+    private var borderColor: Color {
+        switch themeManager.currentTheme {
+        case .light:
+            return Color.black.opacity(0.04)
+        case .dark:
+            return Color.white.opacity(0.06)
+        case .night:
+            return Color.white.opacity(0.03)
+        case .sepia:
+            return Color.black.opacity(0.05)
         }
     }
 }

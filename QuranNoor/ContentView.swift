@@ -44,10 +44,10 @@ struct ContentView: View {
                 }
                 .tag(3)
 
-            // Settings Tab
-            SettingsView()
+            // More Tab
+            MoreView()
                 .tabItem {
-                    Label("Settings", systemImage: "gearshape.fill")
+                    Label("More", systemImage: "ellipsis.circle.fill")
                 }
                 .tag(4)
         }

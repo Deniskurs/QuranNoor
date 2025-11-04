@@ -13,7 +13,7 @@ struct DailyStatsRow: View {
     let stats: DailyStats
 
     var body: some View {
-        LazyVGrid(columns: gridColumns, spacing: 12) {
+        LazyVGrid(columns: gridColumns, spacing: Spacing.gridSpacing) { // Enhanced from 12 to 16
             // Streak stat
             HomeStatCard(
                 icon: "flame.fill",
@@ -56,8 +56,8 @@ struct DailyStatsRow: View {
 
     private var gridColumns: [GridItem] {
         [
-            GridItem(.flexible(), spacing: 12),
-            GridItem(.flexible(), spacing: 12)
+            GridItem(.flexible(), spacing: Spacing.gridSpacing), // Enhanced from 12 to 16
+            GridItem(.flexible(), spacing: Spacing.gridSpacing)
         ]
     }
 }
@@ -76,30 +76,29 @@ struct HomeStatCard: View {
 
     var body: some View {
         CardView(showPattern: false) {
-            VStack(spacing: 12) {
-                // Icon
+            VStack(spacing: Spacing.sm) { // Enhanced from 12 to 16
+                // Icon - keep size, add subtle enhancement
                 Image(systemName: icon)
-                    .font(.system(size: 32))
+                    .font(.system(size: 36)) // Enhanced from 32 for better visual weight
                     .foregroundColor(iconColor)
                     .scaleEffect(scale)
                     .animation(.spring(response: 0.6, dampingFraction: 0.7), value: scale)
 
-                // Value
+                // Value - PROMINENT enhancement
                 Text(value)
-                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .font(.system(size: 32, weight: .bold, design: .rounded)) // Enhanced from 24
                     .foregroundColor(themeManager.currentTheme.textPrimary)
                     .contentTransition(.numericText())
 
-                // Label
+                // Label - refined sizing
                 Text(label)
-                    .font(.caption)
+                    .font(.system(size: 11, weight: .medium)) // Enhanced from caption
                     .foregroundColor(themeManager.currentTheme.textSecondary)
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
-            .padding(.horizontal, 12)
+            .padding(Spacing.cardPadding) // Standardized to uniform 24pt all around
         }
         .aspectRatio(1.0, contentMode: .fit)
         .accessibilityElement(children: .combine)

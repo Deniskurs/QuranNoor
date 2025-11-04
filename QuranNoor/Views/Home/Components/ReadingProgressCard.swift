@@ -14,7 +14,7 @@ struct ReadingProgressCard: View {
 
     var body: some View {
         CardView(showPattern: true) {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: Spacing.cardSpacing) { // Enhanced from 16 to 20
                 // Header
                 HStack {
                     Image(systemName: "book.pages.fill")
@@ -34,16 +34,16 @@ struct ReadingProgressCard: View {
                 }
 
                 // Progress ring
-                HStack(spacing: 20) {
+                HStack(spacing: Spacing.md) { // Enhanced from 20 to 24
                     // Large progress ring
                     QuranProgressRing(
                         versesRead: stats.totalVersesRead,
                         totalVerses: 6236,
-                        size: 100
+                        size: 110 // Enhanced from 100
                     )
 
                     // Stats
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: Spacing.xs) { // Enhanced from 8 to 12
                         statRow(
                             icon: "text.alignleft",
                             label: "Verses Read",
@@ -100,7 +100,7 @@ struct ReadingProgressCard: View {
                     }
                 }
             }
-            .padding(20)
+            .padding(Spacing.cardPadding) // Standardized to 24pt (was 20pt)
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityText)
@@ -109,21 +109,20 @@ struct ReadingProgressCard: View {
     // MARK: - Helper Views
 
     private func statRow(icon: String, label: String, value: String) -> some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 10) { // Enhanced from 8
             Image(systemName: icon)
-                .font(.caption)
+                .font(.system(size: 14)) // Enhanced from caption
                 .foregroundColor(themeManager.currentTheme.textSecondary)
-                .frame(width: 16)
+                .frame(width: 18) // Enhanced from 16
 
             Text(label)
-                .font(.caption)
+                .font(.system(size: 13, weight: .medium)) // Enhanced from caption
                 .foregroundColor(themeManager.currentTheme.textSecondary)
 
             Spacer()
 
             Text(value)
-                .font(.caption)
-                .fontWeight(.semibold)
+                .font(.system(size: 14, weight: .semibold)) // Enhanced from caption
                 .foregroundColor(themeManager.currentTheme.textPrimary)
         }
     }

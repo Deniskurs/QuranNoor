@@ -65,20 +65,9 @@ final class HomeViewModel {
         await loadFreshData()
     }
 
-    /// Update greeting based on time of day and current prayer
+    /// Update greeting with Islamic greeting
     func updateGreeting() {
-        let hour = Calendar.current.component(.hour, from: Date())
-
-        switch hour {
-        case 5..<12:
-            greeting = "Good Morning"
-        case 12..<17:
-            greeting = "Good Afternoon"
-        case 17..<21:
-            greeting = "Good Evening"
-        default:
-            greeting = "As-salamu alaykum"
-        }
+        greeting = "As Salamu Alaykum"
     }
 
     /// Calculate daily statistics from existing services

@@ -93,24 +93,17 @@ struct HomeView: View {
     // MARK: - Regular Content
     private var regularContent: some View {
         ScrollView {
-            LazyVStack(spacing: 20) {
+            LazyVStack(spacing: Spacing.sectionSpacing) { // Enhanced from 20 to 32
                 // Header with greeting and Hijri date
                 HomeHeaderView(
                     greeting: homeVM.greeting,
-                    hijriDate: homeVM.hijriDate,
-                    location: prayerVM.userLocation
+                    hijriDate: homeVM.hijriDate
                 )
                 .transition(.move(edge: .top).combined(with: .opacity))
 
                 // Next prayer card (hero section)
-                NextPrayerCardView(prayerVM: prayerVM)
+                NextPrayerCardView(prayerVM: prayerVM, selectedTab: $selectedTab)
                     .transition(.scale.combined(with: .opacity))
-
-                // Daily stats grid
-                if let stats = homeVM.dailyStats {
-                    DailyStatsRow(stats: stats)
-                        .transition(.scale.combined(with: .opacity))
-                }
 
                 // Spiritual nourishment carousel
                 SpiritualNourishmentCarousel(
@@ -147,7 +140,8 @@ struct HomeView: View {
                 )
                 .transition(.move(edge: .bottom).combined(with: .opacity))
             }
-            .padding(.vertical)
+            .padding(.horizontal, Spacing.screenHorizontal) // 24pt edge spacing for all cards
+            .padding(.vertical, Spacing.md) // Enhanced with specific spacing (24pt)
             .animation(.spring(response: 0.5, dampingFraction: 0.8), value: isInitialized)
         }
         .overlay {

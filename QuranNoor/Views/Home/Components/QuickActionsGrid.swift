@@ -14,7 +14,7 @@ struct QuickActionsGrid: View {
     let lastReadLocation: String?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: Spacing.xs) { // Enhanced from 12
             // Section header
             HStack {
                 Text("Quick Actions")
@@ -23,10 +23,10 @@ struct QuickActionsGrid: View {
 
                 Spacer()
             }
-            .padding(.horizontal, 20)
+            // Note: Horizontal padding removed - inherited from parent HomeView
 
             // Action grid
-            LazyVGrid(columns: gridColumns, spacing: 12) {
+            LazyVGrid(columns: gridColumns, spacing: Spacing.gridSpacing) { // Enhanced from 12 to 16
                 // Continue Reading
                 QuickActionButton(
                     icon: "book.fill",
@@ -71,7 +71,7 @@ struct QuickActionsGrid: View {
                     }
                 )
             }
-            .padding(.horizontal, 20)
+            // Note: Horizontal padding removed - inherited from parent HomeView
         }
     }
 
@@ -105,51 +105,50 @@ struct QuickActionButton: View {
 
             action()
         }) {
-            VStack(alignment: .leading, spacing: 12) {
-                // Icon with gradient
+            VStack(alignment: .leading, spacing: Spacing.sm) { // Enhanced from 12 to 16
+                // Icon with gradient - enhanced
                 ZStack {
                     Circle()
                         .fill(
                             LinearGradient(
-                                gradient: Gradient(colors: gradient.map { $0.opacity(0.2) }),
+                                gradient: Gradient(colors: gradient.map { $0.opacity(0.15) }), // Softer from 0.2
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
                         )
-                        .frame(width: 48, height: 48)
+                        .frame(width: 56, height: 56) // Enhanced from 48
 
                     Image(systemName: icon)
-                        .font(.title3)
+                        .font(.system(size: 24)) // Enhanced from title3
                         .foregroundColor(gradient.first ?? .white)
                 }
 
                 Spacer()
 
-                // Text
-                VStack(alignment: .leading, spacing: 4) {
+                // Text - better hierarchy
+                VStack(alignment: .leading, spacing: 6) { // Enhanced from 4
                     Text(title)
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
+                        .font(.system(size: 15, weight: .semibold)) // Enhanced from subheadline
                         .foregroundColor(themeManager.currentTheme.textPrimary)
                         .lineLimit(2)
 
                     Text(subtitle)
-                        .font(.caption)
+                        .font(.system(size: 12, weight: .regular)) // Enhanced from caption
                         .foregroundColor(themeManager.currentTheme.textSecondary)
                         .lineLimit(1)
                 }
             }
-            .padding(16)
+            .padding(Spacing.cardSpacing) // Enhanced from 16 to 20
             .frame(maxWidth: .infinity, alignment: .leading)
-            .frame(height: 130)
+            .frame(height: 140) // Enhanced from 130 for more breathing room
             .background(
-                RoundedRectangle(cornerRadius: 16)
+                RoundedRectangle(cornerRadius: BorderRadius.xl) // Use standard radius
                     .fill(themeManager.currentTheme.cardColor)
                     .shadow(
-                        color: Color.black.opacity(themeManager.currentTheme == .light ? 0.08 : 0.2),
-                        radius: 8,
+                        color: Color.black.opacity(themeManager.currentTheme == .light ? 0.06 : 0.18), // Softer shadows
+                        radius: 10, // Enhanced from 8
                         x: 0,
-                        y: 4
+                        y: 5 // Enhanced from 4
                     )
             )
             .scaleEffect(isPressed ? 0.95 : 1.0)

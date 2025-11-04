@@ -11,18 +11,18 @@ import SwiftUI
 struct NextPrayerCardView: View {
     @EnvironmentObject var themeManager: ThemeManager
     @State var prayerVM: PrayerViewModel
+    @Binding var selectedTab: Int
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1.0)) { context in
             CardView(showPattern: false) {
-                VStack(spacing: 16) {
+                VStack(spacing: Spacing.md) { // Enhanced from 16 to 24
                     if let period = prayerVM.currentPrayerPeriod {
                         content(for: period)
                     } else {
                         loadingContent
                     }
                 }
-                .padding(20)
             }
         }
         .accessibilityElement(children: .combine)
@@ -44,7 +44,7 @@ struct NextPrayerCardView: View {
 
     // Normal state (> 30min to prayer)
     private func normalContent(period: PrayerPeriod) -> some View {
-        VStack(spacing: 16) {
+        VStack(spacing: Spacing.md) { // Enhanced from 16 to 24
             // Header
             HStack {
                 HStack(spacing: 8) {
@@ -75,17 +75,20 @@ struct NextPrayerCardView: View {
 
             // Prayer name and countdown
             if let nextPrayer = period.nextPrayer {
-                VStack(spacing: 8) {
+                VStack(spacing: Spacing.xs) { // Enhanced from 8 to 12
                     Text(nextPrayer.name.displayName)
-                        .font(.system(size: 36, weight: .bold))
+                        .font(.system(size: 40, weight: .bold)) // Enhanced from 36
+                        .tracking(-0.5) // Tighter tracking for impact
                         .foregroundColor(themeManager.currentTheme.textPrimary)
 
                     Text(period.countdownString)
-                        .font(.system(size: 48, weight: .light, design: .rounded))
+                        .font(.system(size: 72, weight: .ultraLight, design: .rounded)) // HERO enhancement from 48
+                        .tracking(2) // Add letter spacing for elegance
                         .foregroundColor(AppColors.primary.teal)
                         .contentTransition(.numericText())
                         .monospacedDigit()
                 }
+                .padding(.vertical, Spacing.xxs) // Add breathing room
 
                 // Prayer time
                 Text("at \(nextPrayer.time, formatter: timeFormatter)")
@@ -95,15 +98,20 @@ struct NextPrayerCardView: View {
 
             // Prayer completion row
             if let times = prayerVM.todayPrayerTimes {
+                Divider()
+                    .padding(.vertical, Spacing.xxs) // Add spacing around divider
+
                 prayerCompletionRow(times: times.prayerTimes)
+                    .padding(.vertical, Spacing.xxxs) // Subtle spacing
             }
 
             // Quick action button
             PrimaryButton(
                 "View All Prayer Times",
                 icon: "list.bullet",
+                playSound: false,
                 action: {
-                    // Navigate to prayer tab
+                    selectedTab = 2 // Navigate to Prayer tab
                 }
             )
             .frame(height: 44)
@@ -112,7 +120,7 @@ struct NextPrayerCardView: View {
 
     // Urgent state (< 30min to prayer)
     private func urgentContent(period: PrayerPeriod) -> some View {
-        VStack(spacing: 16) {
+        VStack(spacing: Spacing.md) { // Enhanced from 16 to 24
             // Urgent header with pulsing icon
             HStack {
                 Image(systemName: "bell.badge.fill")
@@ -172,7 +180,7 @@ struct NextPrayerCardView: View {
                     "View Details",
                     icon: "info.circle",
                     action: {
-                        // Navigate to prayer details
+                        selectedTab = 2 // Navigate to Prayer tab
                     }
                 )
             }
@@ -182,7 +190,7 @@ struct NextPrayerCardView: View {
 
     // Prayer window active (time to pray now)
     private func prayerWindowContent(prayer: PrayerName, period: PrayerPeriod) -> some View {
-        VStack(spacing: 16) {
+        VStack(spacing: Spacing.md) { // Enhanced from 16 to 24
             // Active prayer header
             HStack {
                 Text("🕌")
@@ -307,8 +315,9 @@ struct NextPrayerCardView: View {
 
 #Preview("Normal State") {
     @Previewable @State var prayerVM = PrayerViewModel()
+    @Previewable @State var selectedTab = 0
 
-    NextPrayerCardView(prayerVM: prayerVM)
+    NextPrayerCardView(prayerVM: prayerVM, selectedTab: $selectedTab)
         .environmentObject(ThemeManager())
         .padding()
         .background(Color(hex: "#F8F4EA"))
@@ -319,8 +328,9 @@ struct NextPrayerCardView: View {
 
 #Preview("Dark Mode") {
     @Previewable @State var prayerVM = PrayerViewModel()
+    @Previewable @State var selectedTab = 0
 
-    NextPrayerCardView(prayerVM: prayerVM)
+    NextPrayerCardView(prayerVM: prayerVM, selectedTab: $selectedTab)
         .environmentObject({
             let manager = ThemeManager()
             manager.setTheme(.dark)

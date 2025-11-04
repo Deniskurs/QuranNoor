@@ -12,87 +12,92 @@ struct HomeHeaderView: View {
     @EnvironmentObject var themeManager: ThemeManager
     let greeting: String
     let hijriDate: HijriDate?
-    let location: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            // Greeting
-            HStack {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            // Greeting - full width
+            VStack(alignment: .leading, spacing: Spacing.xxxs) {
                 Text(greeting)
-                    .font(.system(size: 28, weight: .semibold))
+                    .font(.system(size: 32, weight: .bold))
+                    .tracking(-0.5)
                     .foregroundColor(themeManager.currentTheme.textPrimary)
 
-                Spacer()
-
-                // Location indicator
-                HStack(spacing: 4) {
-                    Image(systemName: "location.fill")
-                        .font(.caption)
-                    Text(location)
-                        .font(.caption)
-                }
-                .foregroundColor(themeManager.currentTheme.textSecondary)
+                // Subtle subtext
+                Text("May peace be upon you")
+                    .font(.system(size: 14, weight: .regular))
+                    .foregroundColor(themeManager.currentTheme.textTertiary)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
 
-            // Hijri and Gregorian dates
-            HStack(spacing: 12) {
-                // Hijri date
-                if let hijri = hijriDate {
-                    HStack(spacing: 6) {
-                        Image(systemName: "calendar.badge.clock")
-                            .font(.caption)
-                            .foregroundColor(AppColors.primary.gold)
-
-                        Text(hijri.formattedDate)
-                            .font(.subheadline)
-                            .foregroundColor(themeManager.currentTheme.textSecondary)
-                    }
-                } else {
-                    HStack(spacing: 6) {
-                        Image(systemName: "calendar")
-                            .font(.caption)
-                            .foregroundColor(AppColors.primary.gold)
-
-                        Text("Loading date...")
-                            .font(.subheadline)
-                            .foregroundColor(themeManager.currentTheme.textSecondary)
-                    }
-                }
-
-                // Separator
+            // Centered date layout with separator - dot is fixed at screen center
+            ZStack {
+                // Center dot - absolutely centered
                 Text("•")
+                    .font(.system(size: 16))
                     .foregroundColor(themeManager.currentTheme.textTertiary)
 
-                // Gregorian date
-                Text(todayGregorian)
-                    .font(.subheadline)
-                    .foregroundColor(themeManager.currentTheme.textSecondary)
+                // Dates on either side
+                HStack(spacing: 0) {
+                    // Hijri date - left side
+                    HStack(spacing: 6) {
+                        if let hijri = hijriDate {
+                            Image(systemName: "calendar.badge.clock")
+                                .font(.caption)
+                                .foregroundColor(AppColors.primary.gold)
+
+                            Text(hijri.formattedDate)
+                                .font(.subheadline)
+                                .foregroundColor(themeManager.currentTheme.textSecondary)
+                        } else {
+                            Image(systemName: "calendar")
+                                .font(.caption)
+                                .foregroundColor(AppColors.primary.gold)
+
+                            Text("Loading...")
+                                .font(.subheadline)
+                                .foregroundColor(themeManager.currentTheme.textSecondary)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .padding(.trailing, Spacing.md) // Space before center dot
+
+                    // Spacer for center dot
+                    Spacer()
+                        .frame(width: 20) // Fixed width for dot area
+
+                    // Gregorian date - right side
+                    Text(todayGregorian)
+                        .font(.subheadline)
+                        .foregroundColor(themeManager.currentTheme.textSecondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.leading, Spacing.md) // Space after center dot
+                }
             }
 
             // Special Islamic occasions/holidays
             if let holidays = hijriDate?.holidays, !holidays.isEmpty {
                 ForEach(holidays, id: \.self) { holiday in
-                    HStack(spacing: 6) {
+                    HStack(spacing: Spacing.xxs) { // Enhanced from 6 to 8
                         Image(systemName: "star.fill")
-                            .font(.caption2)
+                            .font(.system(size: 11)) // Enhanced from caption2
                             .foregroundColor(AppColors.primary.gold)
 
                         Text(holiday)
-                            .font(.caption)
-                            .fontWeight(.medium)
+                            .font(.system(size: 13, weight: .semibold)) // Enhanced from caption + medium
                             .foregroundColor(AppColors.primary.gold)
                     }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
+                    .padding(.horizontal, Spacing.sm) // Enhanced from 12 to 16
+                    .padding(.vertical, Spacing.xxs) // Enhanced from 6 to 8
                     .background(
-                        AppColors.primary.gold.opacity(0.15)
+                        Capsule() // Changed from cornerRadius for sleeker look
+                            .fill(AppColors.primary.gold.opacity(0.12)) // Softer from 0.15
                     )
-                    .cornerRadius(12)
                 }
+                .padding(.top, Spacing.xxs) // Add top spacing
             }
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 16)
+        .padding(.horizontal, Spacing.cardPadding) // Enhanced from 20 to 24
+        .padding(.vertical, Spacing.screenVertical) // Enhanced from 16 to 20
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityText)
     }
@@ -118,8 +123,6 @@ struct HomeHeaderView: View {
             text += " Today is \(holidays.joined(separator: " and "))."
         }
 
-        text += " Location: \(location)."
-
         return text
     }
 }
@@ -136,7 +139,7 @@ private extension HijriDate {
 
 #Preview("Light Mode") {
     HomeHeaderView(
-        greeting: "Good Morning",
+        greeting: "As Salamu Alaykum",
         hijriDate: HijriDate(
             date: "15-07-1446",
             format: "DD-MM-YYYY",
@@ -148,8 +151,7 @@ private extension HijriDate {
             holidays: ["Laylat al-Mi'raj"],
             adjustedHolidays: nil,
             method: nil
-        ),
-        location: "New York"
+        )
     )
     .environmentObject(ThemeManager())
     .padding()
@@ -158,7 +160,7 @@ private extension HijriDate {
 
 #Preview("Dark Mode") {
     HomeHeaderView(
-        greeting: "As-salamu alaykum",
+        greeting: "As Salamu Alaykum",
         hijriDate: HijriDate(
             date: "01-09-1446",
             format: "DD-MM-YYYY",
@@ -170,8 +172,7 @@ private extension HijriDate {
             holidays: ["First Day of Ramadan"],
             adjustedHolidays: nil,
             method: nil
-        ),
-        location: "Dubai"
+        )
     )
     .environmentObject({
         let manager = ThemeManager()
@@ -184,9 +185,8 @@ private extension HijriDate {
 
 #Preview("No Hijri Date") {
     HomeHeaderView(
-        greeting: "Good Afternoon",
-        hijriDate: nil,
-        location: "London"
+        greeting: "As Salamu Alaykum",
+        hijriDate: nil
     )
     .environmentObject(ThemeManager())
     .padding()
