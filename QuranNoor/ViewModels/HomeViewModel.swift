@@ -83,7 +83,7 @@ final class HomeViewModel {
         let currentJuz = calculateCurrentJuz(from: progress)
         let juzProgress = calculateJuzProgress(progress: progress, juz: currentJuz)
 
-        return DailyStats(
+        let stats = DailyStats(
             streakDays: progress.streakDays,
             versesReadToday: calculateVersesReadToday(progress: progress),
             prayersCompleted: todayCompletedPrayers,
@@ -95,6 +95,16 @@ final class HomeViewModel {
             totalVersesRead: progress.totalVersesRead,
             overallCompletion: progress.completionPercentage
         )
+
+        #if DEBUG
+        print("📊 [HomeViewModel] calculateDailyStats:")
+        print("   - ReadingProgress.totalVersesRead: \(progress.totalVersesRead)")
+        print("   - ReadingProgress.completionPercentage: \(progress.completionPercentage)")
+        print("   - DailyStats.overallCompletion: \(stats.overallCompletion)")
+        print("   - DailyStats.progressPercentage: \(stats.progressPercentage)")
+        #endif
+
+        return stats
     }
 
     // MARK: - Private Methods
@@ -110,7 +120,26 @@ final class HomeViewModel {
            let cached = try? JSONDecoder().decode(CachedHomeData.self, from: data),
            !cached.isExpired {
             dailyStats = cached.stats
+
+            #if DEBUG
+            print("📦 [HomeViewModel] Loaded cached stats:")
+            print("   - Cached completion: \(cached.stats.overallCompletion)")
+            print("   - Cached verses: \(cached.stats.totalVersesRead)")
+            print("   - Cache age: \(Date().timeIntervalSince(cached.timestamp))s")
+            #endif
+        } else {
+            #if DEBUG
+            print("📦 [HomeViewModel] No valid cached stats found or cache expired")
+            #endif
         }
+    }
+
+    /// Clear cached data (useful when data seems incorrect)
+    func clearCachedData() {
+        UserDefaults.standard.removeObject(forKey: cacheKey)
+        #if DEBUG
+        print("🗑️ [HomeViewModel] Cleared cached data")
+        #endif
     }
 
     private func loadFreshData() async {
@@ -186,13 +215,17 @@ final class HomeViewModel {
         return islamicContentService.getRandomHadith()
     }
 
-    private func cacheHomeData() {
+    func cacheHomeData() {
         guard let stats = dailyStats else { return }
 
         let cached = CachedHomeData(stats: stats, timestamp: Date())
         if let data = try? JSONEncoder().encode(cached) {
             UserDefaults.standard.set(data, forKey: cacheKey)
         }
+
+        #if DEBUG
+        print("💾 [HomeViewModel] Cached stats: \(stats.progressPercentage), \(stats.totalVersesRead) verses")
+        #endif
     }
 
     private func handleError(_ error: Error) {
