@@ -25,8 +25,14 @@ struct NextPrayerCardView: View {
                 }
             }
         }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            selectedTab = 2 // Navigate to Prayer tab
+            AudioHapticCoordinator.shared.playToast()
+        }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityLabel)
+        .accessibilityHint("Double tap to open Prayer Times")
     }
 
     // MARK: - Content Views
@@ -105,16 +111,6 @@ struct NextPrayerCardView: View {
                     .padding(.vertical, Spacing.xxxs) // Subtle spacing
             }
 
-            // Quick action button
-            PrimaryButton(
-                "View All Prayer Times",
-                icon: "list.bullet",
-                playSound: false,
-                action: {
-                    selectedTab = 2 // Navigate to Prayer tab
-                }
-            )
-            .frame(height: 44)
         }
     }
 
@@ -165,37 +161,18 @@ struct NextPrayerCardView: View {
             .task {
                 startPulsing()
             }
-
-            // Action buttons
-            HStack(spacing: 12) {
-                SecondaryButton(
-                    "Snooze 5min",
-                    icon: "clock.arrow.circlepath",
-                    action: {
-                        // Snooze notification
-                    }
-                )
-
-                PrimaryButton(
-                    "View Details",
-                    icon: "info.circle",
-                    action: {
-                        selectedTab = 2 // Navigate to Prayer tab
-                    }
-                )
-            }
-            .frame(height: 44)
         }
     }
 
     // Prayer window active (time to pray now)
     private func prayerWindowContent(prayer: PrayerName, period: PrayerPeriod) -> some View {
-        VStack(spacing: Spacing.md) { // Enhanced from 16 to 24
+        let isCompleted = PrayerCompletionService.shared.isCompleted(prayer)
+
+        return VStack(spacing: Spacing.md) {
             // Active prayer header
             HStack {
                 Text("🕌")
                     .font(.title2)
-                    .foregroundColor(AppColors.primary.green)
 
                 Text("TIME FOR \(prayer.displayName.uppercased())")
                     .font(.headline)
@@ -203,42 +180,30 @@ struct NextPrayerCardView: View {
                     .foregroundColor(AppColors.primary.green)
 
                 Spacer()
+
+                // Completion indicator
+                if isCompleted {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.title2)
+                        .foregroundColor(AppColors.primary.green)
+                }
             }
 
-            // Inspirational quote
-            Text("Prayer is better than sleep")
-                .font(.title3)
-                .italic()
-                .foregroundColor(themeManager.currentTheme.textSecondary)
-                .multilineTextAlignment(.center)
-                .padding(.vertical, 8)
-
-            // Action buttons
-            VStack(spacing: 12) {
-                PrimaryButton(
-                    "I've Prayed",
-                    icon: "checkmark.circle.fill",
-                    action: {
-                        // Mark prayer as completed
-                    }
-                )
-                .frame(height: 50)
-
-                SecondaryButton(
-                    "Remind me in 10 minutes",
-                    icon: "clock.arrow.circlepath",
-                    action: {
-                        // Schedule reminder
-                    }
-                )
-                .frame(height: 44)
-            }
-
-            // Window duration
+            // Large countdown
             if let nextPrayer = period.nextPrayer {
-                Text("Window closes at \(nextPrayer.time, formatter: timeFormatter)")
-                    .font(.caption)
-                    .foregroundColor(themeManager.currentTheme.textTertiary)
+                VStack(spacing: Spacing.xs) {
+                    Text(period.countdownString)
+                        .font(.system(size: 72, weight: .ultraLight, design: .rounded))
+                        .tracking(2)
+                        .foregroundColor(AppColors.primary.teal)
+                        .contentTransition(.numericText())
+                        .monospacedDigit()
+
+                    Text("until \(nextPrayer.name.displayName)")
+                        .font(.subheadline)
+                        .foregroundColor(themeManager.currentTheme.textSecondary)
+                }
+                .padding(.vertical, Spacing.xxs)
             }
         }
     }
