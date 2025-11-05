@@ -21,9 +21,8 @@ struct QiblaCompassView: View {
     @Environment(\.scenePhase) var scenePhase
     @AccessibilityFocusState private var isCompassFocused: Bool
 
-    // Normalized rotation angles to prevent glitching at 0°/360°
+    // Normalized rotation angle to prevent glitching at 0°/360°
     @State private var normalizedCompassRotation: Double = 0
-    @State private var normalizedNeedleRotation: Double = 0
 
     // Simple state tracking
     @State private var hasAlignedBefore = false
@@ -45,31 +44,35 @@ struct QiblaCompassView: View {
             GradientBackground(style: .serenity, opacity: 0.3)
 
             ScrollView {
-                VStack(spacing: Spacing.lg) {
+                VStack(spacing: 24) {
                     if viewModel.isLoading {
                         LoadingView(size: .large, message: "Finding Qibla direction...")
                     } else {
                         Spacer()
-                            .frame(height: 20)
+                            .frame(height: 16)
 
                         // Distance Card
                         distanceCard
+                            .padding(.horizontal, Spacing.screenPadding)
 
-                        // Compass Section
+                        // Compass Section - let it size naturally
                         compassSection
-                            .frame(height: 280)
+                            .padding(.horizontal, Spacing.screenPadding)
+                            .padding(.top, 20)
+                            .padding(.bottom, 8)
 
                         // Direction Info
                         directionInfoSection
+                            .padding(.horizontal, Spacing.screenPadding)
 
                         // Location Card
                         locationCard
+                            .padding(.horizontal, Spacing.screenPadding)
 
                         Spacer()
-                            .frame(height: 20)
+                            .frame(height: 24)
                     }
                 }
-                .padding(.horizontal, Spacing.screenPadding)
             }
 
             // Tutorial overlay
@@ -162,9 +165,6 @@ struct QiblaCompassView: View {
             .onChange(of: viewModel.deviceHeading) { _, newValue in
                 handleDeviceHeadingChange(newValue)
             }
-            .onChange(of: viewModel.qiblaDirection) { _, _ in
-                updateNeedleRotation()
-            }
             .onChange(of: viewModel.isAlignedWithQibla) { _, newValue in
                 handleAlignmentChange(newValue)
             }
@@ -209,13 +209,6 @@ struct QiblaCompassView: View {
 
     // MARK: - Helper Methods
 
-    /// Updates the needle rotation to point at Qibla, using normalized angles to prevent 360° wrap glitch
-    private func updateNeedleRotation() {
-        let targetAngle = viewModel.qiblaDirection - viewModel.deviceHeading
-        let diff = normalizeAngleDifference(current: normalizedNeedleRotation, target: targetAngle)
-        normalizedNeedleRotation += diff
-    }
-
     /// Setup animations and state when view appears
     private func setupViewOnAppear() {
         // Check if tutorial should be shown
@@ -232,7 +225,6 @@ struct QiblaCompassView: View {
     private func handleDeviceHeadingChange(_ newValue: Double) {
         let diff = normalizeAngleDifference(current: normalizedCompassRotation, target: -newValue)
         normalizedCompassRotation += diff
-        updateNeedleRotation()
     }
 
     /// Handle Qibla alignment changes
@@ -247,27 +239,23 @@ struct QiblaCompassView: View {
     // MARK: - Components
 
     private var compassSection: some View {
-        VStack(spacing: Spacing.md) {
-            // Main Compass
+        VStack(spacing: 20) {
+            // Main Compass - fixed container size to accommodate all elements
             ZStack {
                 // Compass ring rotates so N points to actual north
-                compassRing
+                // Qibla marker is part of the ring and rotates with it
+                compassRingWithQiblaMarker
                     .rotationEffect(.degrees(normalizedCompassRotation))
                     .animation(.spring(response: 0.6, dampingFraction: 0.8), value: normalizedCompassRotation)
 
-                // Qibla needle rotates to point at Qibla direction (from north)
-                qiblaNeedle
-                    .rotationEffect(.degrees(normalizedNeedleRotation))
-                    .animation(.spring(response: 0.6, dampingFraction: 0.8), value: normalizedNeedleRotation)
-
-                // Center ornament
-                centerOrnament
+                // Fixed center needle (always points up - represents device direction)
+                fixedCenterNeedle
             }
-            .frame(width: compassSize, height: compassSize)
+            .frame(width: 320, height: 320) // Fixed size to contain 240px compass + markers + glow
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("Qibla compass")
             .accessibilityValue(getAccessibilityDescription())
-            .accessibilityHint("Rotate your device to align the needle with Qibla direction")
+            .accessibilityHint("Rotate your device to align the needle with Qibla marker")
             .accessibilityFocused($isCompassFocused)
 
             // Alignment indicator
@@ -277,35 +265,37 @@ struct QiblaCompassView: View {
 
     // MARK: - Compass Components
 
-    /// Fixed compass ring with cardinal directions and degree markers
-    private var compassRing: some View {
+    /// Compass ring with cardinal directions, degree markers, and Qibla marker on the edge
+    private var compassRingWithQiblaMarker: some View {
         ZStack {
-            // Prominent alignment glow effect - brighter when aligned
+            // Multi-layer glow effect - more prominent when aligned
             Circle()
-                .stroke(
-                    LinearGradient(
-                        colors: [
-                            AppColors.primary.gold,
-                            AppColors.primary.gold.opacity(0.5),
-                            AppColors.primary.green,
-                            AppColors.primary.teal
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 8
-                )
-                .frame(width: 260, height: 260)
-                .blur(radius: 12)
-                .opacity(viewModel.isAlignedWithQibla ? 0.9 : 0.3) // Subtle always, prominent when aligned
+                .stroke(AppColors.primary.teal, lineWidth: 5)
+                .frame(width: 250, height: 250)
+                .blur(radius: 24)
+                .opacity(viewModel.isAlignedWithQibla ? 0.6 : 0.2)
                 .animation(.easeInOut(duration: 0.4), value: viewModel.isAlignedWithQibla)
 
-            // Background with radial gradient
+            Circle()
+                .stroke(AppColors.primary.teal, lineWidth: 5)
+                .frame(width: 250, height: 250)
+                .blur(radius: 16)
+                .opacity(viewModel.isAlignedWithQibla ? 0.7 : 0.25)
+                .animation(.easeInOut(duration: 0.4), value: viewModel.isAlignedWithQibla)
+
+            Circle()
+                .stroke(AppColors.primary.gold, lineWidth: 5)
+                .frame(width: 250, height: 250)
+                .blur(radius: 8)
+                .opacity(viewModel.isAlignedWithQibla ? 0.8 : 0.15)
+                .animation(.easeInOut(duration: 0.4), value: viewModel.isAlignedWithQibla)
+
+            // Background with radial gradient - FIXED SIZE
             Circle()
                 .fill(
                     RadialGradient(
                         colors: [
-                            themeManager.currentTheme.cardColor,
+                            themeManager.currentTheme.cardColor.opacity(0.8),
                             themeManager.currentTheme.backgroundColor
                         ],
                         center: .center,
@@ -313,74 +303,85 @@ struct QiblaCompassView: View {
                         endRadius: 120
                     )
                 )
+                .frame(width: 240, height: 240)
                 .shadow(color: AppColors.primary.green.opacity(0.3), radius: 20)
 
-            // Outer ring - changes color when aligned
+            // Outer ring - thicker and more visible - FIXED SIZE
             Circle()
                 .stroke(
                     viewModel.isAlignedWithQibla ?
-                        AppColors.primary.gold.opacity(0.6) :
-                        AppColors.primary.green.opacity(0.3),
-                    lineWidth: 3
+                        AppColors.primary.gold.opacity(0.8) :
+                        AppColors.primary.teal.opacity(0.6),
+                    lineWidth: 5
                 )
+                .frame(width: 240, height: 240)
                 .animation(.easeInOut(duration: 0.3), value: viewModel.isAlignedWithQibla)
 
-            // Cardinal directions (N, E, S, W)
+            // Cardinal directions (N, E, S, W) - bolder and larger
             ForEach([("N", 0.0), ("E", 90.0), ("S", 180.0), ("W", 270.0)], id: \.0) { direction in
                 Text(direction.0)
-                    .font(.caption.weight(.bold))
+                    .font(.system(size: 18, weight: .bold))
                     .foregroundColor(direction.0 == "N" ? AppColors.primary.teal : .secondary)
-                    .offset(y: -100)
+                    .offset(y: -105)
                     .rotationEffect(.degrees(-normalizedCompassRotation))
                     .rotationEffect(.degrees(direction.1))
             }
 
-            // Degree markers (every 10 degrees)
+            // Degree markers (every 10 degrees) - more visible
             ForEach(0..<36) { index in
+                let isMajor = index % 3 == 0
                 Rectangle()
-                    .fill(index % 3 == 0 ? Color.secondary : Color.secondary.opacity(0.3))
-                    .frame(width: 1, height: index % 3 == 0 ? 12 : 6)
-                    .offset(y: -105)
+                    .fill(isMajor ? Color.secondary.opacity(0.8) : Color.secondary.opacity(0.4))
+                    .frame(width: isMajor ? 2 : 1, height: isMajor ? 14 : 8)
+                    .offset(y: -108)
                     .rotationEffect(.degrees(Double(index) * 10))
             }
+
+            // Qibla marker positioned on ring edge at the calculated bearing
+            qiblaMarker
+                .rotationEffect(.degrees(viewModel.qiblaDirection))
         }
     }
 
-    /// Rotating needle that points to Qibla
-    private var qiblaNeedle: some View {
-        // Kaaba emoji pointing to Qibla - always at consistent size
-        VStack(spacing: 4) {
+    /// Qibla marker on ring edge - shows direction to Kaaba
+    private var qiblaMarker: some View {
+        VStack(spacing: 2) {
             Text("🕋")
-                .font(.system(size: 36)) // Larger default size
-                .shadow(color: AppColors.primary.gold.opacity(0.5), radius: 8)
+                .font(.system(size: 20))
+                .shadow(color: AppColors.primary.gold.opacity(0.6), radius: 8)
+                .shadow(color: AppColors.primary.gold.opacity(0.8), radius: 16)
 
             Text("QIBLA")
-                .font(.caption2.weight(.bold))
+                .font(.system(size: 8, weight: .bold))
                 .foregroundColor(AppColors.primary.gold)
+                .rotationEffect(.degrees(-viewModel.qiblaDirection - normalizedCompassRotation))
         }
-        .offset(y: -70)
-        .rotationEffect(.degrees(-normalizedNeedleRotation))
+        .offset(y: -135) // Position just outside the ring edge (120px radius + ~15px margin)
+        // Pulsing glow animation
+        .opacity(viewModel.isAlignedWithQibla ? 1.0 : 0.85)
+        .scaleEffect(viewModel.isAlignedWithQibla ? 1.1 : 1.0)
+        .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: viewModel.isAlignedWithQibla)
     }
 
-    /// Center ornament with user direction indicator
-    private var centerOrnament: some View {
+    /// Fixed center needle - always points up (represents device forward direction)
+    private var fixedCenterNeedle: some View {
         ZStack {
-            // User direction arrow - stays fixed pointing up (your direction)
+            // Elegant compass needle pointing up
             VStack(spacing: 0) {
-                // Arrow pointing up
-                Image(systemName: "arrow.up.circle.fill")
-                    .font(.system(size: 32))
-                    .foregroundColor(AppColors.primary.teal)
-                    .shadow(color: AppColors.primary.teal.opacity(0.5), radius: 4)
-
-                // Label
-                Text("YOU")
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundColor(AppColors.primary.teal)
-                    .padding(.top, 2)
+                // Needle triangle (pointing up)
+                Triangle()
+                    .fill(
+                        LinearGradient(
+                            colors: [AppColors.primary.teal, AppColors.primary.teal.opacity(0.8)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .frame(width: 12, height: 80)
+                    .shadow(color: AppColors.primary.teal.opacity(0.4), radius: 4)
+                    .shadow(color: .black.opacity(0.3), radius: 2)
             }
-            .offset(y: 70) // Position at bottom of compass
-            .rotationEffect(.degrees(-normalizedCompassRotation)) // Counter-rotate to stay pointing up
+            .offset(y: -30)
 
             // Center dot
             Circle()
@@ -392,55 +393,75 @@ struct QiblaCompassView: View {
 
     /// Alignment indicator showing when device points toward Qibla
     private var alignmentIndicator: some View {
-        VStack(spacing: 8) {
-            // Main status indicator with fixed frame to prevent jumping
-            HStack(spacing: 8) {
-                Image(systemName: viewModel.isAlignedWithQibla ? "checkmark.circle.fill" : "arrow.up.circle.fill")
-                    .font(.system(size: 24))
+        VStack(spacing: 12) {
+            // Main status indicator with liquid glass effect
+            HStack(spacing: 12) {
+                Image(systemName: viewModel.isAlignedWithQibla ? "checkmark.circle.fill" : "arrow.clockwise")
+                    .font(.system(size: 26))
                     .foregroundColor(viewModel.isAlignedWithQibla ? AppColors.primary.green : AppColors.primary.teal)
                     .symbolEffect(.bounce, value: viewModel.isAlignedWithQibla)
 
-                Text(viewModel.isAlignedWithQibla ? "Aligned with Qibla!" : "\(Int(viewModel.qiblaDirection))° \(cardinalDirection)")
-                    .font(.headline.monospacedDigit())
-                    .foregroundColor(viewModel.isAlignedWithQibla ? AppColors.primary.green : themeManager.currentTheme.textColor)
-                    .fontWeight(viewModel.isAlignedWithQibla ? .bold : .semibold)
+                if viewModel.isAlignedWithQibla {
+                    Text("Aligned with Qibla!")
+                        .font(.headline.monospacedDigit())
+                        .foregroundColor(AppColors.primary.green)
+                        .fontWeight(.bold)
+                } else {
+                    HStack(spacing: 6) {
+                        Text("\(abs(degreeOffset))°")
+                            .font(.title3.monospacedDigit().weight(.bold))
+                            .foregroundColor(AppColors.primary.teal)
+
+                        Text("off")
+                            .font(.headline.weight(.semibold))
+                            .foregroundColor(themeManager.currentTheme.textColor)
+                    }
+                }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
+            .padding(.horizontal, 24)
+            .padding(.vertical, 16)
             .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(viewModel.isAlignedWithQibla ?
-                          AppColors.primary.green.opacity(0.15) :
-                          themeManager.currentTheme.cardColor.opacity(0.5))
+                ZStack {
+                    // Liquid glass blur effect
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(.ultraThinMaterial)
+                        .opacity(0.8)
+
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(
+                            viewModel.isAlignedWithQibla ?
+                                AppColors.primary.green.opacity(0.15) :
+                                AppColors.primary.teal.opacity(0.08)
+                        )
+                }
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: 16)
                     .stroke(
                         viewModel.isAlignedWithQibla ?
-                            AppColors.primary.gold :
-                            AppColors.primary.teal.opacity(0.3),
+                            AppColors.primary.gold.opacity(0.8) :
+                            AppColors.primary.teal.opacity(0.4),
                         lineWidth: viewModel.isAlignedWithQibla ? 2 : 1
                     )
             )
             .shadow(
                 color: viewModel.isAlignedWithQibla ?
-                    AppColors.primary.gold.opacity(0.3) :
-                    Color.clear,
-                radius: 8,
+                    AppColors.primary.gold.opacity(0.4) :
+                    AppColors.primary.teal.opacity(0.2),
+                radius: 12,
                 x: 0,
                 y: 4
             )
             .animation(.spring(response: 0.4, dampingFraction: 0.7), value: viewModel.isAlignedWithQibla)
 
             // Helper text with fixed frame to prevent layout shift
-            Text(viewModel.isAlignedWithQibla ? "You are facing the Kaaba" : "Turn your device to align with Qibla")
-                .font(.caption)
+            Text(viewModel.isAlignedWithQibla ? "✓ You are facing the Kaaba" : "Turn your device to align with Qibla")
+                .font(.subheadline.weight(.medium))
                 .foregroundColor(viewModel.isAlignedWithQibla ? AppColors.primary.green : .secondary)
                 .multilineTextAlignment(.center)
-                .frame(height: 18) // Fixed height prevents jumping
+                .frame(height: 20) // Fixed height prevents jumping
                 .animation(.easeInOut(duration: 0.3), value: viewModel.isAlignedWithQibla)
         }
-        .padding(.horizontal, Spacing.screenPadding)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Alignment status")
         .accessibilityValue(viewModel.isAlignedWithQibla ? "Aligned with Qibla" : "Not aligned")
@@ -448,10 +469,10 @@ struct QiblaCompassView: View {
 
     private func getAccessibilityDescription() -> String {
         if viewModel.isAlignedWithQibla {
-            return "Aligned with Qibla. You are facing the direction of the Kaaba."
+            return "Aligned with Qibla. The fixed needle is pointing at the Qibla marker. You are facing the direction of the Kaaba."
         } else {
-            let instruction = viewModel.getAlignmentInstruction()
-            return "Qibla is at \(viewModel.getDirectionText()). \(instruction) to align."
+            let offset = abs(degreeOffset)
+            return "Qibla marker is at \(Int(viewModel.qiblaDirection)) degrees. You are \(offset) degrees off. Rotate your device to align the fixed needle with the Qibla marker on the ring."
         }
     }
 
@@ -470,58 +491,75 @@ struct QiblaCompassView: View {
 
     private var directionInfoSection: some View {
         CardView {
-            HStack(spacing: Spacing.md) {
+            HStack(spacing: 0) {
                 // Qibla bearing section
-                VStack(spacing: 8) {
+                VStack(spacing: 10) {
                     Image(systemName: "safari")
-                        .font(.system(size: 24))
+                        .font(.system(size: 26))
                         .foregroundColor(AppColors.primary.green)
 
-                    VStack(spacing: 2) {
+                    VStack(spacing: 4) {
                         Text("\(Int(viewModel.qiblaDirection))°")
-                            .font(.system(.title3, design: .rounded).weight(.bold).monospacedDigit())
+                            .font(.system(.title2, design: .rounded).weight(.bold).monospacedDigit())
                             .foregroundStyle(themeManager.currentTheme.textPrimary)
                             .contentTransition(.numericText())
                             .animation(.spring(response: 0.4, dampingFraction: 0.8), value: viewModel.qiblaDirection)
 
                         Text(cardinalDirection)
-                            .font(.caption.weight(.medium))
+                            .font(.subheadline.weight(.semibold))
                             .foregroundStyle(themeManager.currentTheme.textSecondary)
 
                         Text("To Qibla")
-                            .font(.caption2)
-                            .foregroundStyle(AppColors.primary.green)
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(AppColors.primary.teal)
+                            .padding(.top, 2)
                     }
                 }
                 .frame(maxWidth: .infinity)
+                .padding(.vertical, 20)
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel("Qibla direction")
                 .accessibilityValue("\(Int(viewModel.qiblaDirection)) degrees \(cardinalDirection)")
 
-                // Divider
-                Rectangle()
-                    .fill(themeManager.currentTheme.textSecondary.opacity(0.2))
-                    .frame(width: 1, height: 60)
+                // Vertical divider with gradient
+                VStack {
+                    Rectangle()
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    themeManager.currentTheme.textSecondary.opacity(0.1),
+                                    themeManager.currentTheme.textSecondary.opacity(0.3),
+                                    themeManager.currentTheme.textSecondary.opacity(0.1)
+                                ],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                        .frame(width: 1)
+                }
+                .frame(height: 80)
+                .padding(.horizontal, 24)
 
                 // Current heading section
-                VStack(spacing: 8) {
+                VStack(spacing: 10) {
                     Image(systemName: "location.north.line.fill")
-                        .font(.system(size: 24))
+                        .font(.system(size: 26))
                         .foregroundColor(AppColors.primary.teal)
 
-                    VStack(spacing: 2) {
+                    VStack(spacing: 4) {
                         Text("\(Int(viewModel.deviceHeading))°")
-                            .font(.system(.title3, design: .rounded).weight(.bold).monospacedDigit())
+                            .font(.system(.title2, design: .rounded).weight(.bold).monospacedDigit())
                             .foregroundStyle(themeManager.currentTheme.textPrimary)
                             .contentTransition(.numericText())
                             .animation(.spring(response: 0.4, dampingFraction: 0.8), value: viewModel.deviceHeading)
 
                         Text("Your Heading")
-                            .font(.caption.weight(.medium))
+                            .font(.subheadline.weight(.semibold))
                             .foregroundStyle(themeManager.currentTheme.textSecondary)
                     }
                 }
                 .frame(maxWidth: .infinity)
+                .padding(.vertical, 20)
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel("Your heading")
                 .accessibilityValue("\(Int(viewModel.deviceHeading)) degrees")
@@ -534,6 +572,19 @@ struct QiblaCompassView: View {
         let direction = viewModel.getDirectionText()
         // Extract just the cardinal direction (e.g., "45° NE" -> "NE")
         return direction.split(separator: " ").last.map(String.init) ?? ""
+    }
+
+    /// Calculate the degree difference between current heading and Qibla direction
+    private var degreeOffset: Int {
+        let diff = viewModel.qiblaDirection - viewModel.deviceHeading
+        let normalized = diff.truncatingRemainder(dividingBy: 360)
+
+        if normalized > 180 {
+            return Int(normalized - 360)
+        } else if normalized < -180 {
+            return Int(normalized + 360)
+        }
+        return Int(normalized)
     }
 
     private var distanceCard: some View {
@@ -623,6 +674,19 @@ struct CardPressStyle: ButtonStyle {
         configuration.label
             .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
             .animation(.spring(response: 0.3, dampingFraction: 0.6), value: configuration.isPressed)
+    }
+}
+
+// MARK: - Triangle Shape
+/// Custom triangle shape for compass needle
+struct Triangle: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.midX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+        path.closeSubpath()
+        return path
     }
 }
 
