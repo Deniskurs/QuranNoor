@@ -18,7 +18,7 @@ struct NightPortionCard: View {
 
     // MARK: - Body
     var body: some View {
-        CardView(showPattern: true) {
+        LiquidGlassCardView(showPattern: true, intensity: .moderate) {
             VStack(spacing: 16) {
                 // Header
                 HStack {

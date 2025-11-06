@@ -20,6 +20,7 @@ final class OnboardingCoordinator {
         case locationAndCalculation = 2
         case notifications = 3
         case personalization = 4
+        case themeSelection = 5
 
         var id: Int { rawValue }
 
@@ -35,6 +36,8 @@ final class OnboardingCoordinator {
                 return "Prayer Reminders"
             case .personalization:
                 return "Personalize"
+            case .themeSelection:
+                return "Choose Theme"
             }
         }
 
@@ -49,7 +52,9 @@ final class OnboardingCoordinator {
             case .notifications:
                 return "Enable notifications to never miss a prayer"
             case .personalization:
-                return "Customize your app experience"
+                return "Customize your app experience with your name"
+            case .themeSelection:
+                return "Select your preferred reading theme"
             }
         }
     }
@@ -250,6 +255,7 @@ final class OnboardingCoordinator {
     // MARK: - Permission Management
 
     /// Update location permission status
+    /// Note: Views are responsible for calling advance() after permission is granted
     func updateLocationPermission(_ status: PermissionState) {
         locationPermission = status
         saveState()
@@ -258,16 +264,10 @@ final class OnboardingCoordinator {
             "type": "location",
             "status": status.description
         ])
-
-        // Auto-advance if granted
-        if status.isGranted {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-                self?.advance()
-            }
-        }
     }
 
     /// Update notification permission status
+    /// Note: Views are responsible for calling advance() after permission is granted
     func updateNotificationPermission(_ status: PermissionState) {
         notificationPermission = status
         saveState()
@@ -276,13 +276,6 @@ final class OnboardingCoordinator {
             "type": "notification",
             "status": status.description
         ])
-
-        // Auto-advance if granted
-        if status.isGranted {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-                self?.advance()
-            }
-        }
     }
 
     // MARK: - Calculation Method

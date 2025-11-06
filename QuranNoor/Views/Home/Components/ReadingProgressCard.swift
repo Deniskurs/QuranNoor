@@ -14,92 +14,14 @@ struct ReadingProgressCard: View {
     let onContinue: () -> Void
 
     var body: some View {
-        CardView(showPattern: true) {
-            VStack(alignment: .leading, spacing: Spacing.cardSpacing) { // Enhanced from 16 to 20
-                // Header
-                HStack {
-                    Image(systemName: "book.pages.fill")
-                        .font(.title3)
-                        .foregroundColor(AppColors.primary.teal)
-
-                    Text("Quran Progress")
-                        .font(.headline)
-                        .foregroundColor(themeManager.currentTheme.textPrimary)
-
-                    Spacer()
-
-                    // Overall completion percentage
-                    Text(stats.progressPercentage)
-                        .font(.title3.bold())
-                        .foregroundColor(AppColors.primary.teal)
-                }
-
-                // Progress ring
-                HStack(spacing: Spacing.md) { // Enhanced from 20 to 24
-                    // Large progress ring
-                    QuranProgressRing(
-                        versesRead: stats.totalVersesRead,
-                        totalVerses: 6236,
-                        size: 110 // Enhanced from 100
-                    )
-
-                    // Stats
-                    VStack(alignment: .leading, spacing: Spacing.xs) { // Enhanced from 8 to 12
-                        statRow(
-                            icon: "text.alignleft",
-                            label: "Verses Read",
-                            value: "\(stats.totalVersesRead) / 6236"
-                        )
-
-                        statRow(
-                            icon: "book.closed",
-                            label: "Current Juz",
-                            value: "Juz \(stats.currentJuz)"
-                        )
-
-                        statRow(
-                            icon: "flame.fill",
-                            label: "Streak",
-                            value: stats.streakText
-                        )
-                    }
-                }
-
-                // Last read location
-                if stats.lastReadSurahName != nil {
-                    Divider()
-                        .background(themeManager.currentTheme.textTertiary.opacity(0.3))
-
-                    HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Last Read")
-                                .font(.caption)
-                                .foregroundColor(themeManager.currentTheme.textSecondary)
-
-                            Text(stats.lastReadLocation)
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                                .foregroundColor(themeManager.currentTheme.textPrimary)
-                        }
-
-                        Spacer()
-
-                        // Continue reading button
-                        Button(action: onContinue) {
-                            HStack(spacing: 6) {
-                                Text("Continue")
-                                    .font(.subheadline)
-                                    .fontWeight(.semibold)
-
-                                Image(systemName: "arrow.right.circle.fill")
-                                    .font(.subheadline)
-                            }
-                            .foregroundColor(AppColors.primary.teal)
-                        }
-                    }
-                }
+        LiquidGlassCardView(showPattern: true, intensity: .moderate) {
+            if stats.totalVersesRead == 0 {
+                // Encouraging empty state for new users
+                emptyStateView
+            } else {
+                // Regular progress view
+                progressView
             }
-            .padding(Spacing.cardPadding) // Standardized to 24pt (was 20pt)
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityText)
@@ -111,6 +33,144 @@ struct ReadingProgressCard: View {
             print("   - Calculated from ring: \(Double(stats.totalVersesRead) / 6236.0 * 100)%")
             #endif
         }
+    }
+
+    // MARK: - Views
+
+    /// Encouraging empty state for new users
+    private var emptyStateView: some View {
+        VStack(spacing: 20) {
+            // Crescent moon icon
+            Image(systemName: "moon.stars.fill")
+                .font(.system(size: 48))
+                .foregroundColor(AppColors.primary.teal)
+                .padding(.top, 8)
+
+            VStack(spacing: 8) {
+                Text("Begin Your Journey 🌙")
+                    .font(.title3.bold())
+                    .foregroundColor(themeManager.currentTheme.textPrimary)
+
+                Text("Every journey begins with a single verse")
+                    .font(.subheadline)
+                    .foregroundColor(themeManager.currentTheme.textSecondary)
+                    .multilineTextAlignment(.center)
+            }
+
+            // Start reading button
+            Button(action: {
+                HapticManager.shared.trigger(.light)
+                onContinue()
+            }) {
+                HStack(spacing: 8) {
+                    Image(systemName: "book.pages")
+                    Text("Read Al-Fatiha")
+                        .fontWeight(.semibold)
+                }
+                .font(.subheadline)
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(AppColors.primary.teal)
+                .cornerRadius(12)
+            }
+            .padding(.horizontal, 20)
+
+            Text("6,236 verses await")
+                .font(.caption)
+                .foregroundColor(themeManager.currentTheme.textTertiary)
+        }
+        .padding(.vertical, 24)
+        .padding(.horizontal, Spacing.cardPadding)
+    }
+
+    /// Regular progress view with stats
+    private var progressView: some View {
+        VStack(alignment: .leading, spacing: Spacing.cardSpacing) { // Enhanced from 16 to 20
+            // Header
+            HStack {
+                Image(systemName: "book.pages.fill")
+                    .font(.title3)
+                    .foregroundColor(AppColors.primary.teal)
+
+                Text("Quran Progress")
+                    .font(.headline)
+                    .foregroundColor(themeManager.currentTheme.textPrimary)
+
+                Spacer()
+
+                // Overall completion percentage
+                Text(stats.progressPercentage)
+                    .font(.title3.bold())
+                    .foregroundColor(AppColors.primary.teal)
+            }
+
+            // Progress ring
+            HStack(spacing: Spacing.md) { // Enhanced from 20 to 24
+                // Large progress ring
+                QuranProgressRing(
+                    versesRead: stats.totalVersesRead,
+                    totalVerses: 6236,
+                    size: 110 // Enhanced from 100
+                )
+
+                // Stats
+                VStack(alignment: .leading, spacing: Spacing.xs) { // Enhanced from 8 to 12
+                    statRow(
+                        icon: "text.alignleft",
+                        label: "Verses Read",
+                        value: "\(stats.totalVersesRead) / 6236"
+                    )
+
+                    statRow(
+                        icon: "book.closed",
+                        label: "Current Juz",
+                        value: "Juz \(stats.currentJuz)"
+                    )
+
+                    statRow(
+                        icon: "flame.fill",
+                        label: "Streak",
+                        value: stats.streakText
+                    )
+                }
+            }
+
+            // Last read location
+            if stats.lastReadSurahName != nil {
+                Divider()
+                    .background(themeManager.currentTheme.textTertiary.opacity(0.3))
+
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Last Read")
+                            .font(.caption)
+                            .foregroundColor(themeManager.currentTheme.textSecondary)
+
+                        Text(stats.lastReadLocation)
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundColor(themeManager.currentTheme.textPrimary)
+                    }
+
+                    Spacer()
+
+                    // Continue reading button
+                    Button(action: onContinue) {
+                        HStack(spacing: 6) {
+                            Text("Continue")
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+
+                            Image(systemName: "arrow.right.circle.fill")
+                                .font(.subheadline)
+                        }
+                        .foregroundColor(AppColors.primary.teal)
+                    }
+                }
+            }
+        }
+        .padding(Spacing.cardPadding) // Standardized to 24pt (was 20pt)
     }
 
     // MARK: - Helper Views

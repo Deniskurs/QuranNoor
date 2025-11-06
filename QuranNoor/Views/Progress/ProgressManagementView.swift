@@ -259,7 +259,7 @@ struct ProgressManagementView: View {
     // MARK: - Collapsible Stats Header
 
     private var statsHeaderSection: some View {
-        CardView(showPattern: true) {
+        LiquidGlassCardView(showPattern: true, intensity: .moderate) {
             VStack(spacing: 16) {
                 // Header with expand/collapse button
                 HStack {
@@ -688,7 +688,7 @@ struct OverviewTab: View {
     }
 
     private var heroProgressSection: some View {
-        CardView(showPattern: true) {
+        LiquidGlassCardView(showPattern: true, intensity: .moderate) {
             VStack(spacing: 16) {
                 ThemedText("Overall Progress", style: .heading)
                     .foregroundColor(themeManager.currentTheme.textColor)

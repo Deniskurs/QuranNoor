@@ -14,7 +14,7 @@ struct FirstTimeUserView: View {
     var onDismiss: () -> Void
 
     var body: some View {
-        CardView(showPattern: true) {
+        LiquidGlassCardView(showPattern: true, intensity: .prominent) {
             VStack(spacing: 24) {
                 // Welcome icon
                 Image(systemName: "hand.wave.fill")

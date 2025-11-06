@@ -46,7 +46,7 @@ struct PrayerTimeCard: View {
     // MARK: - Body
     var body: some View {
         Button(action: { onTap?() }) {
-            CardView(showPattern: status == .current) {
+            LiquidGlassCardView(showPattern: status == .current, intensity: status == .current ? .prominent : .subtle) {
                 HStack(spacing: 16) {
                     // Left: Prayer info
                     VStack(alignment: .leading, spacing: 8) {

@@ -19,6 +19,7 @@ struct NotificationPermissionView: View {
     @State private var isRequesting = false
     @State private var showSettingsAlert = false
     @State private var showPrimingView = true  // Show priming view first
+    @State private var hasAutoAdvanced = false  // Prevent double-advance
 
     // MARK: - Body
     var body: some View {
@@ -43,88 +44,76 @@ struct NotificationPermissionView: View {
                 .transition(.move(edge: .trailing).combined(with: .opacity))
             } else {
                 // Show permission status and actions
-                VStack(spacing: 32) {
-                    Spacer()
+                ScrollView {
+                    VStack(spacing: 32) {
+                        // Status icon
+                        ZStack {
+                            Circle()
+                                .fill(AppColors.primary.gold.opacity(0.15))
+                                .frame(width: 120, height: 120)
 
-                    // Status icon
-                    ZStack {
-                        Circle()
-                            .fill(AppColors.primary.gold.opacity(0.15))
-                            .frame(width: 120, height: 120)
+                            Image(systemName: permissionManager.notificationStatus.isGranted ? "checkmark.circle.fill" : "bell.badge.fill")
+                                .font(.system(size: 60))
+                                .foregroundColor(permissionManager.notificationStatus.isGranted ? AppColors.primary.green : AppColors.primary.gold)
+                                .symbolEffect(.bounce, value: permissionManager.notificationStatus.isGranted)
+                        }
+                        .padding(.top, 60)
 
-                        Image(systemName: permissionManager.notificationStatus.isGranted ? "checkmark.circle.fill" : "bell.badge.fill")
-                            .font(.system(size: 60))
-                            .foregroundColor(permissionManager.notificationStatus.isGranted ? AppColors.primary.green : AppColors.primary.gold)
-                            .symbolEffect(.bounce, value: permissionManager.notificationStatus.isGranted)
-                    }
+                        // Content
+                        VStack(spacing: 16) {
+                            ThemedText(
+                                permissionManager.notificationStatus.isGranted ? "Notifications Enabled" : "Prayer Reminders",
+                                style: .title
+                            )
+                            .foregroundColor(AppColors.primary.green)
 
-                    // Content
-                    VStack(spacing: 16) {
-                        ThemedText(
-                            permissionManager.notificationStatus.isGranted ? "Notifications Enabled" : "Prayer Reminders",
-                            style: .title
-                        )
-                        .foregroundColor(AppColors.primary.green)
+                            ThemedText.body(
+                                permissionManager.notificationStatus.isGranted ?
+                                "You'll receive timely reminders for your prayers" :
+                                "Get notified before each prayer time so you never miss a salah"
+                            )
+                            .multilineTextAlignment(.center)
+                            .opacity(0.8)
+                            .padding(.horizontal, 40)
+                        }
 
-                        ThemedText.body(
-                            permissionManager.notificationStatus.isGranted ?
-                            "You'll receive timely reminders for your prayers" :
-                            "Get notified before each prayer time so you never miss a salah"
-                        )
-                        .multilineTextAlignment(.center)
-                        .opacity(0.8)
-                        .padding(.horizontal, 40)
-                    }
+                        // Action buttons
+                        VStack(spacing: 12) {
+                            if !permissionManager.notificationStatus.isGranted {
+                                Button {
+                                    requestNotificationPermission()
+                                } label: {
+                                    if isRequesting {
+                                        ProgressView()
+                                            .frame(maxWidth: .infinity)
+                                    } else {
+                                        Label("Enable Notifications", systemImage: "bell.fill")
+                                            .frame(maxWidth: .infinity)
+                                    }
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .controlSize(.large)
+                                .tint(AppColors.primary.gold)
+                                .disabled(isRequesting)
+                            }
 
-                    Spacer()
-
-                    // Action buttons
-                    VStack(spacing: 12) {
-                        if !permissionManager.notificationStatus.isGranted {
-                            Button {
-                                requestNotificationPermission()
-                            } label: {
-                                if isRequesting {
-                                    ProgressView()
-                                        .frame(maxWidth: .infinity)
-                                } else {
-                                    Label("Enable Notifications", systemImage: "bell.fill")
+                            // Show "Open Settings" if denied
+                            if permissionManager.notificationStatus.needsSettingsRedirect {
+                                Button {
+                                    showSettingsAlert = true
+                                } label: {
+                                    Label("Open Settings", systemImage: "gear")
                                         .frame(maxWidth: .infinity)
                                 }
+                                .buttonStyle(.bordered)
+                                .controlSize(.large)
+                                .tint(AppColors.primary.gold)
                             }
-                            .buttonStyle(.borderedProminent)
-                            .controlSize(.large)
-                            .tint(AppColors.primary.gold)
-                            .disabled(isRequesting)
                         }
-
-                        // Show "Open Settings" if denied
-                        if permissionManager.notificationStatus.needsSettingsRedirect {
-                            Button {
-                                showSettingsAlert = true
-                            } label: {
-                                Label("Open Settings", systemImage: "gear")
-                                    .frame(maxWidth: .infinity)
-                            }
-                            .buttonStyle(.bordered)
-                            .controlSize(.large)
-                            .tint(AppColors.primary.gold)
-                        }
-
-                        if !permissionManager.notificationStatus.isGranted {
-                            Button {
-                                // Skip for now
-                                AudioHapticCoordinator.shared.playBack()
-                                coordinator.advance()
-                            } label: {
-                                Text("Maybe Later")
-                            }
-                            .buttonStyle(.borderless)
-                            .foregroundStyle(.secondary)
-                        }
+                        .padding(.horizontal, 32)
+                        .padding(.top, 60)
+                        .padding(.bottom, 40)
                     }
-                    .padding(.horizontal, 32)
-                    .padding(.bottom, 40)
                 }
                 .transition(.move(edge: .leading).combined(with: .opacity))
             }
@@ -143,10 +132,16 @@ struct NotificationPermissionView: View {
         }
         .onChange(of: permissionManager.notificationStatus) { oldStatus, newStatus in
             // Auto-continue when permission is granted
-            if hasRequestedPermission && newStatus.isGranted {
+            if hasRequestedPermission && newStatus.isGranted && !hasAutoAdvanced {
+                hasAutoAdvanced = true  // Prevent double-advance
                 AudioHapticCoordinator.shared.playSuccess()
                 coordinator.updateNotificationPermission(.granted)
-                // Coordinator will auto-advance after 0.5s
+
+                // Auto-advance after brief delay for UX
+                Task { @MainActor in
+                    try? await Task.sleep(nanoseconds: 800_000_000) // 0.8 seconds
+                    coordinator.advance()
+                }
             } else if hasRequestedPermission && newStatus == .denied {
                 coordinator.updateNotificationPermission(.denied)
             } else if hasRequestedPermission && newStatus == .restricted {

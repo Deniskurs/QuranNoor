@@ -21,6 +21,7 @@ struct HomeView: View {
     // MARK: - State
     @State private var isInitialized = false
     @State private var showFirstTimeExperience = false
+    @State private var showWelcomeMoment = false
 
     // MARK: - Body
     var body: some View {
@@ -35,12 +36,24 @@ struct HomeView: View {
 
                 // Main content
                 mainContent
+
+                // Welcome moment overlay (shown after onboarding)
+                if showWelcomeMoment {
+                    WelcomeMomentView(selectedTab: $selectedTab) {
+                        UserDefaults.standard.set(true, forKey: "hasSeenWelcomeMoment")
+                        withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                            showWelcomeMoment = false
+                        }
+                    }
+                    .transition(.opacity)
+                    .zIndex(100)
+                }
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .principal) {
-                    // Invisible title for clean look
-                    Text("")
+                    // iOS 26: Use native ToolbarSpacer for clean look
+                    Spacer()
                 }
             }
             .refreshable {
@@ -96,6 +109,18 @@ struct HomeView: View {
                     withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
                         showFirstTimeExperience = false
                     }
+
+                    // Show welcome moment after brief delay
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        // Check if welcome moment hasn't been seen
+                        let hasSeenWelcome = UserDefaults.standard.bool(forKey: "hasSeenWelcomeMoment")
+                        if !hasSeenWelcome {
+                            withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                                showWelcomeMoment = true
+                            }
+                        }
+                    }
+
                     // Initialize the home page after dismissing welcome screen
                     Task { await initialize() }
                 }
@@ -117,8 +142,10 @@ struct HomeView: View {
                 )
                 .transition(.move(edge: .top).combined(with: .opacity))
 
-                // Next prayer card (hero section)
+                // Next prayer card (HERO SECTION - enhanced visual hierarchy)
                 NextPrayerCardView(prayerVM: prayerVM, selectedTab: $selectedTab)
+                    .scaleEffect(1.02) // Slightly larger to draw attention
+                    .shadow(color: AppColors.primary.teal.opacity(0.15), radius: 12, x: 0, y: 8)
                     .transition(.scale.combined(with: .opacity))
 
                 // Spiritual nourishment carousel
@@ -127,6 +154,15 @@ struct HomeView: View {
                     hadithOfDay: homeVM.hadithOfDay
                 )
                 .transition(.move(edge: .leading).combined(with: .opacity))
+
+                // Quick actions grid (moved up for easier access)
+                if let stats = homeVM.dailyStats {
+                    QuickActionsGrid(
+                        selectedTab: $selectedTab,
+                        lastReadLocation: stats.lastReadLocation
+                    )
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
 
                 // Reading progress card
                 if let stats = homeVM.dailyStats {
@@ -141,15 +177,6 @@ struct HomeView: View {
                 // Hijri calendar card
                 HijriCalendarCard(hijriDate: homeVM.hijriDate)
                     .transition(.scale.combined(with: .opacity))
-
-                // Quick actions grid
-                if let stats = homeVM.dailyStats {
-                    QuickActionsGrid(
-                        selectedTab: $selectedTab,
-                        lastReadLocation: stats.lastReadLocation
-                    )
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                }
 
                 // Recent activity feed
                 RecentActivityFeed(

@@ -165,7 +165,7 @@ struct VerseReaderView: View {
     // MARK: - Components
 
     private var surahHeader: some View {
-        CardView(showPattern: true) {
+        LiquidGlassCardView(showPattern: true, intensity: .subtle) {
             VStack(spacing: 12) {
                 // Arabic name
                 ThemedText.arabic(surah.name)

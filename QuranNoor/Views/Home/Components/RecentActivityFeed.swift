@@ -16,7 +16,7 @@ struct RecentActivityFeed: View {
     let prayersCompleted: Int
 
     var body: some View {
-        CardView(showPattern: false) {
+        LiquidGlassCardView(intensity: .subtle) {
             VStack(alignment: .leading, spacing: Spacing.cardSpacing) { // Enhanced from 16 to 20
                 // Header
                 HStack {
@@ -77,23 +77,35 @@ struct RecentActivityFeed: View {
                         }
                     }
                 } else {
-                    // Empty state
-                    VStack(spacing: 12) {
-                        Image(systemName: "tray")
-                            .font(.system(size: 40))
-                            .foregroundColor(themeManager.currentTheme.textTertiary)
+                    // Encouraging empty state
+                    VStack(spacing: 16) {
+                        Image(systemName: "book.circle")
+                            .font(.system(size: 44))
+                            .foregroundColor(AppColors.primary.teal)
 
-                        Text("No recent activity")
-                            .font(.subheadline)
-                            .foregroundColor(themeManager.currentTheme.textSecondary)
+                        VStack(spacing: 6) {
+                            Text("Your Story Starts Here")
+                                .font(.headline)
+                                .foregroundColor(themeManager.currentTheme.textPrimary)
 
-                        Text("Start reading or mark prayers to see your activity here")
-                            .font(.caption)
-                            .foregroundColor(themeManager.currentTheme.textTertiary)
-                            .multilineTextAlignment(.center)
+                            Text("Complete your first prayer or read a verse to begin tracking your spiritual journey")
+                                .font(.caption)
+                                .foregroundColor(themeManager.currentTheme.textSecondary)
+                                .multilineTextAlignment(.center)
+                        }
+
+                        // Encouraging call-to-action
+                        HStack(spacing: 8) {
+                            Image(systemName: "sparkles")
+                                .font(.caption)
+                            Text("Get Started")
+                                .font(.caption.weight(.medium))
+                        }
+                        .foregroundColor(AppColors.primary.teal)
+                        .padding(.top, 4)
                     }
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 20)
+                    .padding(.vertical, 24)
                 }
             }
             .padding(Spacing.cardPadding) // Standardized to 24pt (was 20pt)

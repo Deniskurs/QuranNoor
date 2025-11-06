@@ -87,7 +87,7 @@ struct LocationPickerView: View {
     }
 
     private var coordinatesEntrySection: some View {
-        CardView(showPattern: true) {
+        LiquidGlassCardView(showPattern: true, intensity: .moderate) {
             VStack(alignment: .leading, spacing: 16) {
                 HStack {
                     Image(systemName: "location.circle.fill")

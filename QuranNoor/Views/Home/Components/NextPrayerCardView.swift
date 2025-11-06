@@ -10,12 +10,13 @@ import SwiftUI
 
 struct NextPrayerCardView: View {
     @EnvironmentObject var themeManager: ThemeManager
+    @Environment(\.accessibilityReduceMotion) var reduceMotion
     @State var prayerVM: PrayerViewModel
     @Binding var selectedTab: Int
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1.0)) { context in
-            CardView(showPattern: false) {
+            LiquidGlassCardView(intensity: .prominent) {
                 VStack(spacing: Spacing.md) { // Enhanced from 16 to 24
                     if let period = prayerVM.currentPrayerPeriod {
                         content(for: period)
@@ -132,17 +133,17 @@ struct NextPrayerCardView: View {
                 Spacer()
             }
 
-            // Large countdown with pulsing ring
+            // Large countdown with pulsing ring (respects reduced motion)
             ZStack {
-                // Pulsing background
+                // Background (pulsing only if motion not reduced)
                 Circle()
                     .fill(AppColors.primary.gold.opacity(0.1))
                     .frame(width: 160, height: 160)
                     .overlay(
                         Circle()
-                            .stroke(AppColors.primary.gold, lineWidth: 3)
-                            .scaleEffect(pulseScale)
-                            .opacity(pulseOpacity)
+                            .stroke(AppColors.primary.gold, lineWidth: reduceMotion ? 4 : 3)
+                            .scaleEffect(reduceMotion ? 1.0 : pulseScale)
+                            .opacity(reduceMotion ? 1.0 : pulseOpacity)
                     )
 
                 VStack(spacing: 4) {
@@ -159,7 +160,9 @@ struct NextPrayerCardView: View {
                 }
             }
             .task {
-                startPulsing()
+                if !reduceMotion {
+                    startPulsing()
+                }
             }
         }
     }
@@ -232,6 +235,7 @@ struct NextPrayerCardView: View {
                     Image(systemName: isCompleted ? "checkmark.circle.fill" : "circle")
                         .font(.title3)
                         .foregroundColor(isCompleted ? AppColors.primary.green : themeManager.currentTheme.textTertiary)
+                        .symbolEffect(.bounce, options: .speed(0.5), value: isCompleted) // iOS 26 draw-on animation
 
                     Text(String(time.name.displayName.prefix(3)))
                         .font(.caption2)

@@ -14,63 +14,52 @@ struct HomeHeaderView: View {
     let hijriDate: HijriDate?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
-            // Greeting - full width
-            VStack(alignment: .leading, spacing: Spacing.xxxs) {
-                Text(greeting)
-                    .font(.system(size: 32, weight: .bold))
-                    .tracking(-0.5)
-                    .foregroundColor(themeManager.currentTheme.textPrimary)
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            // Greeting - Bold & Modern (iOS 26 style)
+            Text(greeting)
+                .font(.system(size: 40, weight: .heavy))
+                .tracking(-0.5)
+                .foregroundColor(themeManager.currentTheme.textPrimary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
-                // Subtle subtext
-                Text("May peace be upon you")
-                    .font(.system(size: 14, weight: .regular))
-                    .foregroundColor(themeManager.currentTheme.textTertiary)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            // Clean divider separator
+            Divider()
+                .background(themeManager.currentTheme.textTertiary.opacity(0.3))
 
-            // Centered date layout with separator - dot is fixed at screen center
-            ZStack {
-                // Center dot - absolutely centered
-                Text("•")
-                    .font(.system(size: 16))
-                    .foregroundColor(themeManager.currentTheme.textTertiary)
+            // Dates stacked vertically (Modern Split style)
+            VStack(alignment: .leading, spacing: Spacing.xs) {
+                // Hijri date - top
+                HStack(spacing: 8) {
+                    if let hijri = hijriDate {
+                        Image(systemName: "calendar.badge.clock")
+                            .font(.system(size: 14))
+                            .foregroundColor(AppColors.primary.gold)
 
-                // Dates on either side
-                HStack(spacing: 0) {
-                    // Hijri date - left side
-                    HStack(spacing: 6) {
-                        if let hijri = hijriDate {
-                            Image(systemName: "calendar.badge.clock")
-                                .font(.caption)
-                                .foregroundColor(AppColors.primary.gold)
+                        Text(hijri.formattedDate)
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundColor(themeManager.currentTheme.textSecondary)
+                    } else {
+                        Image(systemName: "calendar")
+                            .font(.system(size: 14))
+                            .foregroundColor(AppColors.primary.gold)
 
-                            Text(hijri.formattedDate)
-                                .font(.subheadline)
-                                .foregroundColor(themeManager.currentTheme.textSecondary)
-                        } else {
-                            Image(systemName: "calendar")
-                                .font(.caption)
-                                .foregroundColor(AppColors.primary.gold)
-
-                            Text("Loading...")
-                                .font(.subheadline)
-                                .foregroundColor(themeManager.currentTheme.textSecondary)
-                        }
+                        Text("Loading...")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundColor(themeManager.currentTheme.textSecondary)
                     }
-                    .frame(maxWidth: .infinity, alignment: .trailing)
-                    .padding(.trailing, Spacing.md) // Space before center dot
+                }
 
-                    // Spacer for center dot
-                    Spacer()
-                        .frame(width: 20) // Fixed width for dot area
-
-                    // Gregorian date - right side
-                    Text(todayGregorian)
-                        .font(.subheadline)
+                // Gregorian date - bottom
+                HStack(spacing: 8) {
+                    Image(systemName: "calendar")
+                        .font(.system(size: 14))
                         .foregroundColor(themeManager.currentTheme.textSecondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.leading, Spacing.md) // Space after center dot
+
+                    Text(todayGregorian)
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundColor(themeManager.currentTheme.textSecondary)
                 }
             }
 

@@ -18,6 +18,10 @@ struct QuranNoorApp: App {
 
     // MARK: - Initializer
     init() {
+        // Migrate UserDefaults schema if needed
+        // This ensures smooth upgrades between app versions
+        UserDefaultsMigrator().migrateIfNeeded()
+
         // Register notification categories at app launch
         // This ensures categories exist before any notifications are scheduled
         let notificationService = NotificationService()

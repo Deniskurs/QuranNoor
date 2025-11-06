@@ -264,7 +264,7 @@ struct PrayerTimesView: View {
     private var completionStatisticsCard: some View {
         let stats = completionService.getTodayStatistics()
 
-        return CardView(showPattern: false) {
+        return LiquidGlassCardView(intensity: .moderate) {
             VStack(spacing: 16) {
                 // Header
                 HStack {

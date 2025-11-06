@@ -118,8 +118,12 @@ final class PermissionManager: ObservableObject {
                 return await self.checkLocationStatus()
             }
 
-            // Return first result
-            let result = await group.next()!
+            // Return first result (safely unwrap)
+            guard let result = await group.next() else {
+                // Fallback: check current status if group returns nil
+                group.cancelAll()
+                return await checkLocationStatus()
+            }
             group.cancelAll()
             return result
         }
@@ -193,26 +197,47 @@ final class PermissionManager: ObservableObject {
             return currentStatus
         }
 
-        do {
-            let granted = try await UNUserNotificationCenter.current()
-                .requestAuthorization(options: [.alert, .sound, .badge])
+        // Add timeout handling for notification permission request
+        return await withTaskGroup(of: PermissionStatus.self) { group in
+            // Main permission request task
+            group.addTask {
+                do {
+                    let granted = try await UNUserNotificationCenter.current()
+                        .requestAuthorization(options: [.alert, .sound, .badge])
 
-            let status: PermissionStatus = granted ? .granted : .denied
+                    let status: PermissionStatus = granted ? .granted : .denied
 
-            await MainActor.run {
-                notificationStatus = status
-                persistNotificationStatus(status)
+                    await MainActor.run {
+                        self.notificationStatus = status
+                        self.persistNotificationStatus(status)
+                    }
+
+                    return status
+                } catch {
+                    print("⚠️ Notification permission error: \(error)")
+                    let status: PermissionStatus = .denied
+                    await MainActor.run {
+                        self.notificationStatus = status
+                        self.persistNotificationStatus(status)
+                    }
+                    return status
+                }
             }
 
-            return status
-        } catch {
-            print("⚠️ Notification permission error: \(error)")
-            let status: PermissionStatus = .denied
-            await MainActor.run {
-                notificationStatus = status
-                persistNotificationStatus(status)
+            // Timeout task (10 seconds - should never hit this, but safety measure)
+            group.addTask {
+                try? await Task.sleep(nanoseconds: 10_000_000_000)
+                print("⚠️ Notification permission request timed out")
+                return await self.checkNotificationStatus()
             }
-            return status
+
+            // Return first result
+            guard let result = await group.next() else {
+                group.cancelAll()
+                return await checkNotificationStatus()
+            }
+            group.cancelAll()
+            return result
         }
     }
 

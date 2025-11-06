@@ -13,6 +13,9 @@ struct OnboardingContainerView: View {
     @EnvironmentObject var themeManager: ThemeManager
     @Environment(\.dismiss) var dismiss
 
+    // AppStorage binding to directly update completion status
+    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
+
     @State private var coordinator: OnboardingCoordinator
     @StateObject private var permissionManager = PermissionManager.shared
 
@@ -23,6 +26,38 @@ struct OnboardingContainerView: View {
 
     init(coordinator: OnboardingCoordinator? = nil) {
         _coordinator = State(initialValue: coordinator ?? OnboardingCoordinator())
+    }
+
+    // MARK: - Computed Properties
+
+    /// Determines if Continue button should be shown
+    /// Hidden on permission steps until permission is granted
+    private var shouldShowContinueButton: Bool {
+        let currentStepIndex = coordinator.currentStep.rawValue
+        let totalSteps = OnboardingCoordinator.OnboardingStep.allCases.count
+
+        // Don't show on last two steps (personalization and theme have their own buttons)
+        guard currentStepIndex < totalSteps - 2 else {
+            return false
+        }
+
+        // Step 2 = Location permission (locationAndCalculation)
+        let isLocationStep = (currentStepIndex == 2)
+        // Step 3 = Notification permission
+        let isNotificationStep = (currentStepIndex == 3)
+
+        // On permission steps, hide container button
+        // Location step has embedded Continue button (after method selection)
+        if isLocationStep {
+            return false
+        }
+        // Notification step: show Continue only if permission granted
+        else if isNotificationStep {
+            return permissionManager.notificationStatus.isGranted
+        }
+
+        // On non-permission steps, always show Continue
+        return true
     }
 
     // MARK: - Body
@@ -43,22 +78,9 @@ struct OnboardingContainerView: View {
                 .padding(.horizontal)
                 .padding(.top, 8)
 
-                // Skip button (visible until last step) - Native iOS 26 style
-                if coordinator.currentStep.rawValue < OnboardingCoordinator.OnboardingStep.allCases.count - 1 {
-                    HStack {
-                        Spacer()
-                        Button("Skip") {
-                            skipOnboarding()
-                        }
-                        .buttonStyle(.borderless)
-                        .foregroundStyle(.secondary)
-                        .padding()
-                    }
-                    .frame(height: 44) // Standard iOS touch target
-                } else {
-                    Spacer()
-                        .frame(height: 44)
-                }
+                // Spacer for consistent top padding
+                Spacer()
+                    .frame(height: 44)
 
                 // Page content - Map coordinator steps to views
                 TabView(selection: Binding(
@@ -96,11 +118,17 @@ struct OnboardingContainerView: View {
                     )
                     .tag(3)
 
-                    // Step 4: Personalization (using ThemeSelectionView temporarily)
-                    ThemeSelectionView(
+                    // Step 4: Personalization (name entry)
+                    PersonalizationView(
                         coordinator: coordinator
                     )
                     .tag(4)
+
+                    // Step 5: Theme Selection
+                    ThemeSelectionView(
+                        coordinator: coordinator
+                    )
+                    .tag(5)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never)) // Hide default page indicator
                 .animation(.smooth(duration: 0.3), value: coordinator.currentStep)
@@ -121,8 +149,9 @@ struct OnboardingContainerView: View {
 
                     Spacer()
 
-                    // Next/Get Started button
-                    if coordinator.currentStep.rawValue < OnboardingCoordinator.OnboardingStep.allCases.count - 1 {
+                    // Next/Get Started button (conditionally shown)
+                    // Hidden on permission steps until permission is granted
+                    if shouldShowContinueButton {
                         Button {
                             nextPage()
                         } label: {
@@ -188,13 +217,17 @@ struct OnboardingContainerView: View {
 
     /// Complete onboarding and transition to main app
     private func completeOnboarding() {
+        // Mark onboarding as complete (coordinator saves to storage)
+        coordinator.complete()
+
         // Play onboarding completion feedback (success + startup sound)
         feedbackCoordinator.playOnboardingComplete()
 
-        // Dismiss onboarding after brief delay to allow startup sound to play
+        // Update AppStorage to trigger app transition
+        // Brief delay allows startup sound to play
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             withAnimation(.easeInOut(duration: 0.6)) {
-                dismiss()
+                hasCompletedOnboarding = true
             }
         }
     }
@@ -229,6 +262,8 @@ struct OnboardingProgressView: View {
                 }
             }
             .frame(height: 4)
+            .accessibilityLabel("Onboarding progress")
+            .accessibilityValue("\(Int(progress * 100)) percent complete, step \(currentStep) of \(totalSteps)")
         }
         .padding(.vertical, 8)
     }

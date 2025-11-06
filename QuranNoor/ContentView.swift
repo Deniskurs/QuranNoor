@@ -51,6 +51,7 @@ struct ContentView: View {
                 }
                 .tag(4)
         }
+        .tabViewStyle(.automatic) // iOS 26: Enable scroll minimize behavior
         .tint(themeManager.currentTheme.accentColor)  // Use theme-aware accent color
         .onChange(of: selectedTab) { oldValue, newValue in
             // Tab switching haptic feedback

@@ -103,7 +103,7 @@ struct VerseProgressDetailView: View {
     // MARK: - Components
 
     private var headerCard: some View {
-        CardView(showPattern: true) {
+        LiquidGlassCardView(showPattern: true, intensity: .moderate) {
             VStack(spacing: 12) {
                 // Arabic name
                 ThemedText.arabic(surah.name)

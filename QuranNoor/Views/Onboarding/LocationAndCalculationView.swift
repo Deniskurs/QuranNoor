@@ -26,6 +26,7 @@ struct LocationAndCalculationView: View {
     @State private var showPrimingView = true  // Show priming view first
     @State private var detectedCountry: String?
     @State private var manualCity: String = ""
+    @State private var hasAutoAdvanced = false  // Prevent double-advance
 
     // Calculation methods with detailed info
     private let methods: [(id: String, name: String, description: String, regions: String)] = [
@@ -107,10 +108,13 @@ struct LocationAndCalculationView: View {
         }
         .onChange(of: permissionManager.locationStatus) { oldStatus, newStatus in
             // Auto-detect country when permission is granted
-            if hasRequestedPermission && newStatus.isGranted {
+            if hasRequestedPermission && newStatus.isGranted && !hasAutoAdvanced {
+                hasAutoAdvanced = true  // Prevent double-advance
                 AudioHapticCoordinator.shared.playSuccess()
                 coordinator.updateLocationPermission(.granted)
 
+                // Detect country to recommend calculation method
+                // User will select method and click Continue when ready
                 Task {
                     await detectCountryFromLocation()
                 }
@@ -189,22 +193,12 @@ struct LocationAndCalculationView: View {
                             .tint(AppColors.primary.teal)
                         }
 
-                        // Manual entry option
-                        if !permissionManager.locationStatus.isGranted {
+                        // Manual entry option (only after denial)
+                        if permissionManager.locationStatus == .denied {
                             Button {
                                 showManualEntry = true
                             } label: {
                                 Text("Enter City Manually")
-                            }
-                            .buttonStyle(.borderless)
-                            .foregroundStyle(.secondary)
-
-                            Button {
-                                // Skip this step
-                                AudioHapticCoordinator.shared.playBack()
-                                coordinator.advance()
-                            } label: {
-                                Text("Maybe Later")
                             }
                             .buttonStyle(.borderless)
                             .foregroundStyle(.secondary)
@@ -344,22 +338,24 @@ struct LocationAndCalculationView: View {
                     .fill(AppColors.primary.gold.opacity(0.1))
             )
 
-            // Continue button
-            Button {
-                AudioHapticCoordinator.shared.playConfirm()
-                coordinator.advance()
-            } label: {
-                Label {
-                    Text("Continue")
-                } icon: {
-                    Image(systemName: "checkmark.circle.fill")
+            // Continue button (only shown after calculation method selected)
+            if !coordinator.selectedCalculationMethod.isEmpty {
+                Button {
+                    AudioHapticCoordinator.shared.playConfirm()
+                    coordinator.advance()
+                } label: {
+                    Label {
+                        Text("Continue")
+                    } icon: {
+                        Image(systemName: "checkmark.circle.fill")
+                    }
+                    .labelStyle(.titleAndIcon)
+                    .frame(maxWidth: .infinity)
                 }
-                .labelStyle(.titleAndIcon)
-                .frame(maxWidth: .infinity)
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                .tint(AppColors.primary.green)
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-            .tint(AppColors.primary.green)
         }
     }
 
@@ -412,20 +408,13 @@ struct LocationAndCalculationView: View {
         do {
             let response = try await search.start()
 
-            // Get country code from first map item
-            // iOS 26 Note: placemark is deprecated but addressRepresentations doesn't expose country codes
-            // Using device locale as fallback since Apple hasn't provided replacement API
-            if let mapItem = response.mapItems.first {
-                let countryCode: String?
-
-                // Try to get country from region name in addressRepresentations
-                // This gives us the country name, not code, so we'll use locale as fallback
-                if #available(iOS 26.0, *) {
-                    // Fallback to device's region code (best approximation available)
-                    countryCode = Locale.current.region?.identifier
-                } else {
-                    countryCode = mapItem.placemark.countryCode
-                }
+            // Get country code from geocoded location
+            // iOS 26 Note: placemark.countryCode is deprecated
+            // Using device locale as recommended alternative since addressRepresentations
+            // doesn't expose country codes directly
+            if !response.mapItems.isEmpty {
+                // Use device's region code (best approximation available in iOS 26)
+                let countryCode = Locale.current.region?.identifier
 
                 if let countryCode = countryCode {
                     await MainActor.run {

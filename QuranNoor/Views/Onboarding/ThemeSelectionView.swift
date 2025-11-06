@@ -12,7 +12,7 @@ struct ThemeSelectionView: View {
     // MARK: - Properties
     @EnvironmentObject var themeManager: ThemeManager
     @Environment(\.dynamicTypeSize) var dynamicTypeSize
-    @StateObject private var accessibilityHelper = AccessibilityHelper.shared
+    @ObservedObject private var accessibilityHelper = AccessibilityHelper.shared
 
     let coordinator: OnboardingCoordinator
 
@@ -155,7 +155,7 @@ struct ThemeOptionCard: View {
     let onSelect: () -> Void
 
     @EnvironmentObject var themeManager: ThemeManager
-    @StateObject private var accessibilityHelper = AccessibilityHelper.shared
+    @ObservedObject private var accessibilityHelper = AccessibilityHelper.shared
 
     var body: some View {
         Button {

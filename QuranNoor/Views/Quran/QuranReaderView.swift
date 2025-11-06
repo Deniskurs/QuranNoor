@@ -184,7 +184,7 @@ struct QuranReaderView: View {
     }
 
     private var progressCard: some View {
-        CardView(showPattern: true) {
+        LiquidGlassCardView(showPattern: true, intensity: .moderate) {
             VStack(spacing: 16) {
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {

@@ -65,9 +65,14 @@ final class HomeViewModel {
         await loadFreshData()
     }
 
-    /// Update greeting with Islamic greeting
+    /// Update greeting with Islamic greeting (personalized if name is set)
     func updateGreeting() {
-        greeting = "As Salamu Alaykum"
+        if let userName = UserDefaults.standard.string(forKey: "userName"),
+           !userName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            greeting = "As Salamu Alaykum, \(userName)"
+        } else {
+            greeting = "As Salamu Alaykum"
+        }
     }
 
     /// Calculate daily statistics from existing services

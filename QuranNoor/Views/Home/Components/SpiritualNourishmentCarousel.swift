@@ -89,7 +89,7 @@ struct SpiritualContentCard: View {
     @ScaledMetric(relativeTo: .body) private var contentAreaHeight: CGFloat = 220
 
     var body: some View {
-        CardView(showPattern: false) {
+        LiquidGlassCardView(intensity: .moderate) {
             VStack(alignment: .leading, spacing: 14) {
                 // Header - refined with reduced emphasis
                 HStack(spacing: Spacing.xs) {
@@ -335,7 +335,7 @@ struct LoadingContentCard: View {
     @State private var animateGradient = false
 
     var body: some View {
-        CardView(showPattern: false) {
+        LiquidGlassCardView(intensity: .moderate) {
             VStack(alignment: .leading, spacing: 16) {
                 // Header skeleton
                 RoundedRectangle(cornerRadius: 6)

@@ -75,7 +75,7 @@ struct HomeStatCard: View {
     @State private var scale: CGFloat = 1.0
 
     var body: some View {
-        CardView(showPattern: false) {
+        LiquidGlassCardView(intensity: .subtle) {
             VStack(spacing: Spacing.sm) { // Enhanced from 12 to 16
                 // Icon - keep size, add subtle enhancement
                 Image(systemName: icon)

@@ -157,10 +157,11 @@ struct LocationPrimingView: View {
                 Button {
                     onSkip()
                 } label: {
-                    Text("Maybe Later")
+                    Text("I'll Set Up Later")
                 }
                 .buttonStyle(.borderless)
                 .foregroundStyle(.secondary)
+                .font(.caption)
             }
             .padding(.horizontal, 32)
             .padding(.bottom, 32)
