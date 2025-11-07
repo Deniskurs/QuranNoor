@@ -38,12 +38,12 @@ struct PrayerReminderPopup: View {
                     // Prayer icon in circle
                     ZStack {
                         Circle()
-                            .fill(AppColors.primary.green.opacity(0.15))
+                            .fill(themeManager.currentTheme.accentPrimary.opacity(0.15))
                             .frame(width: 80, height: 80)
 
                         Image(systemName: prayer.name.icon)
                             .font(.system(size: 36, weight: .medium))
-                            .foregroundColor(AppColors.primary.green)
+                            .foregroundColor(themeManager.currentTheme.accentPrimary)
                     }
 
                     // Prayer name
@@ -71,7 +71,7 @@ struct PrayerReminderPopup: View {
 
                     Text("May Allah accept your prayers")
                         .font(.system(size: 14, weight: .regular))
-                        .foregroundColor(AppColors.primary.gold)
+                        .foregroundColor(themeManager.currentTheme.accentInteractive)
                         .italic()
                 }
                 .padding(.horizontal, 24)
@@ -120,7 +120,7 @@ struct PrayerReminderPopup: View {
                         .frame(height: 50)
                         .background(
                             RoundedRectangle(cornerRadius: 12)
-                                .fill(AppColors.primary.green)
+                                .fill(themeManager.currentTheme.accentPrimary)
                         )
                     }
                 }

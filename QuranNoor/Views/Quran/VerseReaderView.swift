@@ -50,7 +50,7 @@ struct VerseReaderView: View {
                     VStack(spacing: 16) {
                         ProgressView()
                             .scaleEffect(1.5)
-                            .tint(AppColors.primary.teal)
+                            .tint(themeManager.currentTheme.accentSecondary)
 
                         ThemedText("Loading verses...", style: .body)
                             .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
@@ -62,7 +62,7 @@ struct VerseReaderView: View {
                             VStack(spacing: 16) {
                                 Image(systemName: "exclamationmark.triangle")
                                     .font(.system(size: 48))
-                                    .foregroundColor(AppColors.primary.gold)
+                                    .foregroundColor(themeManager.currentTheme.accentInteractive)
 
                                 ThemedText("Failed to Load Surah", style: .heading)
                                     .foregroundColor(themeManager.currentTheme.textColor)
@@ -82,7 +82,7 @@ struct VerseReaderView: View {
                                     }
                                     .foregroundColor(.white)
                                     .padding()
-                                    .background(AppColors.primary.teal)
+                                    .background(themeManager.currentTheme.accentSecondary)
                                     .cornerRadius(12)
                                 }
                             }
@@ -170,7 +170,7 @@ struct VerseReaderView: View {
                 // Arabic name
                 ThemedText.arabic(surah.name)
                     .font(.system(size: 36))
-                    .foregroundColor(AppColors.primary.gold)
+                    .foregroundColor(themeManager.currentTheme.accentInteractive)
 
                 // English names
                 VStack(spacing: 4) {
@@ -181,7 +181,7 @@ struct VerseReaderView: View {
                         .opacity(0.7)
                 }
 
-                IslamicDivider(style: .ornamental, color: AppColors.primary.gold.opacity(0.3))
+                IslamicDivider(style: .ornamental, color: themeManager.currentTheme.accentInteractive.opacity(0.3))
 
                 // Surah info
                 HStack(spacing: 20) {
@@ -196,7 +196,7 @@ struct VerseReaderView: View {
     private func infoItem(icon: String, text: String) -> some View {
         VStack(spacing: 4) {
             Image(systemName: icon)
-                .foregroundColor(AppColors.primary.teal)
+                .foregroundColor(themeManager.currentTheme.accentSecondary)
                 .font(.system(size: 16))
 
             ThemedText.caption(text)
@@ -209,7 +209,7 @@ struct VerseReaderView: View {
             VStack(spacing: 8) {
                 ThemedText.arabic("بِسۡمِ ٱللَّهِ ٱلرَّحۡمَـٰنِ ٱلرَّحِیمِ")
                     .font(.system(size: 24))
-                    .foregroundColor(AppColors.primary.gold)
+                    .foregroundColor(themeManager.currentTheme.accentInteractive)
 
                 ThemedText.caption("In the name of Allah, the Most Gracious, the Most Merciful")
                     .italic()
@@ -227,11 +227,11 @@ struct VerseReaderView: View {
                     // Verse number badge
                     ZStack {
                         Circle()
-                            .fill(AppColors.primary.green.opacity(0.2))
+                            .fill(themeManager.currentTheme.accentPrimary.opacity(0.2))
                             .frame(width: 36, height: 36)
 
                         ThemedText("\(verse.verseNumber)", style: .body)
-                            .foregroundColor(AppColors.primary.green)
+                            .foregroundColor(themeManager.currentTheme.accentPrimary)
                     }
 
                     Spacer()
@@ -262,12 +262,12 @@ struct VerseReaderView: View {
                         toggleBookmark(verse: verse)
                     } label: {
                         Image(systemName: isBookmarked(verse: verse) ? "bookmark.fill" : "bookmark")
-                            .foregroundColor(AppColors.primary.gold)
+                            .foregroundColor(themeManager.currentTheme.accentInteractive)
                             .font(.system(size: 20))
                     }
                 }
 
-                IslamicDivider(style: .geometric, color: AppColors.primary.gold.opacity(0.2))
+                IslamicDivider(style: .geometric, color: themeManager.currentTheme.accentInteractive.opacity(0.2))
 
                 // Arabic text
                 ThemedText.arabic(verse.text)
@@ -287,7 +287,7 @@ struct VerseReaderView: View {
 
                         ThemedText.caption("— \(translation.author)")
                             .italic()
-                            .foregroundColor(AppColors.primary.teal)
+                            .foregroundColor(themeManager.currentTheme.accentSecondary)
                             .opacity(0.7)
                     } else if isLoadingTranslations {
                         HStack {
@@ -310,13 +310,13 @@ struct VerseReaderView: View {
 
     private var endOrnament: some View {
         VStack(spacing: 12) {
-            IslamicDivider(style: .crescent, color: AppColors.primary.gold)
+            IslamicDivider(style: .crescent, color: themeManager.currentTheme.accentInteractive)
 
             ThemedText("End of Surah \(surah.englishName)", style: .caption)
-                .foregroundColor(AppColors.primary.gold)
+                .foregroundColor(themeManager.currentTheme.accentInteractive)
                 .opacity(0.7)
 
-            IslamicDivider(style: .crescent, color: AppColors.primary.gold)
+            IslamicDivider(style: .crescent, color: themeManager.currentTheme.accentInteractive)
         }
         .padding(.vertical, 20)
     }

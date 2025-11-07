@@ -28,9 +28,9 @@ struct QiblaTutorialOverlay: View {
                 VStack(spacing: Spacing.xs) {
                     Image(systemName: "safari")
                         .font(.system(size: 48))
-                        .foregroundStyle(AppColors.primary.teal)
+                        .foregroundStyle(themeManager.currentTheme.accentSecondary)
                         .symbolRenderingMode(.hierarchical)
-                        .shadow(color: AppColors.primary.teal.opacity(0.3), radius: 8, x: 0, y: 2)
+                        .shadow(color: themeManager.currentTheme.accentSecondary.opacity(0.3), radius: 8, x: 0, y: 2)
 
                     Text("How to Find Qibla")
                         .font(.title2.weight(.bold))
@@ -72,7 +72,7 @@ struct QiblaTutorialOverlay: View {
                             .padding(.vertical, 14)
                             .background(
                                 RoundedRectangle(cornerRadius: BorderRadius.lg)
-                                    .fill(AppColors.primary.teal)
+                                    .fill(themeManager.currentTheme.accentSecondary)
                             )
                     }
 
@@ -129,7 +129,7 @@ struct QiblaTutorialOverlay: View {
             // Icon
             Image(systemName: icon)
                 .font(.title2)
-                .foregroundStyle(AppColors.primary.gold)
+                .foregroundStyle(themeManager.currentTheme.accentInteractive)
                 .symbolRenderingMode(.hierarchical)
                 .frame(width: 40)
 

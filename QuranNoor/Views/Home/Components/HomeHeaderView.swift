@@ -35,7 +35,7 @@ struct HomeHeaderView: View {
                     if let hijri = hijriDate {
                         Image(systemName: "calendar.badge.clock")
                             .font(.system(size: 14))
-                            .foregroundColor(AppColors.primary.gold)
+                            .foregroundColor(themeManager.currentTheme.accentSecondary)
 
                         Text(hijri.formattedDate)
                             .font(.system(size: 15, weight: .medium))
@@ -43,7 +43,7 @@ struct HomeHeaderView: View {
                     } else {
                         Image(systemName: "calendar")
                             .font(.system(size: 14))
-                            .foregroundColor(AppColors.primary.gold)
+                            .foregroundColor(themeManager.currentTheme.accentSecondary)
 
                         Text("Loading...")
                             .font(.system(size: 15, weight: .medium))
@@ -69,17 +69,17 @@ struct HomeHeaderView: View {
                     HStack(spacing: Spacing.xxs) { // Enhanced from 6 to 8
                         Image(systemName: "star.fill")
                             .font(.system(size: 11)) // Enhanced from caption2
-                            .foregroundColor(AppColors.primary.gold)
+                            .foregroundColor(themeManager.currentTheme.accentSecondary)
 
                         Text(holiday)
                             .font(.system(size: 13, weight: .semibold)) // Enhanced from caption + medium
-                            .foregroundColor(AppColors.primary.gold)
+                            .foregroundColor(themeManager.currentTheme.accentSecondary)
                     }
                     .padding(.horizontal, Spacing.sm) // Enhanced from 12 to 16
                     .padding(.vertical, Spacing.xxs) // Enhanced from 6 to 8
                     .background(
                         Capsule() // Changed from cornerRadius for sleeker look
-                            .fill(AppColors.primary.gold.opacity(0.12)) // Softer from 0.15
+                            .fill(themeManager.currentTheme.accentSecondary.opacity(0.15))
                     )
                 }
                 .padding(.top, Spacing.xxs) // Add top spacing

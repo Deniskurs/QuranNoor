@@ -22,7 +22,7 @@ struct RecentActivityFeed: View {
                 HStack {
                     Image(systemName: "clock.arrow.circlepath")
                         .font(.title3)
-                        .foregroundColor(AppColors.primary.teal)
+                        .foregroundColor(themeManager.currentTheme.accentSecondary)
 
                     Text("Recent Activity")
                         .font(.headline)
@@ -36,7 +36,7 @@ struct RecentActivityFeed: View {
                     }) {
                         Text("View All")
                             .font(.caption)
-                            .foregroundColor(AppColors.primary.teal)
+                            .foregroundColor(themeManager.currentTheme.accentSecondary)
                     }
                 }
 
@@ -47,7 +47,7 @@ struct RecentActivityFeed: View {
                         if let surah = lastReadSurah, let verse = lastReadVerse {
                             ActivityRow(
                                 icon: "book.fill",
-                                iconColor: AppColors.primary.teal,
+                                iconColor: themeManager.currentTheme.accentSecondary,
                                 title: "Read \(surah)",
                                 subtitle: "Verse \(verse)",
                                 timestamp: "Today"
@@ -58,7 +58,7 @@ struct RecentActivityFeed: View {
                         ForEach(bookmarks.prefix(2)) { bookmark in
                             ActivityRow(
                                 icon: "bookmark.fill",
-                                iconColor: AppColors.primary.gold,
+                                iconColor: themeManager.currentTheme.accentInteractive,
                                 title: "Bookmarked verse",
                                 subtitle: "Surah \(bookmark.surahNumber):\(bookmark.verseNumber)",
                                 timestamp: timeAgo(from: bookmark.timestamp)
@@ -69,7 +69,7 @@ struct RecentActivityFeed: View {
                         if prayersCompleted > 0 {
                             ActivityRow(
                                 icon: "checkmark.circle.fill",
-                                iconColor: AppColors.primary.green,
+                                iconColor: themeManager.currentTheme.accentPrimary,
                                 title: "Completed prayers",
                                 subtitle: "\(prayersCompleted)/5 today",
                                 timestamp: "Today"
@@ -81,7 +81,7 @@ struct RecentActivityFeed: View {
                     VStack(spacing: 16) {
                         Image(systemName: "book.circle")
                             .font(.system(size: 44))
-                            .foregroundColor(AppColors.primary.teal)
+                            .foregroundColor(themeManager.currentTheme.accentSecondary)
 
                         VStack(spacing: 6) {
                             Text("Your Story Starts Here")
@@ -101,7 +101,7 @@ struct RecentActivityFeed: View {
                             Text("Get Started")
                                 .font(.caption.weight(.medium))
                         }
-                        .foregroundColor(AppColors.primary.teal)
+                        .foregroundColor(themeManager.currentTheme.accentSecondary)
                         .padding(.top, 4)
                     }
                     .frame(maxWidth: .infinity)

@@ -35,11 +35,11 @@ struct ThemeSelectionView: View {
                 VStack(spacing: 12) {
                     Image(systemName: "paintbrush.fill")
                         .font(.system(size: 50))
-                        .foregroundColor(AppColors.primary.gold)
+                        .foregroundColor(themeManager.currentTheme.accentSecondary)
                         .accessibilityHidden(true)
 
                     ThemedText("Choose Your Theme", style: .title)
-                        .foregroundColor(AppColors.primary.green)
+                        .foregroundColor(themeManager.currentTheme.accentPrimary)
                         .accessibilityAddTraits(.isHeader)
 
                     ThemedText.body("Select your preferred reading mode. You can change this anytime in Settings")
@@ -91,7 +91,7 @@ struct ThemeSelectionView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
-                .tint(AppColors.primary.green)
+                .tint(themeManager.currentTheme.accentPrimary)
                 .padding(.horizontal, 32)
                 .padding(.bottom, 40)
                 .accessibleElement(
@@ -177,7 +177,7 @@ struct ThemeOptionCard: View {
                         if isSelected {
                             Image(systemName: "checkmark.circle.fill")
                                 .font(.system(size: 24))
-                                .foregroundColor(AppColors.primary.green)
+                                .foregroundColor(themeManager.currentTheme.accentPrimary)
                                 .transition(AccessibleTransition.scale)
                         }
                     }
@@ -189,7 +189,7 @@ struct ThemeOptionCard: View {
                             ThemedText(theme.displayName, style: .body)
                                 .fontWeight(.semibold)
                                 .foregroundColor(
-                                    isSelected ? AppColors.primary.green : themeManager.currentTheme.textColor
+                                    isSelected ? themeManager.currentTheme.accentPrimary : themeManager.currentTheme.textColor
                                 )
 
                             if isSuggested {
@@ -200,7 +200,7 @@ struct ThemeOptionCard: View {
                                     .padding(.vertical, 4)
                                     .background(
                                         Capsule()
-                                            .fill(AppColors.primary.gold)
+                                            .fill(themeManager.currentTheme.accentSecondary)
                                     )
                                     .transition(AccessibleTransition.scale)
                             }
@@ -227,7 +227,7 @@ struct ThemeOptionCard: View {
                         HStack(spacing: 8) {
                             Image(systemName: "sparkles")
                                 .font(.caption)
-                                .foregroundColor(AppColors.primary.gold)
+                                .foregroundColor(themeManager.currentTheme.accentSecondary)
 
                             ThemedText.caption(theme.personality)
                                 .multilineTextAlignment(.leading)
@@ -250,7 +250,7 @@ struct ThemeOptionCard: View {
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
                             .stroke(
-                                isSelected ? AppColors.primary.green : Color.clear,
+                                isSelected ? themeManager.currentTheme.accentPrimary : Color.clear,
                                 lineWidth: 2
                             )
                     )

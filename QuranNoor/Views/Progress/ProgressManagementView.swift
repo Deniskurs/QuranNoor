@@ -225,7 +225,7 @@ struct ProgressManagementView: View {
                     } label: {
                         Text("Cancel")
                             .font(.system(size: 17))
-                            .foregroundColor(AppColors.primary.teal)
+                            .foregroundColor(themeManager.currentTheme.accentSecondary)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 16)
                     }
@@ -271,7 +271,7 @@ struct ProgressManagementView: View {
                         }
                     } label: {
                         Image(systemName: isStatsExpanded ? "chevron.up" : "chevron.down")
-                            .foregroundColor(AppColors.primary.teal)
+                            .foregroundColor(themeManager.currentTheme.accentSecondary)
                     }
                 }
 
@@ -282,7 +282,7 @@ struct ProgressManagementView: View {
                         lineWidth: 8,
                         size: 80,
                         showPercentage: true,
-                        color: AppColors.primary.green
+                        color: themeManager.currentTheme.accentPrimary
                     )
 
                     VStack(alignment: .leading, spacing: 6) {
@@ -297,7 +297,7 @@ struct ProgressManagementView: View {
                                 .font(.caption2)
                             ThemedText("\(viewModel.currentStreak) day streak", style: .caption)
                         }
-                        .foregroundColor(AppColors.primary.gold)
+                        .foregroundColor(themeManager.currentTheme.accentInteractive)
 
                         ThemedText.caption("Last: \(viewModel.formatDate(viewModel.lastReadDate))")
                             .opacity(0.7)
@@ -315,14 +315,14 @@ struct ProgressManagementView: View {
                             icon: "checkmark.seal.fill",
                             value: "\(viewModel.completedSurahsCount)",
                             label: "Completed",
-                            color: AppColors.primary.green
+                            color: themeManager.currentTheme.accentPrimary
                         )
 
                         statItem(
                             icon: "book.fill",
                             value: "\(viewModel.startedSurahsCount)",
                             label: "In Progress",
-                            color: AppColors.primary.teal
+                            color: themeManager.currentTheme.accentSecondary
                         )
 
                         statItem(
@@ -435,7 +435,7 @@ struct ProgressManagementView: View {
                 }
             }
             .pickerStyle(.menu)
-            .accentColor(AppColors.primary.teal)
+            .accentColor(themeManager.currentTheme.accentSecondary)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
@@ -503,10 +503,10 @@ struct ProgressManagementView: View {
             } label: {
                 Label("Export", systemImage: "square.and.arrow.up")
                     .font(.caption)
-                    .foregroundColor(AppColors.primary.green)
+                    .foregroundColor(themeManager.currentTheme.accentPrimary)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
-                    .background(AppColors.primary.green.opacity(0.1))
+                    .background(themeManager.currentTheme.accentPrimary.opacity(0.1))
                     .cornerRadius(8)
             }
 
@@ -516,10 +516,10 @@ struct ProgressManagementView: View {
             } label: {
                 Label("Import", systemImage: "square.and.arrow.down")
                     .font(.caption)
-                    .foregroundColor(AppColors.primary.teal)
+                    .foregroundColor(themeManager.currentTheme.accentSecondary)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
-                    .background(AppColors.primary.teal.opacity(0.1))
+                    .background(themeManager.currentTheme.accentSecondary.opacity(0.1))
                     .cornerRadius(8)
             }
 
@@ -573,7 +573,7 @@ struct ProgressManagementView: View {
 
                             if selectedImportStrategy == .replace {
                                 Image(systemName: "checkmark.circle.fill")
-                                    .foregroundColor(AppColors.primary.green)
+                                    .foregroundColor(themeManager.currentTheme.accentPrimary)
                             }
                         }
                         .padding(.vertical, 4)
@@ -599,7 +599,7 @@ struct ProgressManagementView: View {
                                         .foregroundColor(.white)
                                         .padding(.horizontal, 6)
                                         .padding(.vertical, 2)
-                                        .background(AppColors.primary.green)
+                                        .background(themeManager.currentTheme.accentPrimary)
                                         .cornerRadius(4)
                                 }
 
@@ -612,7 +612,7 @@ struct ProgressManagementView: View {
 
                             if selectedImportStrategy == .merge {
                                 Image(systemName: "checkmark.circle.fill")
-                                    .foregroundColor(AppColors.primary.green)
+                                    .foregroundColor(themeManager.currentTheme.accentPrimary)
                             }
                         }
                         .padding(.vertical, 4)
@@ -640,7 +640,7 @@ struct ProgressManagementView: View {
 
                             if selectedImportStrategy == .addOnly {
                                 Image(systemName: "checkmark.circle.fill")
-                                    .foregroundColor(AppColors.primary.green)
+                                    .foregroundColor(themeManager.currentTheme.accentPrimary)
                             }
                         }
                         .padding(.vertical, 4)
@@ -698,32 +698,32 @@ struct OverviewTab: View {
                     lineWidth: 12,
                     size: 160,
                     showPercentage: true,
-                    color: AppColors.primary.green
+                    color: themeManager.currentTheme.accentPrimary
                 )
 
                 VStack(spacing: 8) {
                     ThemedText("\(viewModel.totalVersesRead) / \(viewModel.totalVersesInQuran) verses", style: .body)
-                        .foregroundColor(AppColors.primary.teal)
+                        .foregroundColor(themeManager.currentTheme.accentSecondary)
 
                     ThemedText.caption("Last read: \(viewModel.formatDate(viewModel.lastReadDate))")
                         .opacity(0.7)
                 }
 
-                IslamicDivider(style: .ornamental, color: AppColors.primary.gold.opacity(0.3))
+                IslamicDivider(style: .ornamental, color: themeManager.currentTheme.accentInteractive.opacity(0.3))
 
                 HStack(spacing: 20) {
                     statItem(
                         icon: "checkmark.seal.fill",
                         value: "\(viewModel.completedSurahsCount)",
                         label: "Completed",
-                        color: AppColors.primary.green
+                        color: themeManager.currentTheme.accentPrimary
                     )
 
                     statItem(
                         icon: "book.fill",
                         value: "\(viewModel.startedSurahsCount)",
                         label: "In Progress",
-                        color: AppColors.primary.teal
+                        color: themeManager.currentTheme.accentSecondary
                     )
 
                     statItem(
@@ -745,7 +745,7 @@ struct OverviewTab: View {
                 title: "Streak",
                 value: "\(viewModel.currentStreak)",
                 subtitle: "day\(viewModel.currentStreak == 1 ? "" : "s")",
-                color: AppColors.primary.gold
+                color: themeManager.currentTheme.accentInteractive
             )
 
             // Average Card
@@ -754,7 +754,7 @@ struct OverviewTab: View {
                 title: "Daily Average",
                 value: String(format: "%.1f", viewModel.averageVersesPerDay),
                 subtitle: "verses/day",
-                color: AppColors.primary.teal
+                color: themeManager.currentTheme.accentSecondary
             )
         }
     }
@@ -764,7 +764,7 @@ struct OverviewTab: View {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
                     Image(systemName: "gauge.with.dots.needle.67percent")
-                        .foregroundColor(AppColors.primary.green)
+                        .foregroundColor(themeManager.currentTheme.accentPrimary)
                         .font(.system(size: 24))
 
                     VStack(alignment: .leading, spacing: 4) {
@@ -772,7 +772,7 @@ struct OverviewTab: View {
                             .foregroundColor(themeManager.currentTheme.textColor)
 
                         ThemedText.caption(viewModel.readingVelocity)
-                            .foregroundColor(AppColors.primary.teal)
+                            .foregroundColor(themeManager.currentTheme.accentSecondary)
                     }
 
                     Spacer()
@@ -783,7 +783,7 @@ struct OverviewTab: View {
                 if viewModel.estimatedDaysToComplete > 0 {
                     HStack {
                         Image(systemName: "calendar.badge.clock")
-                            .foregroundColor(AppColors.primary.gold)
+                            .foregroundColor(themeManager.currentTheme.accentInteractive)
 
                         ThemedText.caption("At your current pace, you'll complete the Quran in ~\(viewModel.estimatedDaysToComplete) days")
                             .opacity(0.8)
@@ -824,7 +824,7 @@ struct OverviewTab: View {
 
                             HStack(spacing: 12) {
                                 Image(systemName: "checkmark.circle.fill")
-                                    .foregroundColor(AppColors.primary.green)
+                                    .foregroundColor(themeManager.currentTheme.accentPrimary)
                                     .font(.system(size: 16))
 
                                 if let surah = viewModel.getSurah(forNumber: activity.surahNumber) {
@@ -832,7 +832,7 @@ struct OverviewTab: View {
                                         ThemedText.body("\(surah.englishName) - Verse \(activity.verseNumber)")
 
                                         ThemedText.caption(viewModel.formatDate(activity.timestamp))
-                                            .foregroundColor(AppColors.primary.teal)
+                                            .foregroundColor(themeManager.currentTheme.accentSecondary)
                                             .opacity(0.7)
                                     }
                                 }
@@ -987,10 +987,10 @@ struct SurahsTab: View {
                 Image(systemName: "chevron.down")
                     .font(.caption2)
             }
-            .foregroundColor(AppColors.primary.teal)
+            .foregroundColor(themeManager.currentTheme.accentSecondary)
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
-            .background(AppColors.primary.teal.opacity(0.1))
+            .background(themeManager.currentTheme.accentSecondary.opacity(0.1))
             .cornerRadius(8)
         }
     }
@@ -1087,7 +1087,7 @@ struct ManagementTab: View {
 
                             if selectedImportStrategy == .replace {
                                 Image(systemName: "checkmark.circle.fill")
-                                    .foregroundColor(AppColors.primary.green)
+                                    .foregroundColor(themeManager.currentTheme.accentPrimary)
                             }
                         }
                         .padding(.vertical, 4)
@@ -1113,7 +1113,7 @@ struct ManagementTab: View {
                                         .foregroundColor(.white)
                                         .padding(.horizontal, 6)
                                         .padding(.vertical, 2)
-                                        .background(AppColors.primary.green)
+                                        .background(themeManager.currentTheme.accentPrimary)
                                         .cornerRadius(4)
                                 }
 
@@ -1126,7 +1126,7 @@ struct ManagementTab: View {
 
                             if selectedImportStrategy == .merge {
                                 Image(systemName: "checkmark.circle.fill")
-                                    .foregroundColor(AppColors.primary.green)
+                                    .foregroundColor(themeManager.currentTheme.accentPrimary)
                             }
                         }
                         .padding(.vertical, 4)
@@ -1154,7 +1154,7 @@ struct ManagementTab: View {
 
                             if selectedImportStrategy == .addOnly {
                                 Image(systemName: "checkmark.circle.fill")
-                                    .foregroundColor(AppColors.primary.green)
+                                    .foregroundColor(themeManager.currentTheme.accentPrimary)
                             }
                         }
                         .padding(.vertical, 4)
@@ -1184,7 +1184,7 @@ struct ManagementTab: View {
                 VStack(spacing: 12) {
                     HStack {
                         Image(systemName: "arrow.uturn.backward.circle.fill")
-                            .foregroundColor(AppColors.primary.teal)
+                            .foregroundColor(themeManager.currentTheme.accentSecondary)
                             .font(.system(size: 24))
 
                         VStack(alignment: .leading, spacing: 4) {
@@ -1204,7 +1204,7 @@ struct ManagementTab: View {
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 16)
                                 .padding(.vertical, 8)
-                                .background(AppColors.primary.teal)
+                                .background(themeManager.currentTheme.accentSecondary)
                                 .cornerRadius(8)
                         }
                         .disabled(!viewModel.canUndo)
@@ -1263,7 +1263,7 @@ struct ManagementTab: View {
                     } label: {
                         HStack {
                             Image(systemName: "square.and.arrow.up")
-                                .foregroundColor(AppColors.primary.green)
+                                .foregroundColor(themeManager.currentTheme.accentPrimary)
                             ThemedText.body("Export Progress")
                             Spacer()
                             if viewModel.isExporting {
@@ -1289,7 +1289,7 @@ struct ManagementTab: View {
                     } label: {
                         HStack {
                             Image(systemName: "square.and.arrow.down")
-                                .foregroundColor(AppColors.primary.teal)
+                                .foregroundColor(themeManager.currentTheme.accentSecondary)
                             ThemedText.body("Import Progress")
                             Spacer()
                             if viewModel.isImporting {
@@ -1393,6 +1393,8 @@ struct FilterPill: View {
     let isSelected: Bool
     let action: () -> Void
 
+    @EnvironmentObject var themeManager: ThemeManager
+
     var body: some View {
         Button(action: action) {
             HStack(spacing: 6) {
@@ -1408,12 +1410,12 @@ struct FilterPill: View {
             .padding(.vertical, 6)
             .background(
                 isSelected
-                    ? AppColors.primary.green.opacity(0.2)
+                    ? themeManager.currentTheme.accentPrimary.opacity(0.2)
                     : Color.clear
             )
             .foregroundColor(
                 isSelected
-                    ? AppColors.primary.green
+                    ? themeManager.currentTheme.accentPrimary
                     : .secondary
             )
             .cornerRadius(8)
@@ -1421,7 +1423,7 @@ struct FilterPill: View {
                 RoundedRectangle(cornerRadius: 8)
                     .stroke(
                         isSelected
-                            ? AppColors.primary.green
+                            ? themeManager.currentTheme.accentPrimary
                             : Color.secondary.opacity(0.3),
                         lineWidth: 1
                     )
@@ -1450,17 +1452,17 @@ struct SurahProgressCard: View {
                                 .font(.system(size: 32))
                                 .foregroundColor(
                                     stat.isCompleted
-                                        ? AppColors.primary.green.opacity(0.3)
-                                        : AppColors.primary.gold.opacity(0.3)
+                                        ? themeManager.currentTheme.accentPrimary.opacity(0.3)
+                                        : themeManager.currentTheme.accentInteractive.opacity(0.3)
                                 )
 
                             if stat.isCompleted {
                                 Image(systemName: "checkmark")
                                     .font(.system(size: 16, weight: .bold))
-                                    .foregroundColor(AppColors.primary.green)
+                                    .foregroundColor(themeManager.currentTheme.accentPrimary)
                             } else {
                                 ThemedText("\(stat.surahNumber)", style: .body)
-                                    .foregroundColor(AppColors.primary.gold)
+                                    .foregroundColor(themeManager.currentTheme.accentInteractive)
                             }
                         }
                         .frame(width: 40)
@@ -1477,12 +1479,12 @@ struct SurahProgressCard: View {
 
                             HStack(spacing: 4) {
                                 ThemedText.caption("\(stat.readVerses)/\(stat.totalVerses) verses")
-                                    .foregroundColor(AppColors.primary.teal)
+                                    .foregroundColor(themeManager.currentTheme.accentSecondary)
                                 Text("•")
                                     .foregroundColor(.secondary)
                                     .font(.caption)
                                 ThemedText.caption("\(Int(stat.completionPercentage))%")
-                                    .foregroundColor(AppColors.primary.green)
+                                    .foregroundColor(themeManager.currentTheme.accentPrimary)
                             }
                         }
 
@@ -1506,7 +1508,7 @@ struct SurahProgressCard: View {
                             Rectangle()
                                 .fill(
                                     LinearGradient(
-                                        colors: [AppColors.primary.green, AppColors.primary.teal],
+                                        colors: [themeManager.currentTheme.accentPrimary, themeManager.currentTheme.accentSecondary],
                                         startPoint: .leading,
                                         endPoint: .trailing
                                     )

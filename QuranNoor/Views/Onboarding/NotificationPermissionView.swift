@@ -49,12 +49,12 @@ struct NotificationPermissionView: View {
                         // Status icon
                         ZStack {
                             Circle()
-                                .fill(AppColors.primary.gold.opacity(0.15))
+                                .fill(themeManager.currentTheme.accentSecondary.opacity(0.15))
                                 .frame(width: 120, height: 120)
 
                             Image(systemName: permissionManager.notificationStatus.isGranted ? "checkmark.circle.fill" : "bell.badge.fill")
                                 .font(.system(size: 60))
-                                .foregroundColor(permissionManager.notificationStatus.isGranted ? AppColors.primary.green : AppColors.primary.gold)
+                                .foregroundColor(permissionManager.notificationStatus.isGranted ? themeManager.currentTheme.accentPrimary : themeManager.currentTheme.accentSecondary)
                                 .symbolEffect(.bounce, value: permissionManager.notificationStatus.isGranted)
                         }
                         .padding(.top, 60)
@@ -65,7 +65,7 @@ struct NotificationPermissionView: View {
                                 permissionManager.notificationStatus.isGranted ? "Notifications Enabled" : "Prayer Reminders",
                                 style: .title
                             )
-                            .foregroundColor(AppColors.primary.green)
+                            .foregroundColor(themeManager.currentTheme.accentPrimary)
 
                             ThemedText.body(
                                 permissionManager.notificationStatus.isGranted ?
@@ -93,7 +93,7 @@ struct NotificationPermissionView: View {
                                 }
                                 .buttonStyle(.borderedProminent)
                                 .controlSize(.large)
-                                .tint(AppColors.primary.gold)
+                                .tint(themeManager.currentTheme.accentSecondary)
                                 .disabled(isRequesting)
                             }
 
@@ -107,7 +107,7 @@ struct NotificationPermissionView: View {
                                 }
                                 .buttonStyle(.bordered)
                                 .controlSize(.large)
-                                .tint(AppColors.primary.gold)
+                                .tint(themeManager.currentTheme.accentSecondary)
                             }
                         }
                         .padding(.horizontal, 32)

@@ -108,7 +108,7 @@ struct VerseProgressDetailView: View {
                 // Arabic name
                 ThemedText.arabic(surah.name)
                     .font(.system(size: 32))
-                    .foregroundColor(AppColors.primary.gold)
+                    .foregroundColor(themeManager.currentTheme.accentInteractive)
 
                 // English names
                 VStack(spacing: 4) {
@@ -119,7 +119,7 @@ struct VerseProgressDetailView: View {
                         .opacity(0.7)
                 }
 
-                IslamicDivider(style: .ornamental, color: AppColors.primary.gold.opacity(0.3))
+                IslamicDivider(style: .ornamental, color: themeManager.currentTheme.accentInteractive.opacity(0.3))
 
                 // Surah info
                 HStack(spacing: 20) {
@@ -134,7 +134,7 @@ struct VerseProgressDetailView: View {
     private func infoItem(icon: String, text: String) -> some View {
         VStack(spacing: 4) {
             Image(systemName: icon)
-                .foregroundColor(AppColors.primary.teal)
+                .foregroundColor(themeManager.currentTheme.accentSecondary)
                 .font(.system(size: 14))
 
             ThemedText.caption(text)
@@ -151,7 +151,7 @@ struct VerseProgressDetailView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         ThemedText.caption("PROGRESS")
                         ThemedText("\(stats.readVerses) / \(stats.totalVerses)", style: .heading)
-                            .foregroundColor(AppColors.primary.green)
+                            .foregroundColor(themeManager.currentTheme.accentPrimary)
                     }
 
                     Spacer()
@@ -159,7 +159,7 @@ struct VerseProgressDetailView: View {
                     VStack(alignment: .trailing, spacing: 4) {
                         ThemedText.caption("COMPLETION")
                         ThemedText("\(Int(stats.completionPercentage))%", style: .heading)
-                            .foregroundColor(AppColors.primary.teal)
+                            .foregroundColor(themeManager.currentTheme.accentSecondary)
                     }
                 }
 
@@ -174,7 +174,7 @@ struct VerseProgressDetailView: View {
                         Rectangle()
                             .fill(
                                 LinearGradient(
-                                    colors: [AppColors.primary.green, AppColors.primary.teal],
+                                    colors: [themeManager.currentTheme.accentPrimary, themeManager.currentTheme.accentSecondary],
                                     startPoint: .leading,
                                     endPoint: .trailing
                                 )
@@ -208,7 +208,7 @@ struct VerseProgressDetailView: View {
                 .font(.caption2)
             ThemedText.caption(text)
         }
-        .foregroundColor(AppColors.primary.teal)
+        .foregroundColor(themeManager.currentTheme.accentSecondary)
         .opacity(0.8)
     }
 
@@ -224,7 +224,7 @@ struct VerseProgressDetailView: View {
                     ActionButton(
                         icon: "arrow.forward.to.line",
                         title: "First Unread",
-                        color: AppColors.primary.teal,
+                        color: themeManager.currentTheme.accentSecondary,
                         disabled: allVersesRead
                     ) {
                         goToFirstUnread()
@@ -234,7 +234,7 @@ struct VerseProgressDetailView: View {
                     ActionButton(
                         icon: "checkmark.circle.fill",
                         title: "Mark All Read",
-                        color: AppColors.primary.green,
+                        color: themeManager.currentTheme.accentPrimary,
                         disabled: allVersesRead
                     ) {
                         markAllAsRead = true
@@ -398,7 +398,7 @@ struct VerseGridCell: View {
                     .fill(
                         isRead
                             ? LinearGradient(
-                                colors: [AppColors.primary.green, AppColors.primary.teal],
+                                colors: [themeManager.currentTheme.accentPrimary, themeManager.currentTheme.accentSecondary],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
@@ -415,7 +415,7 @@ struct VerseGridCell: View {
                         RoundedRectangle(cornerRadius: 8)
                             .stroke(
                                 isRead
-                                    ? AppColors.primary.green.opacity(0.5)
+                                    ? themeManager.currentTheme.accentPrimary.opacity(0.5)
                                     : themeManager.currentTheme.borderColor,
                                 lineWidth: 1
                             )

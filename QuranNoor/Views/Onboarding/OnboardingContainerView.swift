@@ -144,7 +144,7 @@ struct OnboardingContainerView: View {
                         }
                         .buttonStyle(.borderless)
                         .controlSize(.large)
-                        .tint(AppColors.primary.teal)
+                        .tint(themeManager.currentTheme.accentSecondary)
                     }
 
                     Spacer()
@@ -164,7 +164,7 @@ struct OnboardingContainerView: View {
                         }
                         .buttonStyle(.borderedProminent)
                         .controlSize(.large)
-                        .tint(AppColors.primary.green)
+                        .tint(themeManager.currentTheme.accentPrimary)
                     }
                 }
                 .padding(.horizontal, 24)
@@ -239,24 +239,26 @@ struct OnboardingProgressView: View {
     let currentStep: Int
     let totalSteps: Int
 
+    @EnvironmentObject var themeManager: ThemeManager
+
     var body: some View {
         VStack(spacing: 4) {
             // Progress text
             Text("Step \(currentStep) of \(totalSteps)")
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundColor(themeManager.currentTheme.textTertiary)
 
             // Progress bar
             GeometryReader { geometry in
                 ZStack(alignment: .leading) {
                     // Background
                     RoundedRectangle(cornerRadius: 2)
-                        .fill(Color.secondary.opacity(0.2))
+                        .fill(themeManager.currentTheme.textTertiary.opacity(0.3))
                         .frame(height: 4)
 
                     // Progress
                     RoundedRectangle(cornerRadius: 2)
-                        .fill(AppColors.primary.green)
+                        .fill(themeManager.currentTheme.accentPrimary)
                         .frame(width: geometry.size.width * progress, height: 4)
                         .animation(.smooth(duration: 0.3), value: progress)
                 }

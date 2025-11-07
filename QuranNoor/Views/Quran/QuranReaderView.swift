@@ -63,7 +63,7 @@ struct QuranReaderView: View {
                         showProgressManagement = true
                     } label: {
                         Image(systemName: "chart.line.uptrend.xyaxis.circle")
-                            .foregroundColor(AppColors.primary.teal)
+                            .foregroundColor(themeManager.currentTheme.accentSecondary)
                             .font(.system(size: 22))
                     }
                     .accessibilityLabel("View reading progress")
@@ -118,7 +118,7 @@ struct QuranReaderView: View {
             HStack(spacing: 12) {
                 Image(systemName: "chart.line.uptrend.xyaxis")
                     .font(.system(size: 24))
-                    .foregroundColor(AppColors.primary.teal)
+                    .foregroundColor(themeManager.currentTheme.accentSecondary)
 
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 0) {
@@ -127,11 +127,11 @@ struct QuranReaderView: View {
                             .foregroundColor(themeManager.currentTheme.textColor)
                         Text("\(Int(viewModel.getProgressPercentage()))%")
                             .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(AppColors.primary.green)
+                            .foregroundColor(themeManager.currentTheme.accentPrimary)
                     }
 
                     ThemedText.caption("Tap to manage →")
-                        .foregroundColor(AppColors.primary.teal)
+                        .foregroundColor(themeManager.currentTheme.accentSecondary)
                         .opacity(themeManager.currentTheme.secondaryOpacity)
                 }
 
@@ -151,8 +151,8 @@ struct QuranReaderView: View {
             .background(
                 LinearGradient(
                     colors: [
-                        AppColors.primary.teal.opacity(themeManager.currentTheme.gradientOpacity(for: AppColors.primary.teal) * 2.5),
-                        AppColors.primary.green.opacity(themeManager.currentTheme.gradientOpacity(for: AppColors.primary.green))
+                        themeManager.currentTheme.accentSecondary.opacity(themeManager.currentTheme.gradientOpacity(for: themeManager.currentTheme.accentSecondary) * 2.5),
+                        themeManager.currentTheme.accentPrimary.opacity(themeManager.currentTheme.gradientOpacity(for: themeManager.currentTheme.accentPrimary))
                     ],
                     startPoint: .leading,
                     endPoint: .trailing
@@ -161,7 +161,7 @@ struct QuranReaderView: View {
             .cornerRadius(12)
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke(AppColors.primary.teal.opacity(themeManager.currentTheme.gradientOpacity(for: AppColors.primary.teal) * 5), lineWidth: 1)
+                    .stroke(themeManager.currentTheme.accentSecondary.opacity(themeManager.currentTheme.gradientOpacity(for: themeManager.currentTheme.accentSecondary) * 5), lineWidth: 1)
             )
         }
         .buttonStyle(.plain)
@@ -171,10 +171,10 @@ struct QuranReaderView: View {
         VStack(spacing: 8) {
             Image(systemName: "book.closed.fill")
                 .font(.system(size: 50))
-                .foregroundColor(AppColors.primary.gold)
+                .foregroundColor(themeManager.currentTheme.accentInteractive)
 
             ThemedText("القرآن الكريم", style: .heading)
-                .foregroundColor(AppColors.primary.gold)
+                .foregroundColor(themeManager.currentTheme.accentInteractive)
 
             ThemedText.caption("Read and reflect upon the words of Allah")
                 .multilineTextAlignment(.center)
@@ -190,7 +190,7 @@ struct QuranReaderView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         ThemedText.caption("READING PROGRESS")
                         ThemedText(viewModel.getProgressText(), style: .body)
-                            .foregroundColor(AppColors.primary.green)
+                            .foregroundColor(themeManager.currentTheme.accentPrimary)
                     }
 
                     Spacer()
@@ -198,7 +198,7 @@ struct QuranReaderView: View {
                     VStack(alignment: .trailing, spacing: 4) {
                         ThemedText.caption("STREAK")
                         ThemedText(viewModel.getStreakText(), style: .body)
-                            .foregroundColor(AppColors.primary.teal)
+                            .foregroundColor(themeManager.currentTheme.accentSecondary)
                     }
                 }
 
@@ -207,14 +207,14 @@ struct QuranReaderView: View {
                     lineWidth: 8,
                     size: 80,
                     showPercentage: true,
-                    color: AppColors.primary.green
+                    color: themeManager.currentTheme.accentPrimary
                 )
 
-                IslamicDivider(style: .ornamental, color: AppColors.primary.gold.opacity(0.3))
+                IslamicDivider(style: .ornamental, color: themeManager.currentTheme.accentInteractive.opacity(0.3))
 
                 HStack {
                     Image(systemName: "bookmark.fill")
-                        .foregroundColor(AppColors.primary.gold)
+                        .foregroundColor(themeManager.currentTheme.accentInteractive)
                     ThemedText.caption("Last read: \(viewModel.getLastReadSurahName())")
                         // Caption style already uses textTertiary - no additional opacity needed
                     Spacer()
@@ -315,18 +315,18 @@ struct SurahCard: View {
                             .font(.system(size: 40))
                             .foregroundColor(
                                 progress >= 100
-                                    ? AppColors.primary.green
-                                    : AppColors.primary.gold
+                                    ? themeManager.currentTheme.accentPrimary
+                                    : themeManager.currentTheme.accentInteractive
                             )
-                            .opacity(themeManager.currentTheme.gradientOpacity(for: AppColors.primary.gold) * 5)
+                            .opacity(themeManager.currentTheme.gradientOpacity(for: themeManager.currentTheme.accentInteractive) * 5)
 
                         if progress < 100 {
                             ThemedText("\(surah.id)", style: .body)
-                                .foregroundColor(AppColors.primary.gold)
+                                .foregroundColor(themeManager.currentTheme.accentInteractive)
                         } else {
                             Image(systemName: "checkmark")
                                 .font(.system(size: 20, weight: .bold))
-                                .foregroundColor(AppColors.primary.green)
+                                .foregroundColor(themeManager.currentTheme.accentPrimary)
                         }
                     }
                     .frame(width: 50)
@@ -342,14 +342,14 @@ struct SurahCard: View {
                         HStack(spacing: 8) {
                             Label("\(surah.numberOfVerses) verses", systemImage: "doc.text")
                                 .font(.caption)
-                                .foregroundColor(AppColors.primary.teal)
+                                .foregroundColor(themeManager.currentTheme.accentSecondary)
 
                             Text("•")
                                 .foregroundColor(.secondary)
 
                             Text(surah.revelationType.rawValue)
                                 .font(.caption)
-                                .foregroundColor(AppColors.primary.green)
+                                .foregroundColor(themeManager.currentTheme.accentPrimary)
                         }
                     }
 
@@ -358,7 +358,7 @@ struct SurahCard: View {
                     // Arabic name
                     VStack(alignment: .trailing, spacing: 4) {
                         ThemedText.arabic(surah.name)
-                            .foregroundColor(AppColors.primary.gold)
+                            .foregroundColor(themeManager.currentTheme.accentInteractive)
 
                         Image(systemName: "chevron.right")
                             .font(.caption)
@@ -382,8 +382,8 @@ struct SurahCard: View {
                                     .fill(
                                         LinearGradient(
                                             colors: [
-                                                AppColors.primary.green,
-                                                AppColors.primary.teal
+                                                themeManager.currentTheme.accentPrimary,
+                                                themeManager.currentTheme.accentSecondary
                                             ],
                                             startPoint: .leading,
                                             endPoint: .trailing
@@ -400,7 +400,7 @@ struct SurahCard: View {
 
                         HStack {
                             ThemedText.caption("\(Int(progress))% complete")
-                                .foregroundColor(AppColors.primary.teal)
+                                .foregroundColor(themeManager.currentTheme.accentSecondary)
                                 .opacity(themeManager.currentTheme.secondaryOpacity)
 
                             Spacer()
@@ -429,12 +429,12 @@ struct FilterButton: View {
                 .padding(.vertical, 8)
                 .background(
                     isSelected
-                        ? AppColors.primary.green.opacity(themeManager.currentTheme.gradientOpacity(for: AppColors.primary.green) * 3)
+                        ? themeManager.currentTheme.accentPrimary.opacity(themeManager.currentTheme.gradientOpacity(for: themeManager.currentTheme.accentPrimary) * 3)
                         : Color.clear
                 )
                 .foregroundColor(
                     isSelected
-                        ? AppColors.primary.green
+                        ? themeManager.currentTheme.accentPrimary
                         : themeManager.currentTheme.textSecondary
                 )
                 .cornerRadius(8)
@@ -442,7 +442,7 @@ struct FilterButton: View {
                     RoundedRectangle(cornerRadius: 8)
                         .stroke(
                             isSelected
-                                ? AppColors.primary.green
+                                ? themeManager.currentTheme.accentPrimary
                                 : themeManager.currentTheme.textTertiary.opacity(themeManager.currentTheme.disabledOpacity),
                             lineWidth: 1
                         )

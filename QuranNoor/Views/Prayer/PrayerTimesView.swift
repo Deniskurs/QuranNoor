@@ -196,7 +196,7 @@ struct PrayerTimesView: View {
             VStack(alignment: .leading, spacing: 4) {
                 ThemedText.caption("YOUR LOCATION")
                 ThemedText.body(viewModel.userLocation)
-                    .foregroundColor(AppColors.primary.green)
+                    .foregroundColor(themeManager.currentTheme.accentPrimary)
             }
 
             Spacer()
@@ -271,7 +271,7 @@ struct PrayerTimesView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         ThemedText.caption("TODAY'S PROGRESS")
                         ThemedText("Prayer Completion", style: .heading)
-                            .foregroundColor(AppColors.primary.green)
+                            .foregroundColor(themeManager.currentTheme.accentPrimary)
                     }
 
                     Spacer()
@@ -281,7 +281,7 @@ struct PrayerTimesView: View {
                         progress: Double(stats.completedCount) / Double(stats.totalCount),
                         lineWidth: 6,
                         size: 60,
-                        color: stats.isAllCompleted ? AppColors.primary.green : AppColors.primary.teal,
+                        color: stats.isAllCompleted ? themeManager.currentTheme.accentPrimary : themeManager.currentTheme.accentSecondary,
                         showPercentage: true
                     )
                 }
@@ -294,21 +294,21 @@ struct PrayerTimesView: View {
                         icon: "checkmark.circle.fill",
                         value: "\(stats.completedCount)",
                         label: "Completed",
-                        color: AppColors.primary.green
+                        color: themeManager.currentTheme.accentPrimary
                     )
 
                     statItem(
                         icon: "circle.dashed",
                         value: "\(stats.totalCount - stats.completedCount)",
                         label: "Remaining",
-                        color: AppColors.primary.gold
+                        color: themeManager.currentTheme.accentInteractive
                     )
 
                     statItem(
                         icon: "percent",
                         value: "\(stats.percentage)",
                         label: "Progress",
-                        color: AppColors.primary.teal
+                        color: themeManager.currentTheme.accentSecondary
                     )
                 }
 
@@ -316,16 +316,16 @@ struct PrayerTimesView: View {
                 if stats.isAllCompleted {
                     HStack(spacing: 8) {
                         Image(systemName: "star.fill")
-                            .foregroundColor(AppColors.primary.gold)
+                            .foregroundColor(themeManager.currentTheme.accentInteractive)
                         Text("All prayers completed! ✨")
                             .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(AppColors.primary.gold)
+                            .foregroundColor(themeManager.currentTheme.accentInteractive)
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
                     .background(
                         Capsule()
-                            .fill(AppColors.primary.gold.opacity(themeManager.currentTheme.gradientOpacity(for: AppColors.primary.gold) * 2.5))
+                            .fill(themeManager.currentTheme.accentInteractive.opacity(0.15))
                     )
                     .transition(.scale.combined(with: .opacity))
                 }
@@ -366,7 +366,7 @@ struct PrayerTimesView: View {
                     icon: "function",
                     title: "Calculation Method",
                     value: viewModel.selectedCalculationMethod.rawValue,
-                    color: AppColors.primary.green
+                    color: themeManager.currentTheme.accentPrimary
                 )
             }
 
@@ -378,7 +378,7 @@ struct PrayerTimesView: View {
                     icon: "globe",
                     title: "Madhab (Asr Calculation)",
                     value: viewModel.selectedMadhab.rawValue,
-                    color: AppColors.primary.teal
+                    color: themeManager.currentTheme.accentSecondary
                 )
             }
         }
@@ -473,7 +473,7 @@ struct PrayerTimesView: View {
                                 Spacer()
                                 Text(mosque.formattedDistance)
                                     .font(.system(size: 14, weight: .semibold))
-                                    .foregroundColor(AppColors.primary.teal)
+                                    .foregroundColor(themeManager.currentTheme.accentSecondary)
                             }
 
                             ThemedText.caption(mosque.address)
@@ -485,7 +485,7 @@ struct PrayerTimesView: View {
                                         .font(.system(size: 12))
                                     ThemedText.caption(phone)
                                 }
-                                .foregroundColor(AppColors.primary.green)
+                                .foregroundColor(themeManager.currentTheme.accentPrimary)
                             }
                         }
                     }
@@ -518,7 +518,7 @@ struct PrayerTimesView: View {
 
                                     if method == viewModel.selectedCalculationMethod {
                                         Image(systemName: "checkmark.circle.fill")
-                                            .foregroundColor(AppColors.primary.green)
+                                            .foregroundColor(themeManager.currentTheme.accentPrimary)
                                     }
                                 }
                                 .padding()
@@ -526,7 +526,7 @@ struct PrayerTimesView: View {
                                     RoundedRectangle(cornerRadius: 12)
                                         .fill(
                                             method == viewModel.selectedCalculationMethod
-                                                ? AppColors.primary.green.opacity(themeManager.currentTheme.gradientOpacity(for: AppColors.primary.green) * 2)
+                                                ? themeManager.currentTheme.accentPrimary.opacity(0.15)
                                                 : themeManager.currentTheme.cardColor
                                         )
                                 )
@@ -560,7 +560,7 @@ struct PrayerTimesView: View {
                         HStack(spacing: 12) {
                             Image(systemName: "info.circle.fill")
                                 .font(.system(size: 20))
-                                .foregroundColor(AppColors.primary.gold)
+                                .foregroundColor(themeManager.currentTheme.accentInteractive)
 
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("About Madhab Options")
@@ -578,7 +578,7 @@ struct PrayerTimesView: View {
                         .padding()
                         .background(
                             RoundedRectangle(cornerRadius: 12)
-                                .fill(AppColors.primary.gold.opacity(themeManager.currentTheme.gradientOpacity(for: AppColors.primary.gold) * 2))
+                                .fill(themeManager.currentTheme.accentInteractive.opacity(0.15))
                         )
 
                         // Madhab options
@@ -597,7 +597,7 @@ struct PrayerTimesView: View {
 
                                             Text(madhab.technicalNote)
                                                 .font(.system(size: 12, weight: .regular))
-                                                .foregroundColor(AppColors.primary.teal)
+                                                .foregroundColor(themeManager.currentTheme.accentSecondary)
                                                 .opacity(themeManager.currentTheme.secondaryOpacity)
                                         }
 
@@ -606,7 +606,7 @@ struct PrayerTimesView: View {
                                         if madhab == viewModel.selectedMadhab {
                                             Image(systemName: "checkmark.circle.fill")
                                                 .font(.system(size: 24))
-                                                .foregroundColor(AppColors.primary.teal)
+                                                .foregroundColor(themeManager.currentTheme.accentSecondary)
                                         }
                                     }
 
@@ -621,7 +621,7 @@ struct PrayerTimesView: View {
                                     RoundedRectangle(cornerRadius: 12)
                                         .fill(
                                             madhab == viewModel.selectedMadhab
-                                                ? AppColors.primary.teal.opacity(themeManager.currentTheme.gradientOpacity(for: AppColors.primary.teal) * 2)
+                                                ? themeManager.currentTheme.accentSecondary.opacity(0.15)
                                                 : themeManager.currentTheme.cardColor
                                         )
                                 )

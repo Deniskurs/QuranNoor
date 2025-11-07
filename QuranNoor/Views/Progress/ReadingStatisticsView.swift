@@ -76,7 +76,7 @@ struct ReadingStatisticsView: View {
                             Image(systemName: "chevron.down")
                                 .font(.caption2)
                         }
-                        .foregroundColor(AppColors.primary.teal)
+                        .foregroundColor(themeManager.currentTheme.accentSecondary)
                     }
                 }
             }
@@ -100,7 +100,7 @@ struct ReadingStatisticsView: View {
                     title: "Total Verses",
                     value: "\(viewModel.totalVersesRead)",
                     subtitle: "of 6,236",
-                    color: AppColors.primary.green
+                    color: themeManager.currentTheme.accentPrimary
                 )
 
                 StatCard(
@@ -108,7 +108,7 @@ struct ReadingStatisticsView: View {
                     title: "Surahs Done",
                     value: "\(viewModel.completedSurahsCount)",
                     subtitle: "of 114",
-                    color: AppColors.primary.teal
+                    color: themeManager.currentTheme.accentSecondary
                 )
 
                 StatCard(
@@ -116,7 +116,7 @@ struct ReadingStatisticsView: View {
                     title: "Current Streak",
                     value: "\(viewModel.currentStreak)",
                     subtitle: "day\(viewModel.currentStreak == 1 ? "" : "s")",
-                    color: AppColors.primary.gold
+                    color: themeManager.currentTheme.accentInteractive
                 )
 
                 StatCard(
@@ -124,7 +124,7 @@ struct ReadingStatisticsView: View {
                     title: "Avg Per Day",
                     value: String(format: "%.1f", viewModel.averageVersesPerDay),
                     subtitle: "verses",
-                    color: AppColors.primary.green
+                    color: themeManager.currentTheme.accentPrimary
                 )
             }
         }
@@ -222,24 +222,24 @@ struct ReadingStatisticsView: View {
         if intensity == 0 {
             return themeManager.currentTheme.textColor.opacity(0.05)
         } else if intensity < 0.25 {
-            return AppColors.primary.green.opacity(0.2)
+            return themeManager.currentTheme.accentPrimary.opacity(0.2)
         } else if intensity < 0.5 {
-            return AppColors.primary.green.opacity(0.4)
+            return themeManager.currentTheme.accentPrimary.opacity(0.4)
         } else if intensity < 0.75 {
-            return AppColors.primary.green.opacity(0.6)
+            return themeManager.currentTheme.accentPrimary.opacity(0.6)
         } else {
-            return AppColors.primary.green
+            return themeManager.currentTheme.accentPrimary
         }
     }
 
     private func heatmapColor(for index: Int) -> Color {
         switch index {
         case 0: return themeManager.currentTheme.textColor.opacity(0.05)
-        case 1: return AppColors.primary.green.opacity(0.2)
-        case 2: return AppColors.primary.green.opacity(0.4)
-        case 3: return AppColors.primary.green.opacity(0.6)
-        case 4: return AppColors.primary.green
-        default: return AppColors.primary.green
+        case 1: return themeManager.currentTheme.accentPrimary.opacity(0.2)
+        case 2: return themeManager.currentTheme.accentPrimary.opacity(0.4)
+        case 3: return themeManager.currentTheme.accentPrimary.opacity(0.6)
+        case 4: return themeManager.currentTheme.accentPrimary
+        default: return themeManager.currentTheme.accentPrimary
         }
     }
 
@@ -264,14 +264,14 @@ struct ReadingStatisticsView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             ThemedText.caption("READING VELOCITY")
                             ThemedText(viewModel.readingVelocity, style: .body)
-                                .foregroundColor(AppColors.primary.green)
+                                .foregroundColor(themeManager.currentTheme.accentPrimary)
                         }
 
                         Spacer()
 
                         Image(systemName: "gauge.with.dots.needle.67percent")
                             .font(.system(size: 32))
-                            .foregroundColor(AppColors.primary.green.opacity(0.3))
+                            .foregroundColor(themeManager.currentTheme.accentPrimary.opacity(0.3))
                     }
 
                     IslamicDivider(style: .simple)
@@ -281,7 +281,7 @@ struct ReadingStatisticsView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             ThemedText.caption("CONSISTENCY")
                             ThemedText("\(consistencyPercentage)%", style: .body)
-                                .foregroundColor(AppColors.primary.teal)
+                                .foregroundColor(themeManager.currentTheme.accentSecondary)
                         }
 
                         Spacer()
@@ -291,7 +291,7 @@ struct ReadingStatisticsView: View {
                             lineWidth: 4,
                             size: 40,
                             showPercentage: false,
-                            color: AppColors.primary.teal
+                            color: themeManager.currentTheme.accentSecondary
                         )
                     }
 
@@ -302,14 +302,14 @@ struct ReadingStatisticsView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             ThemedText.caption("MOST PRODUCTIVE DAY")
                             ThemedText(mostProductiveDay, style: .body)
-                                .foregroundColor(AppColors.primary.gold)
+                                .foregroundColor(themeManager.currentTheme.accentInteractive)
                         }
 
                         Spacer()
 
                         Image(systemName: "star.fill")
                             .font(.system(size: 32))
-                            .foregroundColor(AppColors.primary.gold.opacity(0.3))
+                            .foregroundColor(themeManager.currentTheme.accentInteractive.opacity(0.3))
                     }
                 }
             }
@@ -349,13 +349,13 @@ struct ReadingStatisticsView: View {
                         HStack {
                             Image(systemName: "calendar.badge.clock")
                                 .font(.system(size: 40))
-                                .foregroundColor(AppColors.primary.teal.opacity(0.3))
+                                .foregroundColor(themeManager.currentTheme.accentSecondary.opacity(0.3))
 
                             Spacer()
 
                             VStack(alignment: .trailing, spacing: 4) {
                                 ThemedText("\(viewModel.estimatedDaysToComplete)", style: .title)
-                                    .foregroundColor(AppColors.primary.teal)
+                                    .foregroundColor(themeManager.currentTheme.accentSecondary)
 
                                 ThemedText.caption("days to completion")
                                     .opacity(0.7)
@@ -369,14 +369,14 @@ struct ReadingStatisticsView: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 ThemedText.caption("ESTIMATED COMPLETION")
                                 ThemedText(estimatedCompletionDate, style: .body)
-                                    .foregroundColor(AppColors.primary.green)
+                                    .foregroundColor(themeManager.currentTheme.accentPrimary)
                             }
 
                             Spacer()
 
                             Image(systemName: "flag.checkered")
                                 .font(.system(size: 24))
-                                .foregroundColor(AppColors.primary.green.opacity(0.3))
+                                .foregroundColor(themeManager.currentTheme.accentPrimary.opacity(0.3))
                         }
 
                         IslamicDivider(style: .simple)
@@ -386,7 +386,7 @@ struct ReadingStatisticsView: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 ThemedText.caption("VERSES REMAINING")
                                 ThemedText("\(versesRemaining)", style: .body)
-                                    .foregroundColor(AppColors.primary.gold)
+                                    .foregroundColor(themeManager.currentTheme.accentInteractive)
                             }
 
                             Spacer()
@@ -396,7 +396,7 @@ struct ReadingStatisticsView: View {
                                 lineWidth: 4,
                                 size: 40,
                                 showPercentage: false,
-                                color: AppColors.primary.green
+                                color: themeManager.currentTheme.accentPrimary
                             )
                         }
                     } else {
@@ -412,7 +412,7 @@ struct ReadingStatisticsView: View {
 
                             ThemedText.caption("Keep reading to see your progress!")
                                 .multilineTextAlignment(.center)
-                                .foregroundColor(AppColors.primary.teal)
+                                .foregroundColor(themeManager.currentTheme.accentSecondary)
                         }
                         .padding(.vertical, 20)
                     }
@@ -490,7 +490,7 @@ struct ReadingStatisticsView: View {
                                         ThemedText.body(surah.englishName)
 
                                         ThemedText.caption("\(stat.readVerses) verses read")
-                                            .foregroundColor(AppColors.primary.teal)
+                                            .foregroundColor(themeManager.currentTheme.accentSecondary)
                                             .opacity(0.7)
                                     }
                                 }
@@ -500,7 +500,7 @@ struct ReadingStatisticsView: View {
                                 // Progress indicator
                                 Text("\(Int(stat.completionPercentage))%")
                                     .font(.system(size: 14, weight: .semibold))
-                                    .foregroundColor(AppColors.primary.green)
+                                    .foregroundColor(themeManager.currentTheme.accentPrimary)
                             }
                             .padding(.vertical, 12)
                             .padding(.horizontal, 12)
@@ -521,10 +521,10 @@ struct ReadingStatisticsView: View {
 
     private func rankColor(_ index: Int) -> Color {
         switch index {
-        case 0: return AppColors.primary.gold
+        case 0: return themeManager.currentTheme.accentInteractive
         case 1: return Color(hex: "#C0C0C0")  // Silver
         case 2: return Color(hex: "#CD7F32")  // Bronze
-        default: return AppColors.primary.teal
+        default: return themeManager.currentTheme.accentSecondary
         }
     }
 }

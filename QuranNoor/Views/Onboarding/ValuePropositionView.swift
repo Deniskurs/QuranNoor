@@ -50,11 +50,11 @@ struct ValuePropositionView: View {
             }
         }
 
-        var color: Color {
+        func color(for theme: ThemeMode) -> Color {
             switch self {
-            case .quran: return AppColors.primary.teal
-            case .prayer: return AppColors.primary.green
-            case .qibla: return AppColors.primary.gold
+            case .quran: return theme.accentSecondary
+            case .prayer: return theme.accentPrimary
+            case .qibla: return theme.accentInteractive
             }
         }
     }
@@ -68,19 +68,19 @@ struct ValuePropositionView: View {
                     // Icon
                     ZStack {
                         Circle()
-                            .fill(selectedDemo.color.opacity(accessibilityHelper.opacity(0.15)))
+                            .fill(selectedDemo.color(for: themeManager.currentTheme).opacity(accessibilityHelper.opacity(0.15)))
                             .frame(width: 80, height: 80)
 
                         Image(systemName: selectedDemo.icon)
                             .font(.system(size: 40))
-                            .foregroundColor(selectedDemo.color)
+                            .foregroundColor(selectedDemo.color(for: themeManager.currentTheme))
                             .symbolEffect(.bounce, value: selectedDemo)
                     }
                     .accessibilityHidden(true)  // Decorative
 
                     // Title
                     ThemedText(selectedDemo.title, style: .title)
-                        .foregroundColor(AppColors.primary.green)
+                        .foregroundColor(themeManager.currentTheme.accentPrimary)
                         .multilineTextAlignment(.center)
                         .id(selectedDemo)
                         .transition(AccessibleTransition.slideAndFade)
@@ -154,19 +154,19 @@ struct ValuePropositionView: View {
                     featureHighlight(
                         icon: "checkmark.seal.fill",
                         text: "100% Free - No ads, no subscriptions",
-                        color: AppColors.primary.green
+                        color: themeManager.currentTheme.accentPrimary
                     )
 
                     featureHighlight(
                         icon: "icloud.fill",
                         text: "Works offline - Download surahs for offline access",
-                        color: AppColors.primary.teal
+                        color: themeManager.currentTheme.accentSecondary
                     )
 
                     featureHighlight(
                         icon: "moon.stars.fill",
                         text: "Beautiful themes - Light, dark, night, and sepia modes",
-                        color: AppColors.primary.gold
+                        color: themeManager.currentTheme.accentInteractive
                     )
                 }
                 .padding(.horizontal, 32)
@@ -181,15 +181,15 @@ struct ValuePropositionView: View {
                 VStack(spacing: 12) {
                     Text("Explore these features in the next steps")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(themeManager.currentTheme.textTertiary)
                         .multilineTextAlignment(.center)
 
                     HStack(spacing: 8) {
                         Image(systemName: "arrow.right.circle.fill")
-                            .foregroundColor(AppColors.primary.green)
+                            .foregroundColor(themeManager.currentTheme.accentPrimary)
                         Text("Swipe or tap Continue")
                             .font(.caption.weight(.semibold))
-                            .foregroundColor(AppColors.primary.green)
+                            .foregroundColor(themeManager.currentTheme.accentPrimary)
                     }
                 }
                 .padding(.bottom, 20)

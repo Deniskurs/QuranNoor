@@ -35,11 +35,11 @@ struct PersonalizationView: View {
                 VStack(spacing: 12) {
                     Image(systemName: "person.crop.circle.fill")
                         .font(.system(size: 50))
-                        .foregroundColor(AppColors.primary.gold)
+                        .foregroundColor(themeManager.currentTheme.accentSecondary)
                         .accessibilityHidden(true)
 
                     ThemedText("What's Your Name?", style: .title)
-                        .foregroundColor(AppColors.primary.green)
+                        .foregroundColor(themeManager.currentTheme.accentPrimary)
                         .accessibilityAddTraits(.isHeader)
 
                     ThemedText.body("We'll use this to personalize your experience")
@@ -54,7 +54,7 @@ struct PersonalizationView: View {
                     LiquidGlassCardView(showPattern: false, intensity: .moderate) {
                         VStack(alignment: .leading, spacing: 12) {
                             ThemedText.caption("YOUR NAME (OPTIONAL)")
-                                .foregroundColor(AppColors.primary.teal)
+                                .foregroundColor(themeManager.currentTheme.accentSecondary)
 
                             TextField("Enter your name", text: $userName)
                                 .textFieldStyle(.plain)
@@ -68,7 +68,7 @@ struct PersonalizationView: View {
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 12)
                                         .stroke(
-                                            isTextFieldFocused ? AppColors.primary.green : themeManager.currentTheme.borderColor,
+                                            isTextFieldFocused ? themeManager.currentTheme.accentPrimary : themeManager.currentTheme.borderColor,
                                             lineWidth: isTextFieldFocused ? 2 : 1
                                         )
                                 )
@@ -105,7 +105,7 @@ struct PersonalizationView: View {
                     VStack(alignment: .leading, spacing: 16) {
                         HStack(spacing: 8) {
                             Image(systemName: "info.circle.fill")
-                                .foregroundColor(AppColors.primary.teal)
+                                .foregroundColor(themeManager.currentTheme.accentSecondary)
                             ThemedText("Why we ask", style: .heading)
                         }
 
@@ -115,19 +115,19 @@ struct PersonalizationView: View {
                             BenefitRow(
                                 icon: "heart.fill",
                                 text: "Creates a personal connection with the app",
-                                color: AppColors.primary.green
+                                color: themeManager.currentTheme.accentPrimary
                             )
 
                             BenefitRow(
                                 icon: "person.2.fill",
                                 text: "Addressing by name is a Sunnah practice",
-                                color: AppColors.primary.gold
+                                color: themeManager.currentTheme.accentSecondary
                             )
 
                             BenefitRow(
                                 icon: "lock.fill",
                                 text: "Your name stays private on your device",
-                                color: AppColors.primary.teal
+                                color: themeManager.currentTheme.accentInteractive
                             )
                         }
                     }
@@ -146,7 +146,7 @@ struct PersonalizationView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
-                .tint(userName.isEmpty ? AppColors.primary.teal : AppColors.primary.green)
+                .tint(userName.isEmpty ? themeManager.currentTheme.accentSecondary : themeManager.currentTheme.accentPrimary)
                 .padding(.horizontal, 32)
                 .padding(.bottom, 40)
                 .accessibleElement(
@@ -189,9 +189,9 @@ struct GreetingPreviewCard: View {
             VStack(spacing: 16) {
                 HStack {
                     Image(systemName: "sparkles")
-                        .foregroundColor(AppColors.primary.gold)
+                        .foregroundColor(themeManager.currentTheme.accentSecondary)
                     ThemedText("How it will look", style: .caption)
-                        .foregroundColor(AppColors.primary.gold)
+                        .foregroundColor(themeManager.currentTheme.accentSecondary)
                     Spacer()
                 }
 

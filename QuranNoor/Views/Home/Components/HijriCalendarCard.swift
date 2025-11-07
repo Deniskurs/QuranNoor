@@ -19,7 +19,7 @@ struct HijriCalendarCard: View {
                 HStack {
                     Image(systemName: "calendar.badge.plus")
                         .font(.title3)
-                        .foregroundColor(AppColors.primary.gold)
+                        .foregroundColor(themeManager.currentTheme.accentSecondary)
 
                     Text("Islamic Calendar")
                         .font(.headline)
@@ -30,7 +30,7 @@ struct HijriCalendarCard: View {
                     // Crescent moon icon
                     Image(systemName: "moon.stars.fill")
                         .font(.title3)
-                        .foregroundColor(AppColors.primary.gold)
+                        .foregroundColor(themeManager.currentTheme.accentSecondary)
                 }
 
                 if let hijri = hijriDate {
@@ -45,7 +45,7 @@ struct HijriCalendarCard: View {
                             // Day
                             Text(hijri.day)
                                 .font(.system(size: 48, weight: .light))
-                                .foregroundColor(AppColors.primary.gold)
+                                .foregroundColor(themeManager.currentTheme.accentSecondary)
 
                             // Year
                             Text(hijri.year + " AH")
@@ -64,7 +64,7 @@ struct HijriCalendarCard: View {
                                 HStack(spacing: 8) {
                                     Image(systemName: "star.circle.fill")
                                         .font(.caption)
-                                        .foregroundColor(AppColors.primary.gold)
+                                        .foregroundColor(themeManager.currentTheme.accentSecondary)
 
                                     Text(holiday)
                                         .font(.subheadline)
@@ -85,7 +85,7 @@ struct HijriCalendarCard: View {
                     // Loading state
                     VStack(spacing: 12) {
                         ProgressView()
-                            .tint(AppColors.primary.gold)
+                            .tint(themeManager.currentTheme.accentSecondary)
 
                         Text("Loading Islamic date...")
                             .font(.subheadline)
@@ -112,7 +112,7 @@ struct HijriCalendarCard: View {
             HStack(spacing: 12) {
                 Image(systemName: "moon.circle.fill")
                     .font(.title3)
-                    .foregroundColor(AppColors.primary.teal)
+                    .foregroundColor(themeManager.currentTheme.accentPrimary)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Ramadan in \(daysUntil) days")

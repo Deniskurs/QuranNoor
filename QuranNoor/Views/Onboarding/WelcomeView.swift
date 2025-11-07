@@ -22,13 +22,13 @@ struct WelcomeView: View {
                 Circle()
                     .fill(
                         LinearGradient(
-                            colors: [AppColors.primary.green, AppColors.primary.teal],
+                            colors: [themeManager.currentTheme.accentPrimary, themeManager.currentTheme.accentSecondary],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
                     )
                     .frame(width: 120, height: 120)
-                    .shadow(color: AppColors.primary.green.opacity(0.3), radius: 20)
+                    .shadow(color: themeManager.currentTheme.accentPrimary.opacity(0.3), radius: 20)
 
                 Image(systemName: "book.fill")
                     .font(.system(size: 60))
@@ -38,10 +38,10 @@ struct WelcomeView: View {
             // Welcome text
             VStack(spacing: 16) {
                 ThemedText.title("Qur'an Noor", italic: false)
-                    .foregroundColor(AppColors.primary.green)
+                    .foregroundColor(themeManager.currentTheme.accentPrimary)
 
                 ThemedText("Light of the Quran", style: .heading)
-                    .foregroundColor(AppColors.primary.gold)
+                    .foregroundColor(themeManager.currentTheme.accentSecondary)
 
                 ThemedText.body("Your comprehensive Islamic companion for spiritual growth, prayer times, Quran reading, and more")
                     .multilineTextAlignment(.center)
@@ -91,7 +91,7 @@ struct FeatureRow: View {
         HStack(spacing: 16) {
             Image(systemName: icon)
                 .font(.system(size: 28))
-                .foregroundColor(AppColors.primary.teal)
+                .foregroundColor(themeManager.currentTheme.accentSecondary)
                 .frame(width: 44)
 
             VStack(alignment: .leading, spacing: 4) {

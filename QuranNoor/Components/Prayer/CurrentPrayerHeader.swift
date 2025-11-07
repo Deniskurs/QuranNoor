@@ -61,7 +61,7 @@ struct CurrentPrayerHeader: View {
                 HStack(spacing: 8) {
                     Image(systemName: "clock.fill")
                         .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(isUrgent ? .orange : AppColors.primary.teal)
+                        .foregroundColor(isUrgent ? .orange : themeManager.currentTheme.accentSecondary)
 
                     Text(countdownLabel)
                         .font(.system(size: 15, weight: .medium))
@@ -72,13 +72,13 @@ struct CurrentPrayerHeader: View {
 
                     Text(countdownString)
                         .font(.system(size: 20, weight: .bold, design: .monospaced))
-                        .foregroundColor(isUrgent ? .orange : AppColors.primary.teal)
+                        .foregroundColor(isUrgent ? .orange : themeManager.currentTheme.accentSecondary)
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
                 .background(
                     RoundedRectangle(cornerRadius: 12)
-                        .fill((isUrgent ? Color.orange : AppColors.primary.teal).opacity(themeManager.currentTheme.gradientOpacity(for: AppColors.primary.teal) * 2))
+                        .fill((isUrgent ? Color.orange : themeManager.currentTheme.accentSecondary).opacity(0.15))
                 )
             }
         }
@@ -110,7 +110,7 @@ struct CurrentPrayerHeader: View {
     private var stateColor: Color {
         switch state {
         case .beforeFajr:
-            return AppColors.primary.midnight
+            return themeManager.currentTheme.accentPrimary
         case .inProgress(let prayer, _):
             if isUrgent {
                 return .orange
@@ -119,22 +119,22 @@ struct CurrentPrayerHeader: View {
         case .betweenPrayers(_, let next, _):
             return prayerColor(next).opacity(themeManager.currentTheme.secondaryOpacity)
         case .afterIsha:
-            return AppColors.primary.midnight
+            return themeManager.currentTheme.accentPrimary
         }
     }
 
     private func prayerColor(_ prayer: PrayerName) -> Color {
         switch prayer {
         case .fajr:
-            return AppColors.primary.green
+            return themeManager.currentTheme.accentPrimary
         case .dhuhr:
-            return AppColors.primary.teal
+            return themeManager.currentTheme.accentSecondary
         case .asr:
-            return AppColors.primary.gold
+            return themeManager.currentTheme.accentInteractive
         case .maghrib:
             return .orange
         case .isha:
-            return AppColors.primary.midnight
+            return themeManager.currentTheme.accentPrimary
         }
     }
 

@@ -57,7 +57,7 @@ struct NextPrayerCardView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "clock.fill")
                         .font(.title3)
-                        .foregroundColor(AppColors.primary.teal)
+                        .foregroundColor(themeManager.currentTheme.accentSecondary)
 
                     Text("NEXT PRAYER")
                         .font(.subheadline)
@@ -73,7 +73,7 @@ struct NextPrayerCardView: View {
                         progress: period.periodProgress,
                         lineWidth: 4,
                         size: 40,
-                        color: AppColors.primary.teal,
+                        color: themeManager.currentTheme.accentSecondary,
                         backgroundColor: Color.gray.opacity(0.2),
                         showPercentage: false
                     )
@@ -91,7 +91,7 @@ struct NextPrayerCardView: View {
                     Text(period.countdownString)
                         .font(.system(size: 72, weight: .ultraLight, design: .rounded)) // HERO enhancement from 48
                         .tracking(2) // Add letter spacing for elegance
-                        .foregroundColor(AppColors.primary.teal)
+                        .foregroundColor(themeManager.currentTheme.accentSecondary)
                         .contentTransition(.numericText())
                         .monospacedDigit()
                 }
@@ -122,13 +122,13 @@ struct NextPrayerCardView: View {
             HStack {
                 Image(systemName: "bell.badge.fill")
                     .font(.title2)
-                    .foregroundColor(AppColors.primary.gold)
+                    .foregroundColor(themeManager.currentTheme.accentSecondary)
                     .symbolEffect(.bounce.byLayer, options: .repeating)
 
                 Text("PRAYER TIME APPROACHING")
                     .font(.subheadline)
                     .fontWeight(.bold)
-                    .foregroundColor(AppColors.primary.gold)
+                    .foregroundColor(themeManager.currentTheme.accentSecondary)
 
                 Spacer()
             }
@@ -137,11 +137,11 @@ struct NextPrayerCardView: View {
             ZStack {
                 // Background (pulsing only if motion not reduced)
                 Circle()
-                    .fill(AppColors.primary.gold.opacity(0.1))
+                    .fill(themeManager.currentTheme.accentSecondary.opacity(0.1))
                     .frame(width: 160, height: 160)
                     .overlay(
                         Circle()
-                            .stroke(AppColors.primary.gold, lineWidth: reduceMotion ? 4 : 3)
+                            .stroke(themeManager.currentTheme.accentSecondary, lineWidth: reduceMotion ? 4 : 3)
                             .scaleEffect(reduceMotion ? 1.0 : pulseScale)
                             .opacity(reduceMotion ? 1.0 : pulseOpacity)
                     )
@@ -154,7 +154,7 @@ struct NextPrayerCardView: View {
 
                         Text("in \(period.formattedTimeRemaining)")
                             .font(.system(size: 32, weight: .bold, design: .rounded))
-                            .foregroundColor(AppColors.primary.gold)
+                            .foregroundColor(themeManager.currentTheme.accentSecondary)
                             .contentTransition(.numericText())
                     }
                 }
@@ -180,7 +180,7 @@ struct NextPrayerCardView: View {
                 Text("TIME FOR \(prayer.displayName.uppercased())")
                     .font(.headline)
                     .fontWeight(.bold)
-                    .foregroundColor(AppColors.primary.green)
+                    .foregroundColor(themeManager.currentTheme.accentPrimary)
 
                 Spacer()
 
@@ -188,7 +188,7 @@ struct NextPrayerCardView: View {
                 if isCompleted {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.title2)
-                        .foregroundColor(AppColors.primary.green)
+                        .foregroundColor(themeManager.currentTheme.accentPrimary)
                 }
             }
 
@@ -198,7 +198,7 @@ struct NextPrayerCardView: View {
                     Text(period.countdownString)
                         .font(.system(size: 72, weight: .ultraLight, design: .rounded))
                         .tracking(2)
-                        .foregroundColor(AppColors.primary.teal)
+                        .foregroundColor(themeManager.currentTheme.accentInteractive)
                         .contentTransition(.numericText())
                         .monospacedDigit()
 
@@ -215,7 +215,7 @@ struct NextPrayerCardView: View {
     private var loadingContent: some View {
         VStack(spacing: 16) {
             ProgressView()
-                .tint(AppColors.primary.teal)
+                .tint(themeManager.currentTheme.accentInteractive)
 
             Text("Calculating prayer times...")
                 .font(.subheadline)
@@ -234,7 +234,7 @@ struct NextPrayerCardView: View {
                 VStack(spacing: 4) {
                     Image(systemName: isCompleted ? "checkmark.circle.fill" : "circle")
                         .font(.title3)
-                        .foregroundColor(isCompleted ? AppColors.primary.green : themeManager.currentTheme.textTertiary)
+                        .foregroundColor(isCompleted ? themeManager.currentTheme.accentPrimary : themeManager.currentTheme.textTertiary)
                         .symbolEffect(.bounce, options: .speed(0.5), value: isCompleted) // iOS 26 draw-on animation
 
                     Text(String(time.name.displayName.prefix(3)))

@@ -43,7 +43,7 @@ struct ReadingProgressCard: View {
             // Crescent moon icon
             Image(systemName: "moon.stars.fill")
                 .font(.system(size: 48))
-                .foregroundColor(AppColors.primary.teal)
+                .foregroundColor(themeManager.currentTheme.accentSecondary)
                 .padding(.top, 8)
 
             VStack(spacing: 8) {
@@ -71,7 +71,7 @@ struct ReadingProgressCard: View {
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
-                .background(AppColors.primary.teal)
+                .background(themeManager.currentTheme.accentPrimary)
                 .cornerRadius(12)
             }
             .padding(.horizontal, 20)
@@ -91,7 +91,7 @@ struct ReadingProgressCard: View {
             HStack {
                 Image(systemName: "book.pages.fill")
                     .font(.title3)
-                    .foregroundColor(AppColors.primary.teal)
+                    .foregroundColor(themeManager.currentTheme.accentSecondary)
 
                 Text("Quran Progress")
                     .font(.headline)
@@ -102,7 +102,7 @@ struct ReadingProgressCard: View {
                 // Overall completion percentage
                 Text(stats.progressPercentage)
                     .font(.title3.bold())
-                    .foregroundColor(AppColors.primary.teal)
+                    .foregroundColor(themeManager.currentTheme.accentSecondary)
             }
 
             // Progress ring
@@ -165,7 +165,7 @@ struct ReadingProgressCard: View {
                             Image(systemName: "arrow.right.circle.fill")
                                 .font(.subheadline)
                         }
-                        .foregroundColor(AppColors.primary.teal)
+                        .foregroundColor(themeManager.currentTheme.accentSecondary)
                     }
                 }
             }

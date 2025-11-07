@@ -57,7 +57,7 @@ struct LocationManagementModal: View {
                     } label: {
                         Text("Done")
                             .font(.headline.weight(.semibold))
-                            .foregroundStyle(AppColors.primary.teal)
+                            .foregroundStyle(themeManager.currentTheme.accentSecondary)
                     }
                 }
             }
@@ -95,7 +95,7 @@ struct LocationManagementModal: View {
             HStack(spacing: Spacing.sm) {
                 Image(systemName: "bookmark.circle.fill")
                     .font(.title3)
-                    .foregroundStyle(AppColors.primary.gold)
+                    .foregroundStyle(themeManager.currentTheme.accentInteractive)
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Save Current Location")
@@ -119,8 +119,8 @@ struct LocationManagementModal: View {
                     .fill(
                         LinearGradient(
                             colors: [
-                                AppColors.primary.gold.opacity(0.1),
-                                AppColors.primary.gold.opacity(0.05)
+                                themeManager.currentTheme.accentInteractive.opacity(0.1),
+                                themeManager.currentTheme.accentInteractive.opacity(0.05)
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
@@ -129,12 +129,12 @@ struct LocationManagementModal: View {
                     .overlay(
                         RoundedRectangle(cornerRadius: BorderRadius.xl)
                             .strokeBorder(
-                                AppColors.primary.gold.opacity(0.3),
+                                themeManager.currentTheme.accentInteractive.opacity(0.3),
                                 lineWidth: 1
                             )
                     )
             )
-            .shadow(color: AppColors.primary.gold.opacity(0.15), radius: 8, x: 0, y: 2)
+            .shadow(color: themeManager.currentTheme.accentInteractive.opacity(0.15), radius: 8, x: 0, y: 2)
         }
         .buttonStyle(CardPressStyle())
     }
@@ -210,7 +210,7 @@ struct LocationManagementModal: View {
             HStack(spacing: Spacing.sm) {
                 Image(systemName: "plus.circle.fill")
                     .font(.title3)
-                    .foregroundStyle(AppColors.primary.teal)
+                    .foregroundStyle(themeManager.currentTheme.accentSecondary)
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Add Manual Location")
@@ -235,7 +235,7 @@ struct LocationManagementModal: View {
                     .overlay(
                         RoundedRectangle(cornerRadius: BorderRadius.xl)
                             .strokeBorder(
-                                AppColors.primary.teal.opacity(0.3),
+                                themeManager.currentTheme.accentSecondary.opacity(0.3),
                                 style: StrokeStyle(lineWidth: 1, dash: [5, 3])
                             )
                     )
@@ -276,7 +276,7 @@ struct SectionHeader: View {
         HStack(spacing: Spacing.xs) {
             Image(systemName: icon)
                 .font(.title3)
-                .foregroundStyle(AppColors.primary.teal)
+                .foregroundStyle(themeManager.currentTheme.accentSecondary)
                 .symbolRenderingMode(.hierarchical)
 
             Text(title)
@@ -303,22 +303,22 @@ struct LocationCardView: View {
             // Icon
             Image(systemName: icon)
                 .font(.title2)
-                .foregroundStyle(isSelected ? AppColors.primary.teal : AppColors.primary.green)
+                .foregroundStyle(isSelected ? themeManager.currentTheme.accentSecondary : themeManager.currentTheme.accentPrimary)
                 .symbolRenderingMode(.hierarchical)
                 .frame(width: 50, height: 50)
                 .background(
                     Circle()
-                        .fill(isSelected ? AppColors.primary.teal.opacity(0.15) : AppColors.primary.green.opacity(0.1))
+                        .fill(isSelected ? themeManager.currentTheme.accentSecondary.opacity(0.15) : themeManager.currentTheme.accentPrimary.opacity(0.1))
                 )
                 .overlay(
                     Circle()
                         .strokeBorder(
-                            isSelected ? AppColors.primary.teal.opacity(0.3) : Color.clear,
+                            isSelected ? themeManager.currentTheme.accentSecondary.opacity(0.3) : Color.clear,
                             lineWidth: 2
                         )
                 )
                 .shadow(
-                    color: isSelected ? AppColors.primary.teal.opacity(0.2) : Color.clear,
+                    color: isSelected ? themeManager.currentTheme.accentSecondary.opacity(0.2) : Color.clear,
                     radius: 8,
                     x: 0,
                     y: 2
@@ -342,7 +342,7 @@ struct LocationCardView: View {
             // Trailing indicator
             if isSelected {
                 Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(AppColors.primary.teal)
+                    .foregroundStyle(themeManager.currentTheme.accentSecondary)
                     .font(.title3)
                     .symbolEffect(.bounce, value: isSelected)
             } else if showChevron {
@@ -368,8 +368,8 @@ struct LocationCardView: View {
                         .fill(
                             LinearGradient(
                                 colors: [
-                                    AppColors.primary.teal.opacity(0.1),
-                                    AppColors.primary.teal.opacity(0.05),
+                                    themeManager.currentTheme.accentSecondary.opacity(0.1),
+                                    themeManager.currentTheme.accentSecondary.opacity(0.05),
                                     Color.clear
                                 ],
                                 startPoint: .topLeading,
@@ -378,7 +378,7 @@ struct LocationCardView: View {
                         )
 
                     RoundedRectangle(cornerRadius: BorderRadius.xl)
-                        .strokeBorder(AppColors.primary.teal, lineWidth: 2)
+                        .strokeBorder(themeManager.currentTheme.accentSecondary, lineWidth: 2)
                 }
 
                 // Normal state border
@@ -399,7 +399,7 @@ struct LocationCardView: View {
             }
         )
         .shadow(
-            color: isSelected ? AppColors.primary.teal.opacity(0.2) : Color.black.opacity(0.05),
+            color: isSelected ? themeManager.currentTheme.accentSecondary.opacity(0.2) : Color.black.opacity(0.05),
             radius: isSelected ? 12 : 8,
             x: 0,
             y: isSelected ? 4 : 2

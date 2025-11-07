@@ -47,14 +47,14 @@ struct LocationAndCalculationView: View {
                 VStack(spacing: 12) {
                     Image(systemName: permissionManager.locationStatus.isGranted ? "checkmark.circle.fill" : "location.fill")
                         .font(.system(size: 50))
-                        .foregroundColor(permissionManager.locationStatus.isGranted ? AppColors.primary.green : AppColors.primary.teal)
+                        .foregroundColor(permissionManager.locationStatus.isGranted ? themeManager.currentTheme.accentPrimary : themeManager.currentTheme.accentSecondary)
                         .symbolEffect(.bounce, value: permissionManager.locationStatus.isGranted)
 
                     ThemedText(
                         permissionManager.locationStatus.isGranted ? "Location Enabled" : "Prayer Times Setup",
                         style: .title
                     )
-                    .foregroundColor(AppColors.primary.green)
+                    .foregroundColor(themeManager.currentTheme.accentPrimary)
 
                     ThemedText.body(
                         permissionManager.locationStatus.isGranted ?
@@ -176,7 +176,7 @@ struct LocationAndCalculationView: View {
                             }
                             .buttonStyle(.borderedProminent)
                             .controlSize(.large)
-                            .tint(AppColors.primary.teal)
+                            .tint(themeManager.currentTheme.accentSecondary)
                             .disabled(isRequesting)
                         }
 
@@ -190,7 +190,7 @@ struct LocationAndCalculationView: View {
                             }
                             .buttonStyle(.bordered)
                             .controlSize(.large)
-                            .tint(AppColors.primary.teal)
+                            .tint(themeManager.currentTheme.accentSecondary)
                         }
 
                         // Manual entry option (only after denial)
@@ -217,7 +217,7 @@ struct LocationAndCalculationView: View {
             if let country = detectedCountry {
                 HStack(spacing: 12) {
                     Image(systemName: "mappin.circle.fill")
-                        .foregroundColor(AppColors.primary.green)
+                        .foregroundColor(themeManager.currentTheme.accentPrimary)
 
                     VStack(alignment: .leading, spacing: 4) {
                         ThemedText("Detected Location", style: .body)
@@ -278,12 +278,12 @@ struct LocationAndCalculationView: View {
                 } label: {
                     HStack {
                         ThemedText(showMethodSelection ? "Hide Other Methods" : "Use a Different Method", style: .body)
-                            .foregroundColor(AppColors.primary.teal)
+                            .foregroundColor(themeManager.currentTheme.accentInteractive)
 
                         Spacer()
 
                         Image(systemName: showMethodSelection ? "chevron.up" : "chevron.down")
-                            .foregroundColor(AppColors.primary.teal)
+                            .foregroundColor(themeManager.currentTheme.accentInteractive)
                             .font(.caption.weight(.semibold))
                     }
                 }
@@ -322,7 +322,7 @@ struct LocationAndCalculationView: View {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 8) {
                     Image(systemName: "questionmark.circle.fill")
-                        .foregroundColor(AppColors.primary.gold)
+                        .foregroundColor(themeManager.currentTheme.accentSecondary)
                     ThemedText("Why does this matter?", style: .body)
                         .fontWeight(.semibold)
                 }
@@ -335,7 +335,7 @@ struct LocationAndCalculationView: View {
             .padding(16)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(AppColors.primary.gold.opacity(0.1))
+                    .fill(themeManager.currentTheme.accentSecondary.opacity(0.15))
             )
 
             // Continue button (only shown after calculation method selected)
@@ -354,7 +354,7 @@ struct LocationAndCalculationView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
-                .tint(AppColors.primary.green)
+                .tint(themeManager.currentTheme.accentPrimary)
             }
         }
     }
@@ -471,14 +471,14 @@ struct MethodCard: View {
                 ZStack {
                     Circle()
                         .stroke(
-                            isSelected ? AppColors.primary.green : themeManager.currentTheme.textColor.opacity(0.3),
+                            isSelected ? themeManager.currentTheme.accentPrimary : themeManager.currentTheme.textColor.opacity(0.3),
                             lineWidth: 2
                         )
                         .frame(width: 24, height: 24)
 
                     if isSelected {
                         Circle()
-                            .fill(AppColors.primary.green)
+                            .fill(themeManager.currentTheme.accentPrimary)
                             .frame(width: 14, height: 14)
                             .transition(.scale.combined(with: .opacity))
                     }
@@ -491,7 +491,7 @@ struct MethodCard: View {
                         ThemedText(name, style: .body)
                             .fontWeight(.semibold)
                             .foregroundColor(
-                                isSelected ? AppColors.primary.green : themeManager.currentTheme.textColor
+                                isSelected ? themeManager.currentTheme.accentPrimary : themeManager.currentTheme.textColor
                             )
 
                         if isRecommended {
@@ -502,7 +502,7 @@ struct MethodCard: View {
                                 .padding(.vertical, 4)
                                 .background(
                                     Capsule()
-                                        .fill(AppColors.primary.green)
+                                        .fill(themeManager.currentTheme.accentPrimary)
                                 )
                         }
                     }
@@ -528,7 +528,7 @@ struct MethodCard: View {
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
                             .stroke(
-                                isSelected ? AppColors.primary.green : Color.clear,
+                                isSelected ? themeManager.currentTheme.accentPrimary : Color.clear,
                                 lineWidth: 2
                             )
                     )
