@@ -7,12 +7,13 @@
 //
 
 import SwiftUI
+import UserNotifications
 
 @main
 struct QuranNoorApp: App {
     // MARK: - Properties
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    @StateObject private var themeManager = ThemeManager()
+    @State private var themeManager = ThemeManager()
     @State private var deepLinkHandler = DeepLinkHandler()
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
 
@@ -44,7 +45,7 @@ struct QuranNoorApp: App {
                 if hasCompletedOnboarding {
                     // Main app - scales up and fades in
                     ContentView()
-                        .environmentObject(themeManager)
+                        .environment(themeManager)
                         .environment(deepLinkHandler)
                         .preferredColorScheme(themeManager.colorScheme)
                         .transition(
@@ -57,7 +58,7 @@ struct QuranNoorApp: App {
                 } else {
                     // Onboarding - scales down and fades out when dismissed
                     OnboardingContainerView()
-                        .environmentObject(themeManager)
+                        .environment(themeManager)
                         .transition(
                             .asymmetric(
                                 insertion: .scale(scale: 1.0).combined(with: .opacity),
@@ -82,15 +83,89 @@ struct QuranNoorApp: App {
     }
 }
 
-// MARK: - App Delegate Adapter for Quick Actions
-class AppDelegate: NSObject, UIApplicationDelegate {
+// MARK: - App Delegate Adapter for Quick Actions and Notifications
+class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
     func application(
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
+        // Set notification center delegate
+        UNUserNotificationCenter.current().delegate = self
+
         // Register Quick Actions programmatically (for auto-generated Info.plist projects)
         registerQuickActions(application)
         return true
+    }
+
+    // MARK: - UNUserNotificationCenterDelegate Methods
+
+    /// Handle notification when app is in foreground
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification,
+        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+    ) {
+        // Check if this is a prayer time notification
+        let userInfo = notification.request.content.userInfo
+        if let notificationType = userInfo["type"] as? String, notificationType == "prayer_time" {
+            // Play Adhan audio when prayer time arrives (foreground)
+            Task { @MainActor in
+                if let prayerName = userInfo["prayer"] as? String {
+                    print("🕌 Prayer time notification received in foreground: \(prayerName)")
+                    await AdhanAudioService.shared.playAdhan()
+                }
+            }
+        }
+
+        // Still show the notification banner in foreground
+        completionHandler([.banner, .sound, .badge])
+    }
+
+    /// Handle notification tap/interaction
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler: @escaping () -> Void
+    ) {
+        let userInfo = response.notification.request.content.userInfo
+
+        // Handle different notification actions
+        switch response.actionIdentifier {
+        case "MARK_PRAYED_ACTION":
+            // User marked prayer as completed from notification
+            if let prayerName = userInfo["prayer"] as? String,
+               let prayer = PrayerName(rawValue: prayerName) {
+                Task { @MainActor in
+                    PrayerCompletionService.shared.toggleCompletion(prayer)
+                    print("✅ Marked \(prayer.displayName) as prayed from notification")
+                }
+            }
+
+        case "SNOOZE_ACTION":
+            // User snoozed the notification (could reschedule for 5 minutes later)
+            print("⏰ Prayer notification snoozed")
+
+        case UNNotificationDefaultActionIdentifier:
+            // User tapped the notification (default action)
+            // Play Adhan and navigate to prayer tab
+            Task { @MainActor in
+                if let prayerName = userInfo["prayer"] as? String {
+                    print("🕌 Opening app from prayer notification: \(prayerName)")
+                    await AdhanAudioService.shared.playAdhan()
+
+                    // Post notification to navigate to prayer tab
+                    NotificationCenter.default.post(
+                        name: Notification.Name("NavigateToPrayerTab"),
+                        object: nil
+                    )
+                }
+            }
+
+        default:
+            break
+        }
+
+        completionHandler()
     }
 
     func application(

@@ -9,7 +9,7 @@
 import SwiftUI
 
 struct RecentActivityFeed: View {
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
     let bookmarks: [Bookmark]
     let lastReadSurah: String?
     let lastReadVerse: Int?
@@ -140,7 +140,7 @@ struct RecentActivityFeed: View {
 // MARK: - Activity Row
 
 struct ActivityRow: View {
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
     let icon: String
     let iconColor: Color
     let title: String
@@ -204,7 +204,7 @@ struct ActivityRow: View {
         lastReadVerse: 286,
         prayersCompleted: 4
     )
-    .environmentObject(ThemeManager())
+    .environment(ThemeManager())
     .padding()
     .background(Color(hex: "#F8F4EA"))
 }
@@ -216,7 +216,7 @@ struct ActivityRow: View {
         lastReadVerse: nil,
         prayersCompleted: 0
     )
-    .environmentObject(ThemeManager())
+    .environment(ThemeManager())
     .padding()
     .background(Color(hex: "#F8F4EA"))
 }
@@ -234,7 +234,7 @@ struct ActivityRow: View {
         lastReadVerse: 110,
         prayersCompleted: 5
     )
-    .environmentObject({
+    .environment({
         let manager = ThemeManager()
         manager.setTheme(.dark)
         return manager

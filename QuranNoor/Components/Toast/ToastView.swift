@@ -39,7 +39,7 @@ enum ToastStyle {
 // MARK: - Toast View
 struct ToastView: View {
     // MARK: - Properties
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
 
     let message: String
     let style: ToastStyle
@@ -282,5 +282,5 @@ struct EncouragingMessages {
             print("Undo tapped")
         }
     )
-    .environmentObject(ThemeManager())
+    .environment(ThemeManager())
 }

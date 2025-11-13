@@ -11,7 +11,7 @@ struct VerseProgressDetailView: View {
     let surah: Surah
     @ObservedObject var viewModel: ProgressManagementViewModel
 
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
     @Environment(\.dismiss) var dismiss
 
     @State private var verseStates: [Int: Bool] = [:]  // Cached verse read states
@@ -384,7 +384,7 @@ struct VerseGridCell: View {
     let isRead: Bool
     let onToggle: () -> Void
 
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
     @State private var isPressed = false
 
     var body: some View {
@@ -504,5 +504,5 @@ struct ActionButton: View {
         ),
         viewModel: ProgressManagementViewModel()
     )
-    .environmentObject(ThemeManager())
+    .environment(ThemeManager())
 }

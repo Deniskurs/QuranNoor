@@ -16,7 +16,7 @@ struct PrayerReminderPopup: View {
     let onComplete: () -> Void
     let onDismiss: () -> Void
 
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
     @State private var scale: CGFloat = 0.8
     @State private var opacity: Double = 0
 
@@ -184,7 +184,7 @@ struct PrayerReminderPopup: View {
                 print("Popup dismissed")
             }
         )
-        .environmentObject(ThemeManager())
+        .environment(ThemeManager())
     }
 }
 
@@ -215,5 +215,5 @@ struct PrayerReminderPopup: View {
         .padding()
     }
     .background(Color(hex: "#1A2332"))
-    .environmentObject(ThemeManager())
+    .environment(ThemeManager())
 }

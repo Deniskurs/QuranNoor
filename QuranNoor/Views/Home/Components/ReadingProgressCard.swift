@@ -9,7 +9,7 @@
 import SwiftUI
 
 struct ReadingProgressCard: View {
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
     let stats: DailyStats
     let onContinue: () -> Void
 
@@ -216,7 +216,7 @@ struct ReadingProgressCard: View {
     ReadingProgressCard(stats: DailyStats.preview, onContinue: {
         print("Continue tapped")
     })
-    .environmentObject(ThemeManager())
+    .environment(ThemeManager())
     .padding()
     .background(Color(hex: "#F8F4EA"))
 }
@@ -225,7 +225,7 @@ struct ReadingProgressCard: View {
     ReadingProgressCard(stats: DailyStats.activeUser, onContinue: {
         print("Continue tapped")
     })
-    .environmentObject(ThemeManager())
+    .environment(ThemeManager())
     .padding()
     .background(Color(hex: "#F8F4EA"))
 }
@@ -234,7 +234,7 @@ struct ReadingProgressCard: View {
     ReadingProgressCard(stats: DailyStats.emptyState, onContinue: {
         print("Continue tapped")
     })
-    .environmentObject(ThemeManager())
+    .environment(ThemeManager())
     .padding()
     .background(Color(hex: "#F8F4EA"))
 }
@@ -243,7 +243,7 @@ struct ReadingProgressCard: View {
     ReadingProgressCard(stats: DailyStats.preview, onContinue: {
         print("Continue tapped")
     })
-    .environmentObject({
+    .environment({
         let manager = ThemeManager()
         manager.setTheme(.dark)
         return manager

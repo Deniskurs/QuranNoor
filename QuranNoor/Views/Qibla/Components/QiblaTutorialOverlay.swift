@@ -10,7 +10,7 @@ import SwiftUI
 struct QiblaTutorialOverlay: View {
     // MARK: - Properties
     @Binding var isPresented: Bool
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager: ThemeManager
 
     // MARK: - Body
     var body: some View {
@@ -171,6 +171,6 @@ struct QiblaTutorialOverlay: View {
         Color.gray.ignoresSafeArea()
 
         QiblaTutorialOverlay(isPresented: .constant(true))
-            .environmentObject(ThemeManager())
+            .environment(ThemeManager())
     }
 }

@@ -72,7 +72,7 @@ struct EdgeHighlightModifier: ViewModifier {
 /// Falls back to radial gradient on iOS 17 and earlier
 struct MeshGradientBackgroundModifier: ViewModifier {
     let cornerRadius: CGFloat
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
 
     func body(content: Content) -> some View {
         content

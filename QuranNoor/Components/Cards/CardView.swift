@@ -55,5 +55,5 @@ struct CardView<Content: View>: View {
     }
     .padding()
     .background(Color(hex: "#F8F4EA"))
-    .environmentObject(ThemeManager())
+    .environment(ThemeManager())
 }

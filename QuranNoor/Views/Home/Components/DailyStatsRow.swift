@@ -9,7 +9,7 @@
 import SwiftUI
 
 struct DailyStatsRow: View {
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
     let stats: DailyStats
 
     var body: some View {
@@ -65,7 +65,7 @@ struct DailyStatsRow: View {
 // MARK: - Home Stat Card Component
 
 struct HomeStatCard: View {
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
     let icon: String
     let iconColor: Color
     let value: String
@@ -121,28 +121,28 @@ struct HomeStatCard: View {
 
 #Preview("With Stats") {
     DailyStatsRow(stats: DailyStats.preview)
-        .environmentObject(ThemeManager())
+        .environment(ThemeManager())
         .padding()
         .background(Color(hex: "#F8F4EA"))
 }
 
 #Preview("Empty State") {
     DailyStatsRow(stats: DailyStats.emptyState)
-        .environmentObject(ThemeManager())
+        .environment(ThemeManager())
         .padding()
         .background(Color(hex: "#F8F4EA"))
 }
 
 #Preview("Active User") {
     DailyStatsRow(stats: DailyStats.activeUser)
-        .environmentObject(ThemeManager())
+        .environment(ThemeManager())
         .padding()
         .background(Color(hex: "#F8F4EA"))
 }
 
 #Preview("Dark Mode") {
     DailyStatsRow(stats: DailyStats.preview)
-        .environmentObject({
+        .environment({
             let manager = ThemeManager()
             manager.setTheme(.dark)
             return manager

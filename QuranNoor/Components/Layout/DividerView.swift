@@ -18,7 +18,7 @@ enum IslamicDividerStyle {
 // MARK: - Divider View Component
 struct IslamicDivider: View {
     // MARK: - Properties
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
 
     let style: IslamicDividerStyle
     let color: Color?
@@ -301,5 +301,5 @@ struct SectionDivider: View {
         .padding()
     }
     .background(ThemeManager().currentTheme.backgroundColor)
-    .environmentObject(ThemeManager())
+    .environment(ThemeManager())
 }

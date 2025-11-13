@@ -21,7 +21,7 @@ enum SecondaryButtonStyleType {
 // MARK: - Secondary Button Component
 struct SecondaryButton: View {
     // MARK: - Properties
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
 
     let title: String
     let icon: String?
@@ -277,5 +277,5 @@ struct TertiaryButton: View {
         .padding()
     }
     .background(ThemeManager().currentTheme.backgroundColor)
-    .environmentObject(ThemeManager())
+    .environment(ThemeManager())
 }

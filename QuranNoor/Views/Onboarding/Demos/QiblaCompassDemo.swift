@@ -11,7 +11,7 @@ import Combine
 
 struct QiblaCompassDemo: View {
     // MARK: - Properties
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
     @State private var compassRotation: Double = 0
     @State private var isCalibrating = false
     @State private var showAccuracyRing = true
@@ -269,6 +269,6 @@ struct QiblaCompassDemo: View {
 // MARK: - Preview
 #Preview {
     QiblaCompassDemo()
-        .environmentObject(ThemeManager())
+        .environment(ThemeManager())
         .frame(height: 700)
 }

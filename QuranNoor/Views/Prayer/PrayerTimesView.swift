@@ -12,15 +12,18 @@ import SwiftUI
 struct PrayerTimesView: View {
     // MARK: - Properties
 
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
     @State private var viewModel = PrayerViewModel()
     @State private var transitionHandler: PrayerTransitionHandler?
 
     // Completion tracking
     private let completionService = PrayerCompletionService.shared
 
+    // Performance optimization
+    @State private var performanceService = PerformanceOptimizationService.shared
+    @State private var updateInterval: TimeInterval = 1.0
+
     // UI State
-    @State private var showMosqueList: Bool = false
     @State private var showMethodPicker: Bool = false
     @State private var showMadhabPicker: Bool = false
     @State private var scrollOffset: CGFloat = 0
@@ -44,8 +47,8 @@ struct PrayerTimesView: View {
                 // Gradient overlay (automatically suppressed in night mode)
                 GradientBackground(style: .prayer, opacity: 0.3)
 
-                // Main content with TimelineView for automatic updates
-                TimelineView(.periodic(from: Date(), by: 1.0)) { context in
+                // Main content with dynamic TimelineView for optimal performance
+                TimelineView(.periodic(from: Date(), by: updateInterval)) { context in
                     ScrollView {
                         VStack(spacing: 20) {
                             // Location header
@@ -59,6 +62,10 @@ struct PrayerTimesView: View {
                                     countdownString: period.countdownString,
                                     isUrgent: period.isUrgent
                                 )
+                                .onChange(of: period.state) { _, newState in
+                                    // Update timeline frequency based on prayer state
+                                    updateInterval = performanceService.getOptimalUpdateInterval(for: newState)
+                                }
                                 .transition(.asymmetric(
                                     insertion: .scale.combined(with: .opacity),
                                     removal: .opacity
@@ -78,6 +85,9 @@ struct PrayerTimesView: View {
 
                             // Mosque Finder
                             mosqueFinderButton
+
+                            // Qadha Counter
+                            qadhaCounterButton
                         }
                         .padding()
                     }
@@ -132,6 +142,14 @@ struct PrayerTimesView: View {
                 // Initial period calculation
                 viewModel.recalculatePeriod()
 
+                // Perform automatic cache cleanup (runs in background)
+                Task.detached(priority: .background) {
+                    await performanceService.performAutomaticCacheCleanup()
+                }
+
+                // Set initial update interval based on current state
+                updateInterval = performanceService.getOptimalUpdateInterval(for: viewModel.currentPrayerPeriod?.state)
+
                 // Show prayer reminder popup if there's a current prayer not yet completed
                 if !hasShownReminderThisSession,
                    let currentPrayer = viewModel.currentPrayer,
@@ -148,6 +166,13 @@ struct PrayerTimesView: View {
             .onDisappear {
                 transitionHandler?.stop()
             }
+            .onReceive(NotificationCenter.default.publisher(for: .prayerAdjustmentsChanged)) { _ in
+                // Prayer time adjustments changed - refresh prayer times
+                Task {
+                    print("🔄 Adjustments changed, refreshing prayer times...")
+                    await viewModel.refreshPrayerTimes()
+                }
+            }
             .alert("Error", isPresented: $viewModel.showError) {
                 Button("OK", role: .cancel) {}
             } message: {
@@ -155,20 +180,25 @@ struct PrayerTimesView: View {
                     Text(errorMessage)
                 }
             }
-            .sheet(isPresented: $showMosqueList) {
-                mosqueListSheet
-                    .presentationDetents([.medium, .large])
-                    .presentationDragIndicator(.visible)
-            }
             .sheet(isPresented: $showMethodPicker) {
-                methodPickerSheet
-                    .presentationDetents([.medium])
-                    .presentationDragIndicator(.visible)
+                CalculationMethodPickerView(
+                    selectedMethod: $viewModel.selectedCalculationMethod,
+                    onMethodChanged: { method in
+                        await viewModel.changeCalculationMethod(method)
+                    }
+                )
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
             }
             .sheet(isPresented: $showMadhabPicker) {
-                madhabPickerSheet
-                    .presentationDetents([.medium])
-                    .presentationDragIndicator(.visible)
+                MadhabPickerView(
+                    selectedMadhab: $viewModel.selectedMadhab,
+                    onMadhabChanged: { madhab in
+                        await viewModel.changeMadhab(madhab)
+                    }
+                )
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
             }
             .toast(
                 message: EncouragingMessages.prayerComplete(prayerName: completedPrayerName),
@@ -284,6 +314,8 @@ struct PrayerTimesView: View {
                         color: stats.isAllCompleted ? themeManager.currentTheme.accentPrimary : themeManager.currentTheme.accentSecondary,
                         showPercentage: true
                     )
+                    .accessibilityLabel("Prayer completion progress")
+                    .accessibilityValue("\(stats.percentage) percent complete")
                 }
 
                 IslamicDivider(style: .simple)
@@ -311,12 +343,16 @@ struct PrayerTimesView: View {
                         color: themeManager.currentTheme.accentSecondary
                     )
                 }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Prayer statistics")
+                .accessibilityValue("\(stats.completedCount) completed, \(stats.totalCount - stats.completedCount) remaining, \(stats.percentage) percent progress")
 
                 // All completed celebration
                 if stats.isAllCompleted {
                     HStack(spacing: 8) {
                         Image(systemName: "star.fill")
                             .foregroundColor(themeManager.currentTheme.accentInteractive)
+                            .accessibilityHidden(true)
                         Text("All prayers completed! ✨")
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundColor(themeManager.currentTheme.accentInteractive)
@@ -328,8 +364,10 @@ struct PrayerTimesView: View {
                             .fill(themeManager.currentTheme.accentInteractive.opacity(0.15))
                     )
                     .transition(.scale.combined(with: .opacity))
+                    .accessibilityLabel("Celebration: All today's prayers completed")
                 }
             }
+            .accessibilityElement(children: .contain)
         }
         .animation(.spring(response: 0.5, dampingFraction: 0.7), value: stats.completedCount)
     }
@@ -412,236 +450,85 @@ struct PrayerTimesView: View {
     }
 
     private var mosqueFinderButton: some View {
-        PrimaryButton("Find Nearby Mosques", icon: "location.fill") {
-            Task {
-                await viewModel.findNearbyMosques()
-                showMosqueList = true
+        NavigationLink {
+            MosqueFinderView()
+                .environment(themeManager)
+        } label: {
+            HStack {
+                Image(systemName: "building.2.fill")
+                    .font(.system(size: 18, weight: .semibold))
+                    .accessibilityHidden(true)
+                Text("Find Nearby Mosques")
+                    .font(.system(size: 16, weight: .semibold))
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14))
+                    .foregroundColor(themeManager.currentTheme.textTertiary)
+                    .accessibilityHidden(true)
             }
-        }
-    }
-
-    // MARK: - Sheets
-
-    private var mosqueListSheet: some View {
-        NavigationStack {
-            ZStack {
-                themeManager.currentTheme.backgroundColor
-                    .ignoresSafeArea()
-
-                if viewModel.isLoadingMosques {
-                    LoadingView(size: .large, message: "Finding mosques...")
-                } else if viewModel.nearbyMosques.isEmpty {
-                    emptyMosquesView
-                } else {
-                    mosquesList
-                }
-            }
-            .navigationTitle("Nearby Mosques")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        showMosqueList = false
-                    }
-                }
-            }
-        }
-    }
-
-    private var emptyMosquesView: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "location.slash")
-                .font(.system(size: 64))
-                .foregroundColor(.secondary)
-
-            ThemedText.heading("No Mosques Found")
-            ThemedText.body("Try adjusting your location or search radius")
-                .multilineTextAlignment(.center)
-                // Body style already uses textSecondary - no additional opacity needed
-        }
-        .padding()
-    }
-
-    private var mosquesList: some View {
-        ScrollView {
-            VStack(spacing: 12) {
-                ForEach(viewModel.nearbyMosques) { mosque in
-                    CardView {
-                        VStack(alignment: .leading, spacing: 12) {
-                            HStack {
-                                ThemedText(mosque.name, style: .heading)
-                                Spacer()
-                                Text(mosque.formattedDistance)
-                                    .font(.system(size: 14, weight: .semibold))
-                                    .foregroundColor(themeManager.currentTheme.accentSecondary)
-                            }
-
-                            ThemedText.caption(mosque.address)
-                                // Caption style already uses textTertiary - no additional opacity needed
-
-                            if let phone = mosque.phoneNumber {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "phone.fill")
-                                        .font(.system(size: 12))
-                                    ThemedText.caption(phone)
-                                }
-                                .foregroundColor(themeManager.currentTheme.accentPrimary)
-                            }
-                        }
-                    }
-                }
-            }
+            .foregroundColor(themeManager.currentTheme.textPrimary)
             .padding()
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(themeManager.currentTheme.cardColor)
+            )
+        }
+        .accessibilityLabel("Find nearby mosques")
+        .accessibilityHint("Opens map showing mosques near your location")
+    }
+
+    private var qadhaCounterButton: some View {
+        NavigationLink {
+            QadhaCounterView()
+                .environment(themeManager)
+        } label: {
+            HStack {
+                Image(systemName: "clock.arrow.circlepath")
+                    .font(.system(size: 18, weight: .semibold))
+                    .accessibilityHidden(true)
+                Text("Track Qadha Prayers")
+                    .font(.system(size: 16, weight: .semibold))
+                Spacer()
+
+                // Show total count badge if any qadha prayers exist
+                let totalQadha = QadhaTrackerService.shared.totalQadha
+                if totalQadha > 0 {
+                    Text("\(totalQadha)")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(Color.orange)
+                        .clipShape(Capsule())
+                        .accessibilityLabel("\(totalQadha) qadha prayers pending")
+                }
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14))
+                    .foregroundColor(themeManager.currentTheme.textTertiary)
+                    .accessibilityHidden(true)
+            }
+            .foregroundColor(themeManager.currentTheme.textPrimary)
+            .padding()
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(themeManager.currentTheme.cardColor)
+            )
+        }
+        .accessibilityLabel(totalQadhaAccessibilityLabel)
+        .accessibilityHint("Opens qadha prayer tracker to manage missed prayers")
+    }
+
+    private var totalQadhaAccessibilityLabel: String {
+        let totalQadha = QadhaTrackerService.shared.totalQadha
+        if totalQadha > 0 {
+            return "Track qadha prayers, \(totalQadha) pending"
+        } else {
+            return "Track qadha prayers"
         }
     }
 
-    private var methodPickerSheet: some View {
-        NavigationStack {
-            ZStack {
-                themeManager.currentTheme.backgroundColor
-                    .ignoresSafeArea()
-
-                ScrollView {
-                    VStack(spacing: 12) {
-                        ForEach(CalculationMethod.allCases) { method in
-                            Button {
-                                Task {
-                                    await viewModel.changeCalculationMethod(method)
-                                    showMethodPicker = false
-                                }
-                            } label: {
-                                HStack {
-                                    ThemedText.body(method.rawValue)
-                                        .foregroundColor(themeManager.currentTheme.textColor)
-
-                                    Spacer()
-
-                                    if method == viewModel.selectedCalculationMethod {
-                                        Image(systemName: "checkmark.circle.fill")
-                                            .foregroundColor(themeManager.currentTheme.accentPrimary)
-                                    }
-                                }
-                                .padding()
-                                .background(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .fill(
-                                            method == viewModel.selectedCalculationMethod
-                                                ? themeManager.currentTheme.accentPrimary.opacity(0.15)
-                                                : themeManager.currentTheme.cardColor
-                                        )
-                                )
-                            }
-                        }
-                    }
-                    .padding()
-                }
-            }
-            .navigationTitle("Calculation Method")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        showMethodPicker = false
-                    }
-                }
-            }
-        }
-    }
-
-    private var madhabPickerSheet: some View {
-        NavigationStack {
-            ZStack {
-                themeManager.currentTheme.backgroundColor
-                    .ignoresSafeArea()
-
-                ScrollView {
-                    VStack(spacing: 16) {
-                        // Informational note
-                        HStack(spacing: 12) {
-                            Image(systemName: "info.circle.fill")
-                                .font(.system(size: 20))
-                                .foregroundColor(themeManager.currentTheme.accentInteractive)
-
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("About Madhab Options")
-                                    .font(.system(size: 14, weight: .semibold))
-                                    .foregroundColor(themeManager.currentTheme.textColor)
-
-                                Text("Only Asr calculation time is affected. Standard covers Shafi, Maliki, and Hanbali schools (shadow = object). Hanafi uses different calculation (shadow = 2× object).")
-                                    .font(.system(size: 12, weight: .regular))
-                                    .foregroundColor(themeManager.currentTheme.textSecondary)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-
-                            Spacer()
-                        }
-                        .padding()
-                        .background(
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(themeManager.currentTheme.accentInteractive.opacity(0.15))
-                        )
-
-                        // Madhab options
-                        ForEach(Madhab.allCases) { madhab in
-                            Button {
-                                Task {
-                                    await viewModel.changeMadhab(madhab)
-                                    showMadhabPicker = false
-                                }
-                            } label: {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    HStack {
-                                        VStack(alignment: .leading, spacing: 4) {
-                                            ThemedText.body(madhab.rawValue)
-                                                .foregroundColor(themeManager.currentTheme.textColor)
-
-                                            Text(madhab.technicalNote)
-                                                .font(.system(size: 12, weight: .regular))
-                                                .foregroundColor(themeManager.currentTheme.accentSecondary)
-                                                .opacity(themeManager.currentTheme.secondaryOpacity)
-                                        }
-
-                                        Spacer()
-
-                                        if madhab == viewModel.selectedMadhab {
-                                            Image(systemName: "checkmark.circle.fill")
-                                                .font(.system(size: 24))
-                                                .foregroundColor(themeManager.currentTheme.accentSecondary)
-                                        }
-                                    }
-
-                                    // Explanation
-                                    Text(madhab.explanation)
-                                        .font(.system(size: 11, weight: .regular))
-                                        .foregroundColor(themeManager.currentTheme.textTertiary)
-                                        .fixedSize(horizontal: false, vertical: true)
-                                }
-                                .padding()
-                                .background(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .fill(
-                                            madhab == viewModel.selectedMadhab
-                                                ? themeManager.currentTheme.accentSecondary.opacity(0.15)
-                                                : themeManager.currentTheme.cardColor
-                                        )
-                                )
-                            }
-                        }
-                    }
-                    .padding()
-                }
-            }
-            .navigationTitle("Madhab")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        showMadhabPicker = false
-                    }
-                }
-            }
-        }
-    }
 
     // MARK: - Helper Methods
 
@@ -676,5 +563,5 @@ struct PrayerTimesView: View {
 
 #Preview {
     PrayerTimesView()
-        .environmentObject(ThemeManager())
+        .environment(ThemeManager())
 }

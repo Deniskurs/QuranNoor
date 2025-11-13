@@ -39,7 +39,7 @@ enum ColorLevel {
 // MARK: - ThemedText Component
 struct ThemedText: View {
     // MARK: - Properties
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
 
     // Accessibility support
     @Environment(\.sizeCategory) var sizeCategory
@@ -158,5 +158,5 @@ extension ThemedText {
         ThemedText.arabic("بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ")
     }
     .padding()
-    .environmentObject(ThemeManager())
+    .environment(ThemeManager())
 }

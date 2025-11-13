@@ -11,7 +11,7 @@ import Combine
 
 struct PrayerTimesDemo: View {
     // MARK: - Properties
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
     @State private var currentTime = Date()
     @State private var selectedPrayer = 2 // Asr (upcoming)
 
@@ -286,6 +286,6 @@ struct PrayerTimesDemo: View {
 // MARK: - Preview
 #Preview {
     PrayerTimesDemo()
-        .environmentObject(ThemeManager())
+        .environment(ThemeManager())
         .frame(height: 600)
 }

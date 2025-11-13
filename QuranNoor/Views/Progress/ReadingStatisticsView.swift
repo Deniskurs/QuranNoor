@@ -9,7 +9,7 @@ import SwiftUI
 
 struct ReadingStatisticsView: View {
     @ObservedObject var viewModel: ProgressManagementViewModel
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
     @Environment(\.dismiss) var dismiss
 
     @State private var selectedTimeRange: TimeRange = .month
@@ -538,7 +538,7 @@ struct StatCard: View {
     let subtitle: String
     let color: Color
 
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
 
     var body: some View {
         CardView {
@@ -577,5 +577,5 @@ extension View {
 
 #Preview {
     ReadingStatisticsView(viewModel: ProgressManagementViewModel())
-        .environmentObject(ThemeManager())
+        .environment(ThemeManager())
 }

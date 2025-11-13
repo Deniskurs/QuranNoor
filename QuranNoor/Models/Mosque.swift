@@ -9,7 +9,7 @@ import Foundation
 import MapKit
 
 // MARK: - Mosque Model
-struct Mosque: Identifiable, Equatable {
+struct Mosque: Identifiable, Equatable, Hashable {
     let id = UUID()
     let name: String
     let address: String

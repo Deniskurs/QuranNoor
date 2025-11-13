@@ -12,7 +12,7 @@ struct VerseReaderView: View {
     let surah: Surah
     @ObservedObject var viewModel: QuranViewModel
 
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
     @Environment(\.dismiss) var dismiss
 
     @State private var verses: [Verse] = []
@@ -539,5 +539,5 @@ struct VerseReaderView: View {
         ),
         viewModel: QuranViewModel()
     )
-    .environmentObject(ThemeManager())
+    .environment(ThemeManager())
 }

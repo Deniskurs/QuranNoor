@@ -9,7 +9,7 @@
 import SwiftUI
 
 struct HijriCalendarCard: View {
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
     let hijriDate: HijriDate?
 
     var body: some View {
@@ -186,7 +186,7 @@ struct HijriCalendarCard: View {
             method: nil
         )
     )
-    .environmentObject(ThemeManager())
+    .environment(ThemeManager())
     .padding()
     .background(Color(hex: "#F8F4EA"))
 }
@@ -206,7 +206,7 @@ struct HijriCalendarCard: View {
             method: nil
         )
     )
-    .environmentObject(ThemeManager())
+    .environment(ThemeManager())
     .padding()
     .background(Color(hex: "#F8F4EA"))
 }
@@ -226,14 +226,14 @@ struct HijriCalendarCard: View {
             method: nil
         )
     )
-    .environmentObject(ThemeManager())
+    .environment(ThemeManager())
     .padding()
     .background(Color(hex: "#F8F4EA"))
 }
 
 #Preview("Loading") {
     HijriCalendarCard(hijriDate: nil)
-        .environmentObject(ThemeManager())
+        .environment(ThemeManager())
         .padding()
         .background(Color(hex: "#F8F4EA"))
 }
@@ -253,7 +253,7 @@ struct HijriCalendarCard: View {
             method: nil
         )
     )
-    .environmentObject({
+    .environment({
         let manager = ThemeManager()
         manager.setTheme(.dark)
         return manager

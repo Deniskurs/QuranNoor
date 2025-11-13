@@ -9,7 +9,7 @@
 import SwiftUI
 
 struct SpiritualContentDetailSheet: View {
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
     @Environment(\.dismiss) var dismiss
     @ObservedObject private var bookmarkService = SpiritualBookmarkService.shared
 
@@ -177,7 +177,7 @@ struct SpiritualContentDetailSheet: View {
         title: "Verse of the Day",
         accentColor: AppColors.primary.teal
     )
-    .environmentObject(ThemeManager())
+    .environment(ThemeManager())
 }
 
 #Preview("Hadith Detail Dark") {
@@ -192,7 +192,7 @@ struct SpiritualContentDetailSheet: View {
         title: "Hadith of the Day",
         accentColor: AppColors.primary.gold
     )
-    .environmentObject({
+    .environment({
         let manager = ThemeManager()
         manager.setTheme(.dark)
         return manager

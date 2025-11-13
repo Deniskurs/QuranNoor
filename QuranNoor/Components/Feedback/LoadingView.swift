@@ -100,7 +100,7 @@ private struct CrescentMoonShape: Shape {
 
 // MARK: - Full Screen Loading Overlay
 struct LoadingOverlay: View {
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
 
     var body: some View {
         ZStack {
@@ -137,11 +137,11 @@ struct LoadingOverlay: View {
 
             // Loading overlay
             LoadingOverlay()
-                .environmentObject(ThemeManager())
+                .environment(ThemeManager())
         }
         .frame(height: 200)
     }
     .padding()
     .background(ThemeManager().currentTheme.backgroundColor)
-    .environmentObject(ThemeManager())
+    .environment(ThemeManager())
 }

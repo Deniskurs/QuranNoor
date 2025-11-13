@@ -9,7 +9,7 @@ import Foundation
 import Combine
 
 // MARK: - Prayer Name
-enum PrayerName: String, CaseIterable, Identifiable {
+enum PrayerName: String, CaseIterable, Identifiable, Codable {
     case fajr = "Fajr"
     case dhuhr = "Dhuhr"
     case asr = "Asr"
@@ -179,13 +179,51 @@ struct DailyPrayerTimes {
 
 // MARK: - Calculation Method
 enum CalculationMethod: String, CaseIterable, Identifiable {
-    case isna = "ISNA"
-    case mwl = "Muslim World League"
-    case ummAlQura = "Umm al-Qura"
-    case egyptian = "Egyptian"
-    case karachi = "Karachi"
+    case muslimWorldLeague = "Muslim World League"
+    case isna = "ISNA (North America)"
+    case egyptian = "Egyptian General Authority"
+    case ummAlQura = "Umm al-Qura (Makkah)"
+    case karachi = "University of Islamic Sciences, Karachi"
+    case dubai = "Dubai"
+    case moonsightingCommittee = "Moonsighting Committee Worldwide"
 
     var id: String { rawValue }
+
+    // Legacy compatibility
+    static var mwl: CalculationMethod { .muslimWorldLeague }
+
+    /// Short name for display
+    var shortName: String {
+        switch self {
+        case .muslimWorldLeague: return "MWL"
+        case .isna: return "ISNA"
+        case .egyptian: return "Egyptian"
+        case .ummAlQura: return "Umm al-Qura"
+        case .karachi: return "Karachi"
+        case .dubai: return "Dubai"
+        case .moonsightingCommittee: return "Moonsighting"
+        }
+    }
+
+    /// Description of where this method is commonly used
+    var regionDescription: String {
+        switch self {
+        case .muslimWorldLeague:
+            return "Europe, Far East, parts of America"
+        case .isna:
+            return "North America (US & Canada)"
+        case .egyptian:
+            return "Egypt, Syria, Lebanon, Malaysia"
+        case .ummAlQura:
+            return "Saudi Arabia (Makkah)"
+        case .karachi:
+            return "Pakistan, Bangladesh, India, Afghanistan"
+        case .dubai:
+            return "Dubai, UAE"
+        case .moonsightingCommittee:
+            return "Worldwide (follows closest sunrise/sunset)"
+        }
+    }
 }
 
 // MARK: - Madhab (Asr calculation school)

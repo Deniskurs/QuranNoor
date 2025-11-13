@@ -11,7 +11,7 @@ import AVFoundation
 
 struct QuranReaderDemo: View {
     // MARK: - Properties
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
     @State private var currentPage = 0
     @State private var isPlaying = false
     @State private var showTranslation = true
@@ -268,6 +268,6 @@ struct QuranReaderDemo: View {
 // MARK: - Preview
 #Preview {
     QuranReaderDemo()
-        .environmentObject(ThemeManager())
+        .environment(ThemeManager())
         .frame(height: 500)
 }

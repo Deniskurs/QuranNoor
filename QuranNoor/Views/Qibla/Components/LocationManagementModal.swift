@@ -10,7 +10,7 @@ import SwiftUI
 struct LocationManagementModal: View {
     // MARK: - Properties
     @ObservedObject var viewModel: QiblaViewModel
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager: ThemeManager
     @Environment(\.dismiss) private var dismiss
     @State private var searchText = ""
     @State private var showDeleteConfirmation = false
@@ -270,7 +270,7 @@ struct SectionHeader: View {
     let title: String
     let icon: String
 
-    @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(ThemeManager.self) private var themeManager: ThemeManager
 
     var body: some View {
         HStack(spacing: Spacing.xs) {
@@ -418,5 +418,5 @@ struct LocationCardView: View {
 // MARK: - Preview
 #Preview {
     LocationManagementModal(viewModel: QiblaViewModel())
-        .environmentObject(ThemeManager())
+        .environment(ThemeManager())
 }

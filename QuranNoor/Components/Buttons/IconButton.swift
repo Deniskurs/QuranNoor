@@ -21,7 +21,7 @@ enum IconButtonStyle {
 // MARK: - Icon Button Component
 struct IconButton: View {
     // MARK: - Properties
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
 
     let icon: String
     let style: IconButtonStyle
@@ -224,5 +224,5 @@ struct IconButton: View {
     }
     .padding()
     .background(ThemeManager().currentTheme.backgroundColor)
-    .environmentObject(ThemeManager())
+    .environment(ThemeManager())
 }

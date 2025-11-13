@@ -9,7 +9,7 @@ import SwiftUI
 
 struct NightPortionCard: View {
     // MARK: - Properties
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
 
     let sunset: Date
     let midnight: Date?
@@ -234,5 +234,5 @@ struct CompactNightPortionInfo: View {
         .padding()
     }
     .background(ThemeManager().currentTheme.backgroundColor)
-    .environmentObject(ThemeManager())
+    .environment(ThemeManager())
 }

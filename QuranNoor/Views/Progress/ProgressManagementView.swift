@@ -10,7 +10,7 @@ import UniformTypeIdentifiers
 
 struct ProgressManagementView: View {
     @StateObject private var viewModel = ProgressManagementViewModel()
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
     @Environment(\.dismiss) var dismiss
 
     @State private var showResetAllSheet = false
@@ -666,7 +666,7 @@ struct ProgressManagementView: View {
 
 struct OverviewTab: View {
     @ObservedObject var viewModel: ProgressManagementViewModel
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
 
     var body: some View {
         ScrollView {
@@ -872,7 +872,7 @@ struct OverviewTab: View {
 
 struct SurahsTab: View {
     @ObservedObject var viewModel: ProgressManagementViewModel
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
     @State private var selectedSurah: Int?
 
     var body: some View {
@@ -1013,7 +1013,7 @@ struct SurahsTab: View {
 
 struct ManagementTab: View {
     @ObservedObject var viewModel: ProgressManagementViewModel
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
     @State private var showingShareSheet = false
     @State private var showingFileImporter = false
     @State private var showImportStrategySheet = false
@@ -1364,7 +1364,7 @@ struct MiniStatCard: View {
     let subtitle: String
     let color: Color
 
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
 
     var body: some View {
         CardView {
@@ -1393,7 +1393,7 @@ struct FilterPill: View {
     let isSelected: Bool
     let action: () -> Void
 
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
 
     var body: some View {
         Button(action: action) {
@@ -1438,7 +1438,7 @@ struct SurahProgressCard: View {
     let onTap: () -> Void
     let onReset: () -> Void
 
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
     @State private var showingResetConfirmation = false
 
     var body: some View {
@@ -1560,5 +1560,5 @@ struct SurahIdentifier: Identifiable {
 
 #Preview {
     ProgressManagementView()
-        .environmentObject(ThemeManager())
+        .environment(ThemeManager())
 }

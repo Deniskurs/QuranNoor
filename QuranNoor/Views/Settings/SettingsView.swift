@@ -10,7 +10,7 @@ import StoreKit
 
 struct SettingsView: View {
     // MARK: - Properties
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
     @State private var notificationsEnabled = true
     @State private var soundEnabled = true
     @State private var showPrayerCalcInfo = false
@@ -210,7 +210,7 @@ struct SettingsView: View {
         }
         .sheet(isPresented: $showProgressManagement) {
             ProgressManagementView()
-                .environmentObject(themeManager)
+                .environment(themeManager)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
@@ -456,6 +456,48 @@ struct SettingsView: View {
                         // Caption style already uses textTertiary - no additional opacity needed
                         .padding(.leading, 44)
 
+                    IslamicDivider(style: .simple)
+
+                    // Adhan Settings row
+                    NavigationLink {
+                        AdhanSettingsView()
+                            .environment(themeManager)
+                    } label: {
+                        settingRow(
+                            icon: "speaker.wave.3.fill",
+                            title: "Adhan Audio",
+                            value: AdhanAudioService.shared.isEnabled ? "Enabled" : "Disabled",
+                            color: AppColors.primary.gold
+                        )
+                    }
+
+                    // Subtitle for Adhan
+                    ThemedText.caption("Configure beautiful call to prayer audio at prayer times.")
+                        // Caption style already uses textTertiary - no additional opacity needed
+                        .padding(.leading, 44)
+
+                    IslamicDivider(style: .simple)
+
+                    // Prayer Time Adjustments row
+                    NavigationLink {
+                        PrayerTimeAdjustmentView()
+                            .environment(themeManager)
+                    } label: {
+                        settingRow(
+                            icon: "clock.badge.checkmark",
+                            title: "Adjust Prayer Times",
+                            value: PrayerTimeAdjustmentService.shared.hasAdjustments
+                                ? "\(PrayerTimeAdjustmentService.shared.adjustedPrayerCount) custom"
+                                : "Not adjusted",
+                            color: AppColors.primary.midnight
+                        )
+                    }
+
+                    // Subtitle for Adjustments
+                    ThemedText.caption("Manually adjust times to sync with your local mosque schedule.")
+                        // Caption style already uses textTertiary - no additional opacity needed
+                        .padding(.leading, 44)
+
                     // Learn more link
                     HStack {
                         Spacer()
@@ -509,6 +551,36 @@ struct SettingsView: View {
                         }
                     }
                     .tint(themeManager.currentTheme.accentColor)
+                    .disabled(!notificationsEnabled)
+                    .opacity(notificationsEnabled ? 1.0 : themeManager.currentTheme.disabledOpacity)
+
+                    IslamicDivider(style: .simple)
+
+                    // Advanced Notification Settings Link
+                    NavigationLink {
+                        NotificationSettingsView()
+                            .environment(themeManager)
+                    } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: "bell.badge.circle.fill")
+                                .font(.system(size: 20))
+                                .foregroundColor(AppColors.primary.green)
+                                .frame(width: 32)
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                ThemedText.body("Advanced Settings")
+                                ThemedText.caption("Per-prayer notifications & reminders")
+                                    // Caption style already uses textTertiary - no additional opacity needed
+                            }
+
+                            Spacer()
+
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 14))
+                                .foregroundColor(themeManager.currentTheme.textTertiary)
+                                .opacity(themeManager.currentTheme.tertiaryOpacity)
+                        }
+                    }
                     .disabled(!notificationsEnabled)
                     .opacity(notificationsEnabled ? 1.0 : themeManager.currentTheme.disabledOpacity)
                 }
@@ -741,6 +813,6 @@ struct SettingsView: View {
 // MARK: - Preview
 #Preview {
     SettingsView()
-        .environmentObject(ThemeManager())
+        .environment(ThemeManager())
 }
 

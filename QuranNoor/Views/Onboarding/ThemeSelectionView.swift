@@ -10,7 +10,7 @@ import SwiftUI
 
 struct ThemeSelectionView: View {
     // MARK: - Properties
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
     @Environment(\.dynamicTypeSize) var dynamicTypeSize
     @ObservedObject private var accessibilityHelper = AccessibilityHelper.shared
 
@@ -154,7 +154,7 @@ struct ThemeOptionCard: View {
     let isSuggested: Bool
     let onSelect: () -> Void
 
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
     @ObservedObject private var accessibilityHelper = AccessibilityHelper.shared
 
     var body: some View {
@@ -372,5 +372,5 @@ struct Theme {
 // MARK: - Preview
 #Preview {
     ThemeSelectionView(coordinator: OnboardingCoordinator())
-        .environmentObject(ThemeManager())
+        .environment(ThemeManager())
 }

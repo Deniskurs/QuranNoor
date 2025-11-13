@@ -206,5 +206,5 @@ struct QuranProgressRing: View {
     }
     .padding()
     .background(ThemeManager().currentTheme.backgroundColor)
-    .environmentObject(ThemeManager())
+    .environment(ThemeManager())
 }

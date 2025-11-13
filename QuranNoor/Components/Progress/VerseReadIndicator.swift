@@ -12,7 +12,7 @@ struct VerseReadIndicator: View {
     let readDate: Date?
     let onToggle: () -> Void
 
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
     @State private var isPressed = false
 
     var body: some View {
@@ -97,7 +97,7 @@ struct VerseReadIndicator: View {
             print("Toggled")
         }
     )
-    .environmentObject(ThemeManager())
+    .environment(ThemeManager())
     .padding()
 }
 
@@ -109,7 +109,7 @@ struct VerseReadIndicator: View {
             print("Toggled")
         }
     )
-    .environmentObject(ThemeManager())
+    .environment(ThemeManager())
     .padding()
 }
 
@@ -121,7 +121,7 @@ struct VerseReadIndicator: View {
             print("Toggled")
         }
     )
-    .environmentObject(ThemeManager())
+    .environment(ThemeManager())
     .padding()
 }
 
@@ -133,6 +133,6 @@ struct VerseReadIndicator: View {
             print("Toggled")
         }
     )
-    .environmentObject(ThemeManager())
+    .environment(ThemeManager())
     .padding()
 }

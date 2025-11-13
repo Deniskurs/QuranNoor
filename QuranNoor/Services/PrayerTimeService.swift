@@ -2,27 +2,46 @@
 //  PrayerTimeService.swift
 //  QuranNoor
 //
-//  Calculate prayer times using Aladhan API
-//  TODO: Add Adhan Swift package for offline calculations
+//  Calculate prayer times using Aladhan API with offline fallback
+//  Uses Adhan Swift package for offline calculations when API fails
 //
 
 import Foundation
 import Combine
+import Observation
+
+// MARK: - Calculation Source
+enum CalculationSource {
+    case api
+    case offline
+    case cache
+
+    var displayName: String {
+        switch self {
+        case .api: return "Online"
+        case .offline: return "Offline"
+        case .cache: return "Cached"
+        }
+    }
+}
 
 // MARK: - Prayer Time Error
 enum PrayerTimeError: LocalizedError {
     case calculationFailed
     case networkError
     case invalidResponse
+    case offlineFallbackFailed
 
     var errorDescription: String? {
         switch self {
         case .calculationFailed:
             return "Failed to calculate prayer times. Please try again."
         case .networkError:
-            return "Network error. Please check your connection."
+            return "Network error. Attempting offline calculation..."
         case .invalidResponse:
             return "Invalid response from prayer time service."
+        case .offlineFallbackFailed:
+            return "Both online and offline calculations failed. Please check your location settings."
         }
     }
 }
@@ -73,19 +92,29 @@ private struct AladhanMonth: Codable {
 }
 
 // MARK: - Prayer Time Service
+@Observable
 @MainActor
-class PrayerTimeService: ObservableObject {
+final class PrayerTimeService {
+    // MARK: - Singleton
+    static let shared = PrayerTimeService()
+
     // MARK: - Published Properties
-    @Published var todayPrayerTimes: DailyPrayerTimes?
-    @Published var isCalculating: Bool = false
+    private(set) var todayPrayerTimes: DailyPrayerTimes?
+    private(set) var isCalculating: Bool = false
+    private(set) var isUsingOfflineMode: Bool = false
+    private(set) var lastCalculationSource: CalculationSource = .api
 
     // MARK: - Private Properties
     private let baseURL = "https://api.aladhan.com/v1"
     private let userDefaults = UserDefaults.standard
     private let cacheKeyPrefix = "cachedPrayerTimes" // Will append date
     private let cacheVersionKey = "cacheVersion" // Add versioning for cache invalidation
-    private let currentCacheVersion = "3.0" // Updated for date-aware caching + prayer period system
+    private let currentCacheVersion = "3.1" // Updated for offline fallback support
     private let cacheSettingsKey = "cachedPrayerSettings" // Store method + madhab used for cache
+    private let offlineService = OfflinePrayerCalculationService.shared
+
+    // MARK: - Initialization
+    private init() {}
 
     // MARK: - Public Methods
 
@@ -117,6 +146,8 @@ class PrayerTimeService: ObservableObject {
             if Calendar.current.isDateInToday(date) {
                 todayPrayerTimes = cached
             }
+            lastCalculationSource = .cache
+            print("📦 Using cached prayer times from \(lastCalculationSource.displayName) source")
             return cached
         }
 
@@ -145,6 +176,7 @@ class PrayerTimeService: ObservableObject {
             throw PrayerTimeError.calculationFailed
         }
 
+        // Try API first
         do {
             let (data, _) = try await URLSession.shared.data(from: url)
             let response = try JSONDecoder().decode(AladhanResponse.self, from: data)
@@ -160,15 +192,90 @@ class PrayerTimeService: ObservableObject {
                 todayPrayerTimes = prayerTimes
             }
 
+            // Mark as API source and disable offline mode
+            lastCalculationSource = .api
+            isUsingOfflineMode = false
+            print("✅ Prayer times calculated from \(lastCalculationSource.displayName) source")
+
             return prayerTimes
 
         } catch let error as DecodingError {
-            print("❌ Decoding error: \(error)")
-            throw PrayerTimeError.invalidResponse
+            print("❌ API Decoding error: \(error)")
+            // Fallback to offline calculation
+            return try await fallbackToOfflineCalculation(
+                coordinates: coordinates,
+                date: date,
+                method: method,
+                madhab: madhab
+            )
         } catch {
-            print("❌ Network error: \(error)")
-            throw PrayerTimeError.networkError
+            print("❌ API Network error: \(error)")
+            // Fallback to offline calculation
+            return try await fallbackToOfflineCalculation(
+                coordinates: coordinates,
+                date: date,
+                method: method,
+                madhab: madhab
+            )
         }
+    }
+
+    // MARK: - Offline Fallback
+
+    /// Fallback to offline calculation when API fails
+    private func fallbackToOfflineCalculation(
+        coordinates: LocationCoordinates,
+        date: Date,
+        method: CalculationMethod,
+        madhab: Madhab
+    ) async throws -> DailyPrayerTimes {
+        print("🔄 Attempting offline prayer time calculation...")
+
+        do {
+            let prayerTimes = try offlineService.calculateOfflinePrayerTimes(
+                coordinates: coordinates,
+                date: date,
+                method: method,
+                madhab: madhab
+            )
+
+            // Cache the offline result
+            cachePrayerTimes(prayerTimes, forDate: date, method: method, madhab: madhab)
+
+            // Update published property only if this is today
+            if Calendar.current.isDateInToday(date) {
+                todayPrayerTimes = prayerTimes
+            }
+
+            // Mark as offline source and enable offline mode
+            lastCalculationSource = .offline
+            isUsingOfflineMode = true
+            print("✅ Prayer times calculated from \(lastCalculationSource.displayName) source")
+
+            return prayerTimes
+
+        } catch {
+            print("❌ Offline calculation also failed: \(error)")
+            throw PrayerTimeError.offlineFallbackFailed
+        }
+    }
+
+    /// Force use of offline calculations (for testing or offline mode preference)
+    func useOfflineCalculation(
+        coordinates: LocationCoordinates,
+        date: Date = Date(),
+        method: CalculationMethod = .muslimWorldLeague,
+        madhab: Madhab = .shafi
+    ) async throws -> DailyPrayerTimes {
+        isCalculating = true
+        defer { isCalculating = false }
+
+        return try await fallbackToOfflineCalculation(
+            coordinates: coordinates,
+            date: date,
+            method: method,
+            madhab: madhab
+        )
     }
 
     // MARK: - Private Methods
@@ -239,11 +346,13 @@ class PrayerTimeService: ObservableObject {
 
     private func mapCalculationMethod(_ method: CalculationMethod) -> Int {
         switch method {
+        case .muslimWorldLeague: return 3
         case .isna: return 2
-        case .mwl: return 3
         case .egyptian: return 5
         case .ummAlQura: return 4
         case .karachi: return 1
+        case .dubai: return 13
+        case .moonsightingCommittee: return 7
         }
     }
 

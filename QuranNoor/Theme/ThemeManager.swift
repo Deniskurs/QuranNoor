@@ -6,13 +6,17 @@
 //
 
 import SwiftUI
-import Combine
+import Observation
 
 // MARK: - Theme Manager
+@Observable
 @MainActor
-class ThemeManager: ObservableObject {
-    // MARK: - Published Properties
-    @Published var currentTheme: ThemeMode {
+class ThemeManager {
+    // MARK: - Singleton
+    static let shared = ThemeManager()
+
+    // MARK: - Properties
+    var currentTheme: ThemeMode {
         didSet {
             saveTheme()
             // Clear gradient cache when theme changes
@@ -39,6 +43,23 @@ class ThemeManager: ObservableObject {
 
     var borderColor: Color {
         currentTheme.borderColor
+    }
+
+    // MARK: - Additional Computed Properties
+    var primaryTextColor: Color {
+        currentTheme.textPrimary
+    }
+
+    var secondaryTextColor: Color {
+        currentTheme.textSecondary
+    }
+
+    var accentColor: Color {
+        currentTheme.accentPrimary
+    }
+
+    var cardBackground: Color {
+        currentTheme.cardColor
     }
 
     // MARK: - Initialization
@@ -85,7 +106,7 @@ extension EnvironmentValues {
 
 // MARK: - Themed View Modifier
 struct ThemedViewModifier: ViewModifier {
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager
 
     func body(content: Content) -> some View {
         content

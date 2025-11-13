@@ -10,7 +10,7 @@ import SwiftUI
 
 struct ValuePropositionView: View {
     // MARK: - Properties
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
     @Environment(\.dynamicTypeSize) var dynamicTypeSize
     @ObservedObject private var accessibilityHelper = AccessibilityHelper.shared
 
@@ -231,5 +231,5 @@ struct ValuePropositionView: View {
 // MARK: - Preview
 #Preview {
     ValuePropositionView(coordinator: OnboardingCoordinator())
-        .environmentObject(ThemeManager())
+        .environment(ThemeManager())
 }

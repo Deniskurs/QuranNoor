@@ -9,7 +9,7 @@ import SwiftUI
 
 struct QuranReaderView: View {
     // MARK: - Properties
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
     @StateObject private var viewModel = QuranViewModel()
     @State private var showingVerseReader = false
     @State private var showProgressManagement = false
@@ -78,7 +78,7 @@ struct QuranReaderView: View {
             }
             .sheet(isPresented: $showProgressManagement) {
                 ProgressManagementView()
-                    .environmentObject(themeManager)
+                    .environment(themeManager)
                     .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
             }
@@ -303,7 +303,7 @@ struct QuranReaderView: View {
 struct SurahCard: View {
     let surah: Surah
     let progress: Double  // 0-100
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
 
     var body: some View {
         CardView {
@@ -414,7 +414,7 @@ struct SurahCard: View {
 
 // MARK: - Filter Button
 struct FilterButton: View {
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
 
     let title: String
     let isSelected: Bool
@@ -454,5 +454,5 @@ struct FilterButton: View {
 // MARK: - Preview
 #Preview {
     QuranReaderView()
-        .environmentObject(ThemeManager())
+        .environment(ThemeManager())
 }

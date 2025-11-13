@@ -9,7 +9,7 @@
 import SwiftUI
 
 struct BookmarksView: View {
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
     @State private var viewModel = BookmarksViewModel()
     @State private var selectedBookmark: SpiritualBookmark?
     @State private var showDetailSheet = false
@@ -326,7 +326,7 @@ struct BookmarksView: View {
 // MARK: - Tab Button Component
 
 private struct TabButton: View {
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
     let title: String
     let icon: String
     let isSelected: Bool
@@ -378,17 +378,17 @@ private struct TabButton: View {
 
 #Preview("With Bookmarks") {
     BookmarksView()
-        .environmentObject(ThemeManager())
+        .environment(ThemeManager())
 }
 
 #Preview("Empty State") {
     BookmarksView()
-        .environmentObject(ThemeManager())
+        .environment(ThemeManager())
 }
 
 #Preview("Dark Mode") {
     BookmarksView()
-        .environmentObject({
+        .environment({
             let manager = ThemeManager()
             manager.setTheme(.dark)
             return manager

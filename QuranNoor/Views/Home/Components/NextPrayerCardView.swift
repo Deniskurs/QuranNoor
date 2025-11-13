@@ -9,7 +9,7 @@
 import SwiftUI
 
 struct NextPrayerCardView: View {
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
     @Environment(\.accessibilityReduceMotion) var reduceMotion
     @State var prayerVM: PrayerViewModel
     @Binding var selectedTab: Int
@@ -287,7 +287,7 @@ struct NextPrayerCardView: View {
     @Previewable @State var selectedTab = 0
 
     NextPrayerCardView(prayerVM: prayerVM, selectedTab: $selectedTab)
-        .environmentObject(ThemeManager())
+        .environment(ThemeManager())
         .padding()
         .background(Color(hex: "#F8F4EA"))
         .task {
@@ -300,7 +300,7 @@ struct NextPrayerCardView: View {
     @Previewable @State var selectedTab = 0
 
     NextPrayerCardView(prayerVM: prayerVM, selectedTab: $selectedTab)
-        .environmentObject({
+        .environment({
             let manager = ThemeManager()
             manager.setTheme(.dark)
             return manager

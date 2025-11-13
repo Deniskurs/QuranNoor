@@ -10,7 +10,7 @@ import SwiftUI
 struct LocationPickerView: View {
     // MARK: - Properties
     @Environment(\.dismiss) var dismiss
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
     @ObservedObject var viewModel: QiblaViewModel
 
     @State private var locationName = ""
@@ -308,5 +308,5 @@ struct LocationPickerView: View {
 // MARK: - Preview
 #Preview {
     LocationPickerView(viewModel: QiblaViewModel())
-        .environmentObject(ThemeManager())
+        .environment(ThemeManager())
 }

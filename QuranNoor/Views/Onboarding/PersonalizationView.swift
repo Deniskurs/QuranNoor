@@ -9,7 +9,7 @@ import SwiftUI
 
 struct PersonalizationView: View {
     // MARK: - Properties
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
     @Environment(\.dynamicTypeSize) var dynamicTypeSize
     @ObservedObject private var accessibilityHelper = AccessibilityHelper.shared
 
@@ -182,7 +182,7 @@ struct PersonalizationView: View {
 
 struct GreetingPreviewCard: View {
     let userName: String?
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
 
     var body: some View {
         LiquidGlassCardView(showPattern: true, intensity: .prominent) {
@@ -227,7 +227,7 @@ struct BenefitRow: View {
     let text: String
     let color: Color
 
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
 
     var body: some View {
         HStack(spacing: 12) {
@@ -249,5 +249,5 @@ struct BenefitRow: View {
 
 #Preview {
     PersonalizationView(coordinator: OnboardingCoordinator())
-        .environmentObject(ThemeManager())
+        .environment(ThemeManager())
 }

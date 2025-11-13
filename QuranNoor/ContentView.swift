@@ -9,7 +9,7 @@ import SwiftUI
 
 struct ContentView: View {
     // MARK: - Properties
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
     @Environment(DeepLinkHandler.self) var deepLinkHandler
     @State private var selectedTab = 0
 
@@ -84,5 +84,5 @@ struct ContentView: View {
 // MARK: - Preview
 #Preview {
     ContentView()
-        .environmentObject(ThemeManager())
+        .environment(ThemeManager())
 }

@@ -46,7 +46,7 @@ class GradientCache {
 // MARK: - Gradient Background Component
 struct GradientBackground: View {
     // MARK: - Properties
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
 
     let style: BackgroundGradientStyle
     let opacity: Double
@@ -253,7 +253,7 @@ struct AnimatedGradientBackground: View {
 
 // MARK: - Theme-Aware Background
 struct ThemeAwareBackground: View {
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
 
     var body: some View {
         ZStack {
@@ -372,7 +372,7 @@ struct ThemeAwareBackground: View {
                 .padding()
             }
             .frame(height: 200)
-            .environmentObject(ThemeManager())
+            .environment(ThemeManager())
         }
     }
     .background(Color.black)

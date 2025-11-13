@@ -134,5 +134,5 @@ struct PrimaryButton: View {
     }
     .padding()
     .background(ThemeManager().currentTheme.backgroundColor)
-    .environmentObject(ThemeManager())
+    .environment(ThemeManager())
 }

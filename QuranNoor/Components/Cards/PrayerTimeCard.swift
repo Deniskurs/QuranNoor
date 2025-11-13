@@ -17,7 +17,7 @@ enum PrayerTimeStatus {
 // MARK: - Prayer Time Card Component
 struct PrayerTimeCard: View {
     // MARK: - Properties
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
 
     let prayerName: String
     let time: Date
@@ -255,5 +255,5 @@ struct CompactPrayerTimeCard: View {
         .padding()
     }
     .background(ThemeManager().currentTheme.backgroundColor)
-    .environmentObject(ThemeManager())
+    .environment(ThemeManager())
 }

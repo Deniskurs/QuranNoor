@@ -11,7 +11,7 @@ import SwiftUI
 // MARK: - Spiritual Bookmark Card
 
 struct SpiritualBookmarkCard: View {
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
     let bookmark: SpiritualBookmark
     let onTap: () -> Void
 
@@ -99,7 +99,7 @@ struct SpiritualBookmarkCard: View {
 // MARK: - Quran Bookmark Card
 
 struct QuranBookmarkCard: View {
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
     let bookmark: Bookmark
     let onTap: () -> Void
 
@@ -188,7 +188,7 @@ struct QuranBookmarkCard: View {
     }
     .padding()
     .background(Color(hex: "#F8F4EA"))
-    .environmentObject(ThemeManager())
+    .environment(ThemeManager())
 }
 
 #Preview("Quran Bookmark") {
@@ -198,5 +198,5 @@ struct QuranBookmarkCard: View {
     )
     .padding()
     .background(Color(hex: "#F8F4EA"))
-    .environmentObject(ThemeManager())
+    .environment(ThemeManager())
 }

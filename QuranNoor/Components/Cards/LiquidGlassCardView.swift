@@ -11,7 +11,7 @@ import SwiftUI
 /// iOS 26 Liquid Glass card with translucent background and subtle border
 struct LiquidGlassCardView<Content: View>: View {
     // MARK: - Properties
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
 
     let content: Content
     let showPattern: Bool
@@ -107,7 +107,7 @@ struct LiquidGlassCardView<Content: View>: View {
     private var glassBackgroundTint: Color {
         switch themeManager.currentTheme {
         case .light:
-            return AppColors.primary.teal.opacity(intensity.tintOpacity)
+            return Color(hex: "#E8DCC8").opacity(intensity.tintOpacity * 0.5)  // Warm gold tint
         case .dark:
             return AppColors.primary.teal.opacity(intensity.tintOpacity * 0.7)
         case .night:
@@ -245,7 +245,7 @@ private struct IslamicPatternView: View {
             endPoint: .bottomTrailing
         )
     )
-    .environmentObject(ThemeManager())
+    .environment(ThemeManager())
 }
 
 #Preview("Liquid Glass - Dark") {
@@ -276,7 +276,7 @@ private struct IslamicPatternView: View {
             endPoint: .bottomTrailing
         )
     )
-    .environmentObject({
+    .environment({
         let manager = ThemeManager()
         manager.setTheme(.dark)
         return manager
@@ -311,7 +311,7 @@ private struct IslamicPatternView: View {
     }
     .padding()
     .background(Color.black)
-    .environmentObject({
+    .environment({
         let manager = ThemeManager()
         manager.setTheme(.night)
         return manager

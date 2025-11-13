@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct MoreView: View {
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
 
     var body: some View {
         NavigationStack {
@@ -155,7 +155,7 @@ struct MoreView: View {
 // MARK: - More Menu Item
 
 private struct MoreMenuItem: View {
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
 
     let icon: String
     let title: String
@@ -214,7 +214,7 @@ private struct MoreMenuItem: View {
 // MARK: - Placeholder Views
 
 struct AboutView: View {
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
 
     var body: some View {
         ZStack {
@@ -243,7 +243,7 @@ struct AboutView: View {
 }
 
 struct HelpView: View {
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
 
     var body: some View {
         ZStack {
@@ -273,12 +273,12 @@ struct HelpView: View {
 
 #Preview("More View") {
     MoreView()
-        .environmentObject(ThemeManager())
+        .environment(ThemeManager())
 }
 
 #Preview("Dark Mode") {
     MoreView()
-        .environmentObject({
+        .environment({
             let manager = ThemeManager()
             manager.setTheme(.dark)
             return manager

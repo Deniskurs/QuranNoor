@@ -10,7 +10,7 @@ import SwiftUI
 
 /// Welcome moment overlay shown after onboarding completion
 struct WelcomeMomentView: View {
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
     @Environment(\.accessibilityReduceMotion) var reduceMotion
     @Binding var selectedTab: Int
     let onDismiss: () -> Void
@@ -251,7 +251,7 @@ struct ScaleButtonStyle: ButtonStyle {
     WelcomeMomentView(selectedTab: $selectedTab) {
         print("Dismissed")
     }
-    .environmentObject(ThemeManager())
+    .environment(ThemeManager())
 }
 
 #Preview("Dark Mode") {
@@ -260,7 +260,7 @@ struct ScaleButtonStyle: ButtonStyle {
     WelcomeMomentView(selectedTab: $selectedTab) {
         print("Dismissed")
     }
-    .environmentObject({
+    .environment({
         let manager = ThemeManager()
         manager.setTheme(.dark)
         return manager

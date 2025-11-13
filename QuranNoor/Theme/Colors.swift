@@ -50,7 +50,7 @@ enum ThemeMode: String, CaseIterable, Identifiable {
     /// Secondary background - cards, panels
     var cardColor: Color {
         switch self {
-        case .light: return Color.white
+        case .light: return Color(hex: "#FAF7F0")  // Warm cream - harmonious with cream background
         case .dark: return Color(hex: "#2A3342")
         case .night: return Color(hex: "#1A1A1A")
         case .sepia: return Color(hex: "#FFFBF0")  // Slightly lighter for better contrast
@@ -178,7 +178,7 @@ enum ThemeMode: String, CaseIterable, Identifiable {
     var accentSubtle: Color {
         switch self {
         case .light:
-            return AppColors.primary.teal.opacity(0.25)  // Soft teal tint
+            return Color(hex: "#E8DCC8").opacity(0.15)  // Warm beige wash
         case .dark:
             return AppColors.primary.gold.opacity(0.35)  // Warm glow
         case .night:
@@ -230,8 +230,8 @@ enum ThemeMode: String, CaseIterable, Identifiable {
         switch self {
         case .light:
             return [
-                AppColors.primary.teal.opacity(0.15),
-                AppColors.primary.green.opacity(0.20)
+                Color(hex: "#F0E8D8").opacity(0.10),  // Warm cream
+                AppColors.primary.gold.opacity(0.08)   // Subtle gold
             ]
         case .dark:
             return [

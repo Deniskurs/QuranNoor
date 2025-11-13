@@ -10,7 +10,7 @@ import SwiftUI
 
 struct QiblaCompassView: View {
     // MARK: - Properties
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
     @StateObject private var viewModel = QiblaViewModel()
     @State private var showSaveLocationAlert = false
     @State private var locationName = ""
@@ -78,7 +78,7 @@ struct QiblaCompassView: View {
             // Tutorial overlay
             if showTutorial {
                 QiblaTutorialOverlay(isPresented: $showTutorial)
-                    .environmentObject(themeManager)
+                    .environment(themeManager)
             }
         }
     }
@@ -155,7 +155,7 @@ struct QiblaCompassView: View {
                 LocationManagementModal(viewModel: viewModel) {
                     showSaveLocationAlert = true
                 }
-                .environmentObject(themeManager)
+                .environment(themeManager)
             }
     }
 
@@ -565,7 +565,7 @@ struct QiblaCompassView: View {
                 .accessibilityValue("\(Int(viewModel.deviceHeading)) degrees")
             }
         }
-        .environmentObject(themeManager)
+        .environment(themeManager)
     }
 
     private var cardinalDirection: String {
@@ -612,7 +612,7 @@ struct QiblaCompassView: View {
                 }
             }
         }
-        .environmentObject(themeManager)
+        .environment(themeManager)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Distance to Kaaba")
         .accessibilityValue("\(Int(viewModel.distanceToKaaba)) kilometers from your location")
@@ -653,7 +653,7 @@ struct QiblaCompassView: View {
                 }
             }
         }
-        .environmentObject(themeManager)
+        .environment(themeManager)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(viewModel.isUsingManualLocation ? "Manual location" : "Current location")
         .accessibilityValue(viewModel.userLocation)
@@ -693,5 +693,5 @@ struct Triangle: Shape {
 // MARK: - Preview
 #Preview {
     QiblaCompassView()
-        .environmentObject(ThemeManager())
+        .environment(ThemeManager())
 }

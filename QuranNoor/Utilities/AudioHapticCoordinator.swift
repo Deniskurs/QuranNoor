@@ -65,6 +65,12 @@ class AudioHapticCoordinator {
         hapticManager.trigger(.medium)
     }
 
+    /// Alias for playButtonTap for consistency across codebase
+    /// - Parameter customVolume: Optional custom audio volume
+    func playButtonPress(customVolume: Float? = nil) {
+        playButtonTap(customVolume: customVolume)
+    }
+
     /// Play feedback for selection changes (toggles, radio buttons)
     /// - Parameter customVolume: Optional custom audio volume
     func playSelection(customVolume: Float? = nil) {
@@ -77,6 +83,13 @@ class AudioHapticCoordinator {
     func playNotification(customVolume: Float? = nil) {
         audioService.playNotification(customVolume: customVolume)
         hapticManager.trigger(.medium)
+    }
+
+    /// Play feedback for warnings and destructive actions
+    /// - Parameter customVolume: Optional custom audio volume
+    func playWarning(customVolume: Float? = nil) {
+        audioService.playBack(customVolume: customVolume)
+        hapticManager.trigger(.warning)
     }
 
     // MARK: - Prayer-Specific Feedback

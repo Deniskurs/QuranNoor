@@ -9,7 +9,7 @@ import SwiftUI
 
 struct WelcomeView: View {
     // MARK: - Properties
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
     let coordinator: OnboardingCoordinator
 
     // MARK: - Body
@@ -85,7 +85,7 @@ struct FeatureRow: View {
     let title: String
     let description: String
 
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
 
     var body: some View {
         HStack(spacing: 16) {
@@ -110,5 +110,5 @@ struct FeatureRow: View {
 // MARK: - Preview
 #Preview {
     WelcomeView(coordinator: OnboardingCoordinator())
-        .environmentObject(ThemeManager())
+        .environment(ThemeManager())
 }

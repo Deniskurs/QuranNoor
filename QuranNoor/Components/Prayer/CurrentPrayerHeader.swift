@@ -17,7 +17,7 @@ struct CurrentPrayerHeader: View {
     let countdownString: String
     let isUrgent: Bool
 
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
 
     // MARK: - Body
 
@@ -80,6 +80,20 @@ struct CurrentPrayerHeader: View {
                     RoundedRectangle(cornerRadius: 12)
                         .fill((isUrgent ? Color.orange : themeManager.currentTheme.accentSecondary).opacity(0.15))
                 )
+            }
+
+            // Motivational tip (optional, based on state)
+            if let tip = motivationalTip {
+                HStack(spacing: 8) {
+                    Image(systemName: "lightbulb.fill")
+                        .font(.caption)
+                        .foregroundColor(themeManager.currentTheme.accentSecondary)
+
+                    Text(tip)
+                        .font(.caption)
+                        .foregroundColor(themeManager.currentTheme.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
         }
         .padding(20)
@@ -154,17 +168,146 @@ struct CurrentPrayerHeader: View {
     private var stateDescription: String {
         switch state {
         case .beforeFajr:
-            return "Preparing for Fajr"
+            return getBeforeFajrMessage()
         case .inProgress(let prayer, _):
             if isUrgent {
-                return "\(prayer.displayName) Ending Soon"
+                return getUrgentMessage(for: prayer)
             }
-            return "\(prayer.displayName) Time"
+            return getInProgressMessage(for: prayer)
         case .betweenPrayers(_, let next, _):
-            return "\(next.displayName) Upcoming"
+            return getBetweenPrayersMessage(for: next)
         case .afterIsha:
-            return "Night Time"
+            return getAfterIshaMessage()
         }
+    }
+
+    // MARK: - Contextual Messages
+
+    private func getBeforeFajrMessage() -> String {
+        let hour = Calendar.current.component(.hour, from: Date())
+
+        // Last third of night (special blessed time)
+        if hour >= 3 && hour < 5 {
+            return "The Last Third of Night"
+        }
+
+        return "Preparing for Fajr"
+    }
+
+    private func getInProgressMessage(for prayer: PrayerName) -> String {
+        let messages: [PrayerName: [String]] = [
+            .fajr: [
+                "Time for Fajr Prayer",
+                "Begin Your Day with Prayer",
+                "The Best Start to Your Day"
+            ],
+            .dhuhr: [
+                "Time for Dhuhr Prayer",
+                "Midday Break for Prayer",
+                "Renew Your Focus with Prayer"
+            ],
+            .asr: [
+                "Time for Asr Prayer",
+                "Afternoon Prayer Time",
+                "Seek Forgiveness Before Sunset"
+            ],
+            .maghrib: [
+                "Time for Maghrib Prayer",
+                "Break Your Fast with Prayer",
+                "The Sunset Prayer"
+            ],
+            .isha: [
+                "Time for Isha Prayer",
+                "Complete Your Day with Prayer",
+                "The Final Prayer of the Day"
+            ]
+        ]
+
+        // Get day of week to add Friday-specific message for Dhuhr
+        if prayer == .dhuhr && Calendar.current.component(.weekday, from: Date()) == 6 {
+            return "Time for Jumu'ah Prayer"
+        }
+
+        let prayerMessages = messages[prayer] ?? ["Time for \(prayer.displayName) Prayer"]
+        return prayerMessages.randomElement() ?? prayerMessages[0]
+    }
+
+    private func getUrgentMessage(for prayer: PrayerName) -> String {
+        let urgentMessages: [PrayerName: [String]] = [
+            .fajr: [
+                "Fajr Ending Soon!",
+                "Don't Miss Fajr!",
+                "Last Moments of Fajr"
+            ],
+            .dhuhr: [
+                "Dhuhr Ending Soon",
+                "Time Running Out for Dhuhr",
+                "Complete Dhuhr Now"
+            ],
+            .asr: [
+                "Asr Ending Soon",
+                "Pray Asr Before Sunset",
+                "Final Minutes of Asr"
+            ],
+            .maghrib: [
+                "Maghrib Ending Soon",
+                "Don't Delay Maghrib",
+                "Time Running Out"
+            ],
+            .isha: [
+                "Isha Ending Soon",
+                "Complete Your Day's Prayers",
+                "Last Call for Isha"
+            ]
+        ]
+
+        let prayerMessages = urgentMessages[prayer] ?? ["\(prayer.displayName) Ending Soon"]
+        return prayerMessages.randomElement() ?? prayerMessages[0]
+    }
+
+    private func getBetweenPrayersMessage(for nextPrayer: PrayerName) -> String {
+        let betweenMessages: [PrayerName: [String]] = [
+            .fajr: [
+                "Fajr Approaching",
+                "Night is Ending Soon"
+            ],
+            .dhuhr: [
+                "Dhuhr is Next",
+                "Prepare for Midday Prayer"
+            ],
+            .asr: [
+                "Asr Approaching",
+                "Afternoon Prayer Soon"
+            ],
+            .maghrib: [
+                "Maghrib is Next",
+                "Sunset Prayer Soon"
+            ],
+            .isha: [
+                "Isha Approaching",
+                "Final Prayer of the Day Soon"
+            ]
+        ]
+
+        // Add Friday-specific message
+        if nextPrayer == .dhuhr && Calendar.current.component(.weekday, from: Date()) == 6 {
+            return "Jumu'ah Prayer Approaching"
+        }
+
+        let messages = betweenMessages[nextPrayer] ?? ["\(nextPrayer.displayName) Upcoming"]
+        return messages.randomElement() ?? messages[0]
+    }
+
+    private func getAfterIshaMessage() -> String {
+        let hour = Calendar.current.component(.hour, from: Date())
+
+        // Late night (past midnight)
+        if hour >= 0 && hour < 3 {
+            return "Night of Reflection"
+        }
+
+        // Evening (before midnight)
+        return "Rest and Recharge"
     }
 
     private var countdownLabel: String {
@@ -180,6 +323,79 @@ struct CurrentPrayerHeader: View {
         let stateText = stateDescription
         let timeText = !countdownString.isEmpty ? ", \(countdownLabel) \(countdownString)" : ""
         return "\(stateText)\(timeText)"
+    }
+
+    private var motivationalTip: String? {
+        switch state {
+        case .beforeFajr:
+            let hour = Calendar.current.component(.hour, from: Date())
+            if hour >= 3 && hour < 5 {
+                return "The last third of the night is blessed for making dua"
+            }
+            return "Fajr prayer awakens the soul and brings blessings"
+
+        case .inProgress(let prayer, _):
+            if isUrgent {
+                return getUrgentTip(for: prayer)
+            }
+            return getInProgressTip(for: prayer)
+
+        case .betweenPrayers(_, let next, _):
+            return getBetweenPrayersTip(for: next)
+
+        case .afterIsha:
+            return "Rest is worship when it prepares you for tomorrow's prayers"
+        }
+    }
+
+    private func getInProgressTip(for prayer: PrayerName) -> String {
+        let tips: [PrayerName: [String]] = [
+            .fajr: [
+                "Pray in congregation for 27x reward",
+                "Two rakahs of Fajr are better than the world",
+                "Angels witness the Fajr prayer"
+            ],
+            .dhuhr: [
+                "Make dua after prayer - it's more likely to be answered",
+                "A break for prayer brings barakah to your work",
+                "Pray with focus and presence"
+            ],
+            .asr: [
+                "The afternoon is blessed for seeking forgiveness",
+                "Remember Allah during the day for peace of heart",
+                "Prayer on time is most beloved to Allah"
+            ],
+            .maghrib: [
+                "Break your fast first, then pray promptly",
+                "Dua at Iftar time is readily accepted",
+                "The Prophet ﷺ would hasten to pray Maghrib"
+            ],
+            .isha: [
+                "Complete your day with gratitude",
+                "Pray Witr before you sleep",
+                "The night prayer brings tranquility"
+            ]
+        ]
+
+        let prayerTips = tips[prayer] ?? []
+        return prayerTips.randomElement() ?? ""
+    }
+
+    private func getUrgentTip(for prayer: PrayerName) -> String {
+        return "Prayer on time is most beloved to Allah - don't delay!"
+    }
+
+    private func getBetweenPrayersTip(for nextPrayer: PrayerName) -> String {
+        let tips: [PrayerName: [String]] = [
+            .fajr: ["Prepare yourself now - Fajr is the most challenging prayer"],
+            .dhuhr: ["Use your break time wisely - prioritize prayer"],
+            .asr: ["Plan to leave work early for prayer if needed"],
+            .maghrib: ["Prepare to break your fast and pray"],
+            .isha: ["Wind down your day with the final prayer"]
+        ]
+
+        let prayerTips = tips[nextPrayer] ?? []
+        return prayerTips.randomElement() ?? ""
     }
 }
 
@@ -239,5 +455,5 @@ struct CurrentPrayerHeader: View {
         .padding()
     }
     .background(Color(hex: "#1A2332"))
-    .environmentObject(ThemeManager())
+    .environment(ThemeManager())
 }

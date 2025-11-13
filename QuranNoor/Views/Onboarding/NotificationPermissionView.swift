@@ -10,7 +10,7 @@ import UserNotifications
 
 struct NotificationPermissionView: View {
     // MARK: - Properties
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
 
     let coordinator: OnboardingCoordinator
     @ObservedObject var permissionManager: PermissionManager
@@ -185,5 +185,5 @@ struct NotificationPermissionView: View {
         coordinator: OnboardingCoordinator(),
         permissionManager: PermissionManager.shared
     )
-    .environmentObject(ThemeManager())
+    .environment(ThemeManager())
 }

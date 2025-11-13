@@ -10,7 +10,7 @@ import SwiftUI
 
 struct HomeView: View {
     // MARK: - Environment
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
     @Binding var selectedTab: Int
 
     // MARK: - ViewModels
@@ -286,7 +286,7 @@ struct HomeView: View {
 
     TabView(selection: $selectedTab) {
         HomeView(selectedTab: $selectedTab)
-            .environmentObject(ThemeManager())
+            .environment(ThemeManager())
             .tabItem {
                 Label("Home", systemImage: "house.fill")
             }
@@ -299,7 +299,7 @@ struct HomeView: View {
 
     TabView(selection: $selectedTab) {
         HomeView(selectedTab: $selectedTab)
-            .environmentObject({
+            .environment({
                 let manager = ThemeManager()
                 manager.setTheme(.dark)
                 return manager
@@ -316,7 +316,7 @@ struct HomeView: View {
 
     TabView(selection: $selectedTab) {
         HomeView(selectedTab: $selectedTab)
-            .environmentObject({
+            .environment({
                 let manager = ThemeManager()
                 manager.setTheme(.night)
                 return manager
@@ -333,7 +333,7 @@ struct HomeView: View {
 
     TabView(selection: $selectedTab) {
         HomeView(selectedTab: $selectedTab)
-            .environmentObject({
+            .environment({
                 let manager = ThemeManager()
                 manager.setTheme(.sepia)
                 return manager

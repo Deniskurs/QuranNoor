@@ -47,8 +47,8 @@ class PrayerViewModel {
     // MARK: - Services
 
     private let locationService = LocationService.shared
-    private let prayerTimeService = PrayerTimeService()
-    private let mosqueFinderService = MosqueFinderService()
+    private let prayerTimeService = PrayerTimeService.shared
+    private let mosqueFinderService = MosqueFinderService.shared
     let notificationService = NotificationService() // Public for notification toggle
 
     // MARK: - Urgent Notification Tracking
@@ -174,7 +174,10 @@ class PrayerViewModel {
                 method: selectedCalculationMethod,
                 madhab: selectedMadhab
             )
-            todayPrayerTimes = prayerTimes
+
+            // Step 3.5: Apply manual adjustments (if any)
+            let adjustedPrayerTimes = PrayerTimeAdjustmentService.shared.applyAdjustments(to: prayerTimes)
+            todayPrayerTimes = adjustedPrayerTimes
 
             // Step 4: Schedule notifications (if enabled)
             if notificationService.isAuthorized && notificationService.notificationsEnabled {
@@ -212,8 +215,11 @@ class PrayerViewModel {
                 method: selectedCalculationMethod,
                 madhab: selectedMadhab
             )
-            tomorrowPrayerTimes = tomorrowPrayers
-            print("✅ Tomorrow's prayer times loaded successfully")
+
+            // Apply manual adjustments (if any)
+            let adjustedTomorrowPrayers = PrayerTimeAdjustmentService.shared.applyAdjustments(to: tomorrowPrayers)
+            tomorrowPrayerTimes = adjustedTomorrowPrayers
+            print("✅ Tomorrow's prayer times loaded successfully (with adjustments if configured)")
 
         } catch {
             print("⚠️ Failed to fetch tomorrow's prayers: \(error.localizedDescription)")

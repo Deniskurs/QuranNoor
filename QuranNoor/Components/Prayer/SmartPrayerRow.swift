@@ -20,7 +20,7 @@ struct SmartPrayerRow: View {
     let canCheckOff: Bool // Whether this prayer can be checked off (not future)
     let onCompletionToggle: () -> Void
 
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
 
     // Animation state
     @State private var scale: CGFloat = 1.0
@@ -111,17 +111,34 @@ struct SmartPrayerRow: View {
                                 .font(.system(size: 18, weight: .semibold))
                                 .foregroundColor(prayerTextColor)
 
-                            // Badge for current/next prayer
-                            if isCurrentPrayer || isNextPrayer {
-                                Text(isCurrentPrayer ? "IN PROGRESS" : "NEXT")
-                                    .font(.system(size: 10, weight: .bold, design: .rounded))
-                                    .foregroundColor(.white)
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 4)
-                                    .background(
-                                        Capsule()
-                                            .fill(isCurrentPrayer ? themeManager.currentTheme.accentPrimary : Color.purple)
-                                    )
+                            // Badges row
+                            HStack(spacing: 6) {
+                                // Badge for current/next prayer
+                                if isCurrentPrayer || isNextPrayer {
+                                    Text(isCurrentPrayer ? "IN PROGRESS" : "NEXT")
+                                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                                        .foregroundColor(.white)
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 4)
+                                        .background(
+                                            Capsule()
+                                                .fill(isCurrentPrayer ? themeManager.currentTheme.accentPrimary : Color.purple)
+                                        )
+                                }
+
+                                // Badge for adjusted prayer time
+                                if PrayerTimeAdjustmentService.shared.isAdjusted(prayer.name) {
+                                    let adjustment = PrayerTimeAdjustmentService.shared.getAdjustment(for: prayer.name)
+                                    Text("CUSTOM \(adjustment > 0 ? "+" : "")\(adjustment)m")
+                                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                                        .foregroundColor(.white)
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 4)
+                                        .background(
+                                            Capsule()
+                                                .fill(Color.orange)
+                                        )
+                                }
                             }
                         }
 
@@ -315,5 +332,5 @@ struct SmartPrayerRow: View {
         .padding()
     }
     .background(Color(hex: "#1A2332"))
-    .environmentObject(ThemeManager())
+    .environment(ThemeManager())
 }

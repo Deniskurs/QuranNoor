@@ -9,7 +9,7 @@
 import SwiftUI
 
 struct SpiritualNourishmentCarousel: View {
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
     let verseOfDay: IslamicQuote?
     let hadithOfDay: IslamicQuote?
 
@@ -69,7 +69,7 @@ struct SpiritualNourishmentCarousel: View {
 // MARK: - Spiritual Content Card
 
 struct SpiritualContentCard: View {
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
     @ObservedObject private var bookmarkService = SpiritualBookmarkService.shared
     @Environment(\.dynamicTypeSize) var dynamicTypeSize
 
@@ -331,7 +331,7 @@ struct SpiritualContentCard: View {
 // MARK: - Loading State
 
 struct LoadingContentCard: View {
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
     @State private var animateGradient = false
 
     var body: some View {
@@ -416,7 +416,7 @@ struct LoadingContentCard: View {
             relatedPrayer: nil
         )
     )
-    .environmentObject(ThemeManager())
+    .environment(ThemeManager())
     .background(Color(hex: "#F8F4EA"))
 }
 
@@ -425,7 +425,7 @@ struct LoadingContentCard: View {
         verseOfDay: nil,
         hadithOfDay: nil
     )
-    .environmentObject(ThemeManager())
+    .environment(ThemeManager())
     .background(Color(hex: "#F8F4EA"))
 }
 
@@ -444,7 +444,7 @@ struct LoadingContentCard: View {
             relatedPrayer: nil
         )
     )
-    .environmentObject({
+    .environment({
         let manager = ThemeManager()
         manager.setTheme(.dark)
         return manager

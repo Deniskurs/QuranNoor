@@ -10,7 +10,7 @@ import SwiftUI
 
 struct OnboardingContainerView: View {
     // MARK: - Properties
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
     @Environment(\.dismiss) var dismiss
 
     // AppStorage binding to directly update completion status
@@ -239,7 +239,7 @@ struct OnboardingProgressView: View {
     let currentStep: Int
     let totalSteps: Int
 
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
 
     var body: some View {
         VStack(spacing: 4) {
@@ -278,5 +278,5 @@ struct OnboardingProgressView: View {
 // MARK: - Preview
 #Preview {
     OnboardingContainerView()
-        .environmentObject(ThemeManager())
+        .environment(ThemeManager())
 }

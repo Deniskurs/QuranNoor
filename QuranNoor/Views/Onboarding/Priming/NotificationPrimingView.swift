@@ -10,7 +10,7 @@ import SwiftUI
 
 struct NotificationPrimingView: View {
     // MARK: - Properties
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
 
     let onRequestPermission: () -> Void
     let onSkip: () -> Void
@@ -264,5 +264,5 @@ struct NotificationPrimingView: View {
         onRequestPermission: { print("Request permission") },
         onSkip: { print("Skip") }
     )
-    .environmentObject(ThemeManager())
+    .environment(ThemeManager())
 }

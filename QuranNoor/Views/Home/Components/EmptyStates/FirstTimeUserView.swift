@@ -9,7 +9,7 @@
 import SwiftUI
 
 struct FirstTimeUserView: View {
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
     @Binding var selectedTab: Int
     var onDismiss: () -> Void
 
@@ -76,7 +76,7 @@ struct FirstTimeUserView: View {
         selectedTab: $selectedTab,
         onDismiss: { print("Dismissed") }
     )
-    .environmentObject(ThemeManager())
+    .environment(ThemeManager())
     .padding()
     .background(Color(hex: "#F8F4EA"))
 }

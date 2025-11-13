@@ -9,7 +9,7 @@
 import SwiftUI
 
 struct HomeHeaderView: View {
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
     let greeting: String
     let hijriDate: HijriDate?
 
@@ -142,7 +142,7 @@ private extension HijriDate {
             method: nil
         )
     )
-    .environmentObject(ThemeManager())
+    .environment(ThemeManager())
     .padding()
     .background(Color(hex: "#F8F4EA"))
 }
@@ -163,7 +163,7 @@ private extension HijriDate {
             method: nil
         )
     )
-    .environmentObject({
+    .environment({
         let manager = ThemeManager()
         manager.setTheme(.dark)
         return manager
@@ -177,7 +177,7 @@ private extension HijriDate {
         greeting: "As Salamu Alaykum",
         hijriDate: nil
     )
-    .environmentObject(ThemeManager())
+    .environment(ThemeManager())
     .padding()
     .background(Color(hex: "#F8F4EA"))
 }

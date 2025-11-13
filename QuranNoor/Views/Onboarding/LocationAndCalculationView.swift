@@ -12,7 +12,7 @@ import MapKit
 
 struct LocationAndCalculationView: View {
     // MARK: - Properties
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
     @StateObject private var locationService = LocationService.shared
 
     let coordinator: OnboardingCoordinator
@@ -460,7 +460,7 @@ struct MethodCard: View {
     let isSelected: Bool
     let onSelect: () -> Void
 
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
 
     var body: some View {
         Button {
@@ -567,5 +567,5 @@ struct BenefitRowWithColor: View {
         coordinator: OnboardingCoordinator(),
         permissionManager: PermissionManager.shared
     )
-    .environmentObject(ThemeManager())
+    .environment(ThemeManager())
 }

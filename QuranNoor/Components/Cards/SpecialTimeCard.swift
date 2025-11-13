@@ -9,7 +9,7 @@ import SwiftUI
 
 struct SpecialTimeCard: View {
     // MARK: - Properties
-    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
 
     let specialTime: SpecialTime
     let highlight: Bool
@@ -171,5 +171,5 @@ struct CompactSpecialTimeCard: View {
         .padding()
     }
     .background(ThemeManager().currentTheme.backgroundColor)
-    .environmentObject(ThemeManager())
+    .environment(ThemeManager())
 }
