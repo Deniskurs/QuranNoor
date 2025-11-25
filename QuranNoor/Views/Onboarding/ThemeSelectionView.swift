@@ -314,8 +314,8 @@ extension ThemeMode {
 
     var accentColor: Color {
         switch self {
-        case .light: return AppColors.primary.teal
-        case .dark: return AppColors.primary.green
+        case .light: return AppColors.primary.green  // Emerald - softer than teal
+        case .dark: return featureAccent             // Theme-appropriate accent
         case .night: return AppColors.primary.gold
         case .sepia: return Color(hex: "#C7A566")
         }
@@ -329,7 +329,7 @@ extension ThemeMode {
                 backgroundColor: Color(hex: "#F8F4EA"),
                 cardColor: .white,
                 textColor: Color(hex: "#1A2332"),
-                accentColor: AppColors.primary.teal
+                accentColor: AppColors.primary.green  // Emerald - softer than teal
             )
         case .dark:
             return Theme(
@@ -337,7 +337,7 @@ extension ThemeMode {
                 backgroundColor: Color(hex: "#1A2332"),
                 cardColor: Color(hex: "#2A3442"),
                 textColor: Color(hex: "#F8F4EA"),
-                accentColor: AppColors.primary.green
+                accentColor: featureAccent  // Theme-appropriate accent
             )
         case .night:
             return Theme(

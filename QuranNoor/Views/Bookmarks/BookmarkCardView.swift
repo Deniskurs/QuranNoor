@@ -79,13 +79,13 @@ struct SpiritualBookmarkCard: View {
     private var accentColor: Color {
         switch bookmark.contentType {
         case .verse:
-            return AppColors.primary.teal
+            return themeManager.currentTheme.featureAccent
         case .hadith:
             return AppColors.primary.gold
         case .wisdom:
             return AppColors.primary.green
         case .dua:
-            return AppColors.primary.teal
+            return themeManager.currentTheme.featureAccent
         }
     }
 
@@ -110,7 +110,7 @@ struct QuranBookmarkCard: View {
                 HStack {
                     Image(systemName: "book.fill")
                         .font(.system(size: 14))
-                        .foregroundColor(AppColors.primary.teal)
+                        .foregroundColor(themeManager.currentTheme.featureAccent)
 
                     Text("QUR'AN VERSE")
                         .font(.system(size: 11, weight: .semibold))
@@ -157,7 +157,7 @@ struct QuranBookmarkCard: View {
             .cornerRadius(BorderRadius.lg)
             .overlay(
                 RoundedRectangle(cornerRadius: BorderRadius.lg)
-                    .strokeBorder(AppColors.primary.teal.opacity(0.15), lineWidth: 1)
+                    .strokeBorder(themeManager.currentTheme.featureAccent.opacity(0.15), lineWidth: 1)
             )
         }
         .buttonStyle(PlainButtonStyle())

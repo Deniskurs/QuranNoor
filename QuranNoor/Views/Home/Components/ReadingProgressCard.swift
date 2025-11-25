@@ -218,7 +218,7 @@ struct ReadingProgressCard: View {
     })
     .environment(ThemeManager())
     .padding()
-    .background(Color(hex: "#F8F4EA"))
+    .background(ThemeMode.light.backgroundColor)
 }
 
 #Preview("Active User") {
@@ -227,7 +227,7 @@ struct ReadingProgressCard: View {
     })
     .environment(ThemeManager())
     .padding()
-    .background(Color(hex: "#F8F4EA"))
+    .background(ThemeMode.light.backgroundColor)
 }
 
 #Preview("Empty State") {
@@ -236,7 +236,7 @@ struct ReadingProgressCard: View {
     })
     .environment(ThemeManager())
     .padding()
-    .background(Color(hex: "#F8F4EA"))
+    .background(ThemeMode.light.backgroundColor)
 }
 
 #Preview("Dark Mode") {
@@ -249,5 +249,5 @@ struct ReadingProgressCard: View {
         return manager
     }())
     .padding()
-    .background(Color(hex: "#1A2332"))
+    .background(ThemeMode.dark.backgroundColor)
 }

@@ -24,7 +24,7 @@ struct Surah: Identifiable, Codable, Sendable {
 }
 
 // MARK: - Verse
-struct Verse: Identifiable, Codable, Sendable {
+struct Verse: Identifiable, Codable, Sendable, Equatable {
     let id: UUID
     let number: Int  // Absolute verse number (1-6236)
     let surahNumber: Int

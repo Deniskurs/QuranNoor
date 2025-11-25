@@ -47,7 +47,7 @@ struct NightPortionCard: View {
                             icon: "moon.stars",
                             label: "Islamic Midnight",
                             time: midnight,
-                            color: AppColors.primary.teal
+                            color: themeManager.currentTheme.featureAccent
                         )
                     }
 
@@ -87,7 +87,7 @@ struct NightPortionCard: View {
                         LinearGradient(
                             colors: [
                                 AppColors.primary.midnight.opacity(0.5),
-                                AppColors.primary.teal.opacity(0.3),
+                                themeManager.currentTheme.featureAccent.opacity(0.3),
                                 AppColors.primary.green.opacity(0.5)
                             ],
                             startPoint: .leading,

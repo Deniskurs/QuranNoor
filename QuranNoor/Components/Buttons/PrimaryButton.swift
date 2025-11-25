@@ -14,6 +14,8 @@ import UIKit
 // MARK: - Primary Button Component
 struct PrimaryButton: View {
     // MARK: - Properties
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
+
     let title: String
     let icon: String?
     let action: () -> Void
@@ -89,8 +91,8 @@ struct PrimaryButton: View {
     private var backgroundGradient: LinearGradient {
         LinearGradient(
             gradient: Gradient(colors: [
-                AppColors.primary.green,
-                AppColors.primary.teal.opacity(0.8)
+                themeManager.currentTheme.featureAccent,
+                themeManager.currentTheme.featureAccentSecondary.opacity(0.8)
             ]),
             startPoint: .leading,
             endPoint: .trailing

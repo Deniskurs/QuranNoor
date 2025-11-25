@@ -24,6 +24,10 @@ struct VerseReaderView: View {
     @State private var trackedVerses: Set<String> = []  // Track verses already marked as read (prevents duplicates)
     @State private var dwellTimers: [String: Task<Void, Never>] = [:]  // Active dwell timers for each verse
     @State private var debounceTimers: [String: Task<Void, Never>] = [:]  // Debounce timers for smooth tracking
+    @State private var showingTranslationSelector = false
+    @State private var selectedTranslation: TranslationEdition = .sahihInternational
+    @State private var audioPillExpanded = false
+    @State private var audioService = QuranAudioService.shared
 
     // MARK: - Performance Optimization: Cached Read States
     /// Cached verse read states to prevent querying on every render (120fps = 4,800 queries/sec)
@@ -41,7 +45,7 @@ struct VerseReaderView: View {
     // MARK: - Body
     var body: some View {
         NavigationStack {
-            ZStack {
+            ZStack(alignment: .bottom) {
                 // Background gradient
                 GradientBackground(style: .quran, opacity: 0.2)
 
@@ -98,6 +102,9 @@ struct VerseReaderView: View {
                                 // Surah Header
                                 surahHeader
 
+                                // Play Surah Button (prominent, easy access)
+                                playSurahButton
+
                                 // Bismillah (except for Surah 9)
                                 if surah.id != 9 && surah.id != 1 {
                                     bismillahView
@@ -118,13 +125,42 @@ struct VerseReaderView: View {
 
                                 // End ornament
                                 endOrnament
+
+                                // Bottom padding for audio pill
+                                Color.clear.frame(height: 80)
                             }
                             .padding()
                         }
                         .refreshable {
                             await loadVerses()
                         }
+                        .onScrollPhaseChange { oldPhase, newPhase in
+                            // Collapse audio pill when user starts scrolling
+                            if newPhase == .interacting && audioPillExpanded {
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                    audioPillExpanded = false
+                                }
+                            }
+                        }
+                        .onChange(of: audioService.currentVerse) { oldVerse, newVerse in
+                            // Auto-scroll to currently playing verse
+                            if let verse = newVerse, audioService.playbackState.isPlaying {
+                                withAnimation(.easeInOut(duration: 0.5)) {
+                                    proxy.scrollTo(verse.id, anchor: .center)
+                                }
+                            }
+                        }
                     }
+
+                    // Inline Audio Pill (floating at bottom)
+                    InlineAudioPill(
+                        audioService: audioService,
+                        isExpanded: $audioPillExpanded,
+                        verses: verses,
+                        onStop: {
+                            audioPillExpanded = false
+                        }
+                    )
                 }
             }
             .navigationTitle(surah.englishName)
@@ -139,15 +175,31 @@ struct VerseReaderView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
                         Button {
-                            // Share surah
+                            showingTranslationSelector = true
                         } label: {
-                            Label("Share", systemImage: "square.and.arrow.up")
+                            Label("Translation: \(selectedTranslation.displayName)", systemImage: "text.book.closed")
+                        }
+
+                        Divider()
+
+                        Button {
+                            // Play entire surah with continuous mode
+                            audioService.continuousPlaybackEnabled = true
+                            Task {
+                                do {
+                                    try await audioService.playVerses(verses, startingAt: 0)
+                                } catch {
+                                    print("Failed to start surah playback: \(error)")
+                                }
+                            }
+                        } label: {
+                            Label("Listen to Surah", systemImage: "play.circle")
                         }
 
                         Button {
-                            // Audio player
+                            // Share surah
                         } label: {
-                            Label("Listen", systemImage: "play.circle")
+                            Label("Share", systemImage: "square.and.arrow.up")
                         }
                     } label: {
                         Image(systemName: "ellipsis.circle")
@@ -155,9 +207,24 @@ struct VerseReaderView: View {
                 }
             }
             .onAppear {
+                // Load saved translation preference
+                selectedTranslation = quranService.getTranslationPreferences().primaryTranslation
                 Task {
                     await loadVerses()
                 }
+            }
+            .sheet(isPresented: $showingTranslationSelector) {
+                TranslationSelectorView(
+                    currentPreferences: quranService.getTranslationPreferences()
+                ) { edition in
+                    selectedTranslation = edition
+                    // Reload translations with new edition
+                    Task {
+                        await loadTranslations(for: verses)
+                    }
+                }
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
             }
         }
     }
@@ -204,6 +271,100 @@ struct VerseReaderView: View {
         }
     }
 
+    // MARK: - Play Surah Button
+    private var playSurahButton: some View {
+        HStack(spacing: 12) {
+            // Main Play Surah button
+            Button {
+                // Enable continuous playback and start from first verse
+                audioService.continuousPlaybackEnabled = true
+                Task {
+                    do {
+                        try await audioService.playVerses(verses, startingAt: 0)
+                    } catch {
+                        print("Failed to start surah playback: \(error)")
+                    }
+                }
+                HapticManager.shared.trigger(.selection)
+            } label: {
+                HStack(spacing: 10) {
+                    ZStack {
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [themeManager.currentTheme.featureAccentSecondary, themeManager.currentTheme.featureAccent],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .frame(width: 44, height: 44)
+
+                        Image(systemName: "play.fill")
+                            .font(.system(size: 18))
+                            .foregroundColor(.white)
+                            .offset(x: 2)
+                    }
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Play Entire Surah")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(themeManager.currentTheme.textColor)
+
+                        Text("\(verses.count) verses • \(audioService.selectedReciter.shortName)")
+                            .font(.system(size: 13))
+                            .foregroundColor(themeManager.currentTheme.textColor.opacity(0.6))
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(themeManager.currentTheme.textColor.opacity(0.4))
+                }
+                .padding(12)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(themeManager.currentTheme.cardColor)
+                        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+                )
+            }
+            .buttonStyle(.plain)
+
+            // Quick reciter change button
+            Menu {
+                ForEach(Reciter.allCases) { reciter in
+                    Button {
+                        audioService.selectedReciter = reciter
+                    } label: {
+                        HStack {
+                            Text(reciter.displayName)
+                            if audioService.selectedReciter == reciter {
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+                }
+            } label: {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(themeManager.currentTheme.cardColor)
+                        .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+                        .frame(width: 44, height: 68)
+
+                    VStack(spacing: 4) {
+                        Image(systemName: "person.wave.2.fill")
+                            .font(.system(size: 16))
+                            .foregroundColor(themeManager.currentTheme.featureAccent)
+
+                        Text("Reciter")
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundColor(themeManager.currentTheme.textColor.opacity(0.6))
+                    }
+                }
+            }
+        }
+    }
+
     private var bismillahView: some View {
         CardView {
             VStack(spacing: 8) {
@@ -220,50 +381,108 @@ struct VerseReaderView: View {
     }
 
     private func verseCard(verse: Verse, index: Int) -> some View {
-        CardView {
+        let isCurrentlyPlaying = audioService.currentVerse?.id == verse.id && audioService.playbackState.isPlaying
+
+        return CardView {
             VStack(alignment: .leading, spacing: 16) {
                 // Verse header
                 HStack {
-                    // Verse number badge
+                    // Verse number badge (enhanced when playing)
                     ZStack {
                         Circle()
-                            .fill(themeManager.currentTheme.accentPrimary.opacity(0.2))
+                            .fill(isCurrentlyPlaying ?
+                                  LinearGradient(
+                                    colors: [themeManager.currentTheme.featureAccent, themeManager.currentTheme.featureAccentSecondary],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                  ) :
+                                  LinearGradient(
+                                    colors: [themeManager.currentTheme.accentPrimary.opacity(0.2)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                  )
+                            )
                             .frame(width: 36, height: 36)
 
                         ThemedText("\(verse.verseNumber)", style: .body)
-                            .foregroundColor(themeManager.currentTheme.accentPrimary)
+                            .foregroundColor(isCurrentlyPlaying ? .white : themeManager.currentTheme.accentPrimary)
+                    }
+
+                    // "Now Playing" indicator
+                    if isCurrentlyPlaying {
+                        HStack(spacing: 6) {
+                            // Animated playing indicator (simple, not 30 bars)
+                            HStack(spacing: 2) {
+                                ForEach(0..<3, id: \.self) { i in
+                                    RoundedRectangle(cornerRadius: 1)
+                                        .fill(themeManager.currentTheme.featureAccent)
+                                        .frame(width: 3, height: 12)
+                                }
+                            }
+
+                            Text("Now Playing")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundColor(themeManager.currentTheme.featureAccent)
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(
+                            Capsule()
+                                .fill(themeManager.currentTheme.featureAccent.opacity(0.15))
+                        )
+                        .transition(.scale.combined(with: .opacity))
                     }
 
                     Spacer()
 
-                    // Read status indicator (using cached state for 120fps performance)
-                    VerseReadIndicator(
-                        isRead: verseReadStates[verse.verseNumber]?.isRead ?? false,
-                        readDate: verseReadStates[verse.verseNumber]?.timestamp,
-                        onToggle: {
-                            // Optimistic update: Update cache immediately for instant UI feedback
-                            let currentState = verseReadStates[verse.verseNumber]
-                            let newIsRead = !(currentState?.isRead ?? false)
-                            verseReadStates[verse.verseNumber] = VerseReadState(
-                                isRead: newIsRead,
-                                timestamp: newIsRead ? Date() : nil
-                            )
-
-                            // Async backend update
-                            viewModel.toggleVerseReadStatus(
-                                surahNumber: surah.id,
-                                verseNumber: verse.verseNumber
-                            )
+                    HStack(spacing: 16) {
+                        // Audio play button - starts inline playback
+                        Button {
+                            Task {
+                                do {
+                                    // Play single verse (continuous can be toggled from pill)
+                                    try await audioService.play(verse: verse)
+                                } catch {
+                                    print("Failed to play verse: \(error)")
+                                }
+                            }
+                            HapticManager.shared.trigger(.selection)
+                        } label: {
+                            Image(systemName: "play.circle")
+                                .foregroundColor(themeManager.currentTheme.featureAccent)
+                                .font(.system(size: 24))
                         }
-                    )
+                        .accessibilityLabel("Play audio for this verse")
 
-                    // Bookmark button
-                    Button {
-                        toggleBookmark(verse: verse)
-                    } label: {
-                        Image(systemName: isBookmarked(verse: verse) ? "bookmark.fill" : "bookmark")
-                            .foregroundColor(themeManager.currentTheme.accentInteractive)
-                            .font(.system(size: 20))
+                        // Read status indicator (using cached state for 120fps performance)
+                        VerseReadIndicator(
+                            isRead: verseReadStates[verse.verseNumber]?.isRead ?? false,
+                            readDate: verseReadStates[verse.verseNumber]?.timestamp,
+                            onToggle: {
+                                // Optimistic update: Update cache immediately for instant UI feedback
+                                let currentState = verseReadStates[verse.verseNumber]
+                                let newIsRead = !(currentState?.isRead ?? false)
+                                verseReadStates[verse.verseNumber] = VerseReadState(
+                                    isRead: newIsRead,
+                                    timestamp: newIsRead ? Date() : nil
+                                )
+
+                                // Async backend update
+                                viewModel.toggleVerseReadStatus(
+                                    surahNumber: surah.id,
+                                    verseNumber: verse.verseNumber
+                                )
+                            }
+                        )
+
+                        // Bookmark button
+                        Button {
+                            toggleBookmark(verse: verse)
+                        } label: {
+                            Image(systemName: isBookmarked(verse: verse) ? "bookmark.fill" : "bookmark")
+                                .foregroundColor(themeManager.currentTheme.accentInteractive)
+                                .font(.system(size: 20))
+                        }
                     }
                 }
 
@@ -306,6 +525,35 @@ struct VerseReaderView: View {
                 }
             }
         }
+        .background(
+            // Subtle background tint when playing - uses theme-aware accent for consistency
+            RoundedRectangle(cornerRadius: 16)
+                .fill(isCurrentlyPlaying ?
+                      themeManager.currentTheme.accentSecondary.opacity(0.12) :
+                      Color.clear
+                )
+                .animation(.easeInOut(duration: 0.3), value: isCurrentlyPlaying)
+        )
+        .overlay(
+            // Highlight border for currently playing verse
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(
+                    LinearGradient(
+                        colors: [themeManager.currentTheme.featureAccent, themeManager.currentTheme.featureAccentSecondary],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: isCurrentlyPlaying ? 3 : 0
+                )
+                .animation(.easeInOut(duration: 0.3), value: isCurrentlyPlaying)
+        )
+        .shadow(
+            color: isCurrentlyPlaying ? themeManager.currentTheme.featureAccent.opacity(0.4) : .clear,
+            radius: isCurrentlyPlaying ? 12 : 0,
+            x: 0,
+            y: isCurrentlyPlaying ? 4 : 0
+        )
+        .animation(.easeInOut(duration: 0.3), value: isCurrentlyPlaying)
     }
 
     private var endOrnament: some View {
@@ -462,14 +710,15 @@ struct VerseReaderView: View {
         }
     }
 
-    private func loadTranslations() async {
+    private func loadTranslations(for versesToLoad: [Verse]? = nil) async {
         isLoadingTranslations = true
+        let targetVerses = versesToLoad ?? verses
 
         // Load translations for all verses concurrently (in batches to avoid overwhelming API)
         // Reduced batch size from 10 to 5 to prevent rate limiting (429 errors)
         let batchSize = 5
-        let batches = stride(from: 0, to: verses.count, by: batchSize).map {
-            Array(verses[$0..<min($0 + batchSize, verses.count)])
+        let batches = stride(from: 0, to: targetVerses.count, by: batchSize).map {
+            Array(targetVerses[$0..<min($0 + batchSize, targetVerses.count)])
         }
 
         for (index, batch) in batches.enumerated() {
@@ -477,7 +726,11 @@ struct VerseReaderView: View {
                 for verse in batch {
                     group.addTask {
                         do {
-                            let translation = try await self.quranService.getTranslation(forVerse: verse)
+                            // Use selected translation edition
+                            let translation = try await self.quranService.getTranslation(
+                                forVerse: verse,
+                                edition: self.selectedTranslation
+                            )
                             return (verse.number, translation)
                         } catch {
                             // Silently fail for translations - fallback will be used

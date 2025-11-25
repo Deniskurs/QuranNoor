@@ -22,7 +22,7 @@ struct QuickActionsGrid: View {
                 icon: "book.fill",
                 title: "Continue Reading",
                 subtitle: lastReadLocation ?? "Start reading",
-                gradient: [AppColors.primary.teal, AppColors.primary.green],
+                gradient: [themeManager.currentTheme.featureAccent, themeManager.currentTheme.featureAccentSecondary],
                 action: {
                     selectedTab = 1 // Quran tab
                 }
@@ -33,7 +33,7 @@ struct QuickActionsGrid: View {
                 icon: "location.north.fill",
                 title: "Find Qibla",
                 subtitle: "Prayer direction",
-                gradient: [AppColors.primary.green, AppColors.primary.teal],
+                gradient: [themeManager.currentTheme.featureAccentSecondary, themeManager.currentTheme.featureAccent],
                 action: {
                     selectedTab = 3 // Qibla tab
                 }
@@ -44,7 +44,7 @@ struct QuickActionsGrid: View {
                 icon: "clock.fill",
                 title: "Prayer Times",
                 subtitle: "View all prayers",
-                gradient: [AppColors.primary.gold, AppColors.primary.teal],
+                gradient: [AppColors.primary.gold, themeManager.currentTheme.featureAccent],
                 action: {
                     selectedTab = 2 // Prayer tab
                 }

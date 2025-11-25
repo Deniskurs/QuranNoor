@@ -138,14 +138,14 @@ struct HomeView: View {
                 // Header with greeting and Hijri date
                 HomeHeaderView(
                     greeting: homeVM.greeting,
-                    hijriDate: homeVM.hijriDate
+                    hijriDate: homeVM.currentHijriDate
                 )
                 .transition(.move(edge: .top).combined(with: .opacity))
 
                 // Next prayer card (HERO SECTION - enhanced visual hierarchy)
                 NextPrayerCardView(prayerVM: prayerVM, selectedTab: $selectedTab)
                     .scaleEffect(1.02) // Slightly larger to draw attention
-                    .shadow(color: AppColors.primary.teal.opacity(0.15), radius: 12, x: 0, y: 8)
+                    .shadow(color: themeManager.currentTheme.featureAccent.opacity(0.15), radius: 12, x: 0, y: 8)
                     .transition(.scale.combined(with: .opacity))
 
                 // Spiritual nourishment carousel
@@ -175,7 +175,7 @@ struct HomeView: View {
                 }
 
                 // Hijri calendar card
-                HijriCalendarCard(hijriDate: homeVM.hijriDate)
+                HijriCalendarCard(hijriDate: homeVM.currentHijriDate)
                     .transition(.scale.combined(with: .opacity))
 
                 // Recent activity feed
@@ -207,7 +207,7 @@ struct HomeView: View {
             VStack(spacing: 20) {
                 ProgressView()
                     .scaleEffect(1.5)
-                    .tint(AppColors.primary.teal)
+                    .tint(themeManager.currentTheme.featureAccent)
 
                 Text("Preparing your spiritual journey...")
                     .font(.subheadline)

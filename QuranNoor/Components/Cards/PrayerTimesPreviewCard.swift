@@ -7,14 +7,11 @@
 //
 
 import SwiftUI
-import Combine
 
 struct PrayerTimesPreviewCard: View {
     // MARK: - Properties
     let theme: Theme
     @State private var currentTime = Date()
-
-    private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     // Sample prayer times
     private let prayers: [(name: String, time: String, icon: String)] = [
@@ -123,8 +120,12 @@ struct PrayerTimesPreviewCard: View {
                 .fill(theme.cardColor)
                 .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
         )
-        .onReceive(timer) { _ in
-            currentTime = Date()
+        .task {
+            // Modern timer pattern - automatically cancels when view disappears
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(1))
+                currentTime = Date()
+            }
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Prayer times preview in \(theme.name) theme. Next prayer is Asr at 3:48 PM")
@@ -146,7 +147,7 @@ struct PrayerTimesPreviewCard: View {
         backgroundColor: Color(hex: "#F8F4EA"),
         cardColor: .white,
         textColor: Color(hex: "#1A2332"),
-        accentColor: AppColors.primary.teal
+        accentColor: ThemeMode.light.featureAccent
     ))
     .padding()
     .background(Color(hex: "#F8F4EA"))

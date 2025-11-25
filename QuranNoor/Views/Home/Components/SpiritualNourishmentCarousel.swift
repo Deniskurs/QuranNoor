@@ -19,7 +19,7 @@ struct SpiritualNourishmentCarousel: View {
             HStack(spacing: Spacing.xs) { // Add spacing
                 Image(systemName: "book.closed.fill")
                     .font(.system(size: 18)) // More consistent sizing
-                    .foregroundColor(AppColors.primary.teal)
+                    .foregroundColor(themeManager.currentTheme.featureAccent)
 
                 Text("Daily Inspiration")
                     .font(.system(size: 20, weight: .bold)) // Enhanced from headline
@@ -38,7 +38,7 @@ struct SpiritualNourishmentCarousel: View {
                             icon: "book.fill",
                             title: "Verse of the Day",
                             content: verse,
-                            accentColor: AppColors.primary.teal
+                            accentColor: themeManager.currentTheme.featureAccent
                         )
                     }
 

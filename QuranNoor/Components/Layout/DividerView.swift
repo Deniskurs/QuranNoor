@@ -295,7 +295,7 @@ struct SectionDivider: View {
             VStack(spacing: 16) {
                 IslamicDivider(style: .ornamental, color: AppColors.primary.green)
                 IslamicDivider(style: .crescent, color: AppColors.primary.gold)
-                IslamicDivider(style: .geometric, color: AppColors.primary.teal)
+                IslamicDivider(style: .geometric, color: ThemeMode.light.featureAccent)
             }
         }
         .padding()

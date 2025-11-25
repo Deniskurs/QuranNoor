@@ -28,7 +28,7 @@ enum ToastStyle {
     var color: Color {
         switch self {
         case .success: return AppColors.primary.green
-        case .info: return AppColors.primary.teal
+        case .info: return AppColors.primary.green  // Use emerald (softer than teal)
         case .warning: return Color.orange
         case .error: return Color.red
         case .spiritual: return AppColors.primary.gold
@@ -93,7 +93,7 @@ struct ToastView: View {
                         }
                     } label: {
                         ThemedText.body("Undo")
-                            .foregroundColor(AppColors.primary.teal)
+                            .foregroundColor(themeManager.currentTheme.featureAccent)
                             .fontWeight(.semibold)
                     }
                 }

@@ -72,7 +72,7 @@ struct UserFriendlyError: Identifiable {
 
         var color: Color {
             switch self {
-            case .info: return .blue
+            case .info: return AppColors.primary.green // Theme-consistent info color
             case .warning: return .orange
             case .error: return .red
             case .critical: return .purple

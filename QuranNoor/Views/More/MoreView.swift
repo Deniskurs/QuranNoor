@@ -49,7 +49,7 @@ struct MoreView: View {
                                     icon: "gearshape.fill",
                                     title: "Settings",
                                     subtitle: "Preferences and customization",
-                                    accentColor: AppColors.primary.teal
+                                    accentColor: themeManager.currentTheme.featureAccent
                                 )
                             }
                             .buttonStyle(PlainButtonStyle())
@@ -79,7 +79,7 @@ struct MoreView: View {
                 Circle()
                     .fill(
                         LinearGradient(
-                            colors: [AppColors.primary.green, AppColors.primary.teal],
+                            colors: [themeManager.currentTheme.featureAccent, themeManager.currentTheme.featureAccentSecondary],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
@@ -130,7 +130,7 @@ struct MoreView: View {
                     icon: "questionmark.circle.fill",
                     title: "Help & Support",
                     subtitle: "Get assistance",
-                    accentColor: AppColors.primary.teal
+                    accentColor: themeManager.currentTheme.featureAccent
                 )
             }
             .buttonStyle(PlainButtonStyle())
@@ -261,7 +261,7 @@ struct HelpView: View {
 
                 Text("support@qurannoor.app")
                     .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(AppColors.primary.teal)
+                    .foregroundColor(themeManager.currentTheme.accentInteractive)
             }
         }
         .navigationTitle("Help & Support")

@@ -108,7 +108,7 @@ struct OptimizedProgressRing: View {
             progress: 0.50,
             lineWidth: 10,
             size: 120,
-            color: AppColors.primary.teal,
+            color: ThemeMode.light.featureAccent,
             showPercentage: true
         )
 

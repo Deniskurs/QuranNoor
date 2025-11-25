@@ -530,39 +530,7 @@ struct ReadingStatisticsView: View {
 }
 
 // MARK: - Supporting Components
-
-struct StatCard: View {
-    let icon: String
-    let title: String
-    let value: String
-    let subtitle: String
-    let color: Color
-
-    @Environment(ThemeManager.self) var themeManager: ThemeManager
-
-    var body: some View {
-        CardView {
-            VStack(spacing: 12) {
-                Image(systemName: icon)
-                    .font(.system(size: 28))
-                    .foregroundColor(color.opacity(0.3))
-
-                VStack(spacing: 4) {
-                    ThemedText.caption(title)
-                        .opacity(0.7)
-
-                    ThemedText(value, style: .title)
-                        .foregroundColor(color)
-
-                    ThemedText.caption(subtitle)
-                        .opacity(0.5)
-                }
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 8)
-        }
-    }
-}
+// Note: StatCard moved to Components/Cards/StatCard.swift
 
 // MARK: - Helper Extensions
 

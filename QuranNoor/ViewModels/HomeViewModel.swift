@@ -10,6 +10,9 @@ import Foundation
 import Observation
 import SwiftUI
 
+// Typealias to avoid HijriDate ambiguity in @Observable macro expansion
+typealias AppHijriDate = HijriDate
+
 /// Home page view model managing daily stats, prayer times, and spiritual content
 @Observable
 @MainActor
@@ -23,7 +26,7 @@ final class HomeViewModel {
     // MARK: - Published State
 
     var dailyStats: DailyStats?
-    var hijriDate: HijriDate?
+    var currentHijriDate: AppHijriDate?
     var verseOfDay: IslamicQuote?
     var hadithOfDay: IslamicQuote?
     var greeting: String = ""
@@ -117,7 +120,7 @@ final class HomeViewModel {
     private func loadCachedData() {
         // Load cached Hijri date
         if let cachedHijri = hijriService.getCachedHijriDate() {
-            hijriDate = cachedHijri
+            currentHijriDate = cachedHijri
         }
 
         // Load cached daily stats from UserDefaults
@@ -157,7 +160,7 @@ final class HomeViewModel {
         let (hijri, verse, hadith) = await (hijriTask, verseTask, hadithTask)
 
         // Update state
-        hijriDate = hijri
+        currentHijriDate = hijri
         verseOfDay = verse
         hadithOfDay = hadith
 
@@ -165,7 +168,7 @@ final class HomeViewModel {
         cacheHomeData()
     }
 
-    private func loadHijriDate() async -> HijriDate? {
+    private func loadHijriDate() async -> AppHijriDate? {
         do {
             return try await hijriService.getCurrentHijriDate()
         } catch {

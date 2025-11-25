@@ -175,7 +175,7 @@ struct SpiritualContentDetailSheet: View {
         ),
         icon: "book.fill",
         title: "Verse of the Day",
-        accentColor: AppColors.primary.teal
+        accentColor: ThemeMode.light.featureAccent  // Theme-aware preview color
     )
     .environment(ThemeManager())
 }

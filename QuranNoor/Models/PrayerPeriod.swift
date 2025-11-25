@@ -131,6 +131,19 @@ struct PrayerPeriod {
         return timeUntilNextEvent < 1800 // 30 minutes
     }
 
+    /// Current urgency level based on time remaining
+    /// Uses UrgencyLevel enum for psychologically-informed color progression
+    var urgencyLevel: UrgencyLevel {
+        let minutes = Int(timeUntilNextEvent / 60)
+        return UrgencyLevel.from(minutesRemaining: minutes)
+    }
+
+    /// Depleting progress for the progress ring (1.0 = full, depletes to 0.0)
+    /// Uses inverted progress for loss-aversion psychology
+    var depletingProgress: Double {
+        max(0, 1.0 - periodProgress)
+    }
+
     /// Formatted countdown string (e.g., "02:30:15" or "45:30")
     var countdownString: String {
         let interval = max(timeUntilNextEvent, 0)

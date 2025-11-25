@@ -3,7 +3,7 @@
 //  QuranNoor
 //
 //  Interactive Quran reader demo for onboarding
-//  Shows Al-Fatiha with translation, page-turning animation, and audio preview
+//  Shows Al-Fatiha with translation, page-turning animation, and real audio recitation
 //
 
 import SwiftUI
@@ -13,11 +13,13 @@ struct QuranReaderDemo: View {
     // MARK: - Properties
     @Environment(ThemeManager.self) var themeManager: ThemeManager
     @State private var currentPage = 0
-    @State private var isPlaying = false
     @State private var showTranslation = true
     @State private var fontSize: CGFloat = 24
 
-    // Sample verses (Al-Fatiha - Surah 1)
+    // Audio service for real Quran recitation (observed for UI updates)
+    @State private var audioService = DemoAudioService.shared
+
+    // Sample verses (Al-Fatiha - Surah 1, verses 1-4)
     private let verses: [(arabic: String, translation: String, transliteration: String)] = [
         (
             "بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ",
@@ -41,6 +43,16 @@ struct QuranReaderDemo: View {
         )
     ]
 
+    // MARK: - Computed Properties
+
+    private var isPlaying: Bool {
+        audioService.playbackState == .playing
+    }
+
+    private var isCurrentVersePlaying: Bool {
+        isPlaying && audioService.currentVerseIndex == currentPage
+    }
+
     // MARK: - Body
     var body: some View {
         VStack(spacing: 0) {
@@ -48,11 +60,11 @@ struct QuranReaderDemo: View {
             VStack(spacing: 8) {
                 HStack {
                     Image(systemName: "book.closed.fill")
-                        .foregroundColor(AppColors.primary.teal)
+                        .foregroundColor(themeManager.currentTheme.featureAccent)
                     ThemedText("Surah Al-Fatiha", style: .heading)
                         .foregroundColor(AppColors.primary.green)
                     Spacer()
-                    Text("1:1-7")
+                    Text("1:1-4")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -74,7 +86,7 @@ struct QuranReaderDemo: View {
             // Content area with page turning
             TabView(selection: $currentPage) {
                 ForEach(verses.indices, id: \.self) { index in
-                    verseView(verse: verses[index], verseNumber: index + 1)
+                    verseView(verse: verses[index], verseNumber: index + 1, index: index)
                         .tag(index)
                 }
             }
@@ -83,16 +95,56 @@ struct QuranReaderDemo: View {
 
             // Controls
             VStack(spacing: 12) {
-                // Page indicator
+                // Progress bar (shows when playing)
+                if audioService.playbackState != .idle {
+                    GeometryReader { geometry in
+                        ZStack(alignment: .leading) {
+                            // Background track
+                            RoundedRectangle(cornerRadius: 2)
+                                .fill(Color.secondary.opacity(0.2))
+                                .frame(height: 4)
+
+                            // Progress fill
+                            RoundedRectangle(cornerRadius: 2)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [AppColors.primary.green, themeManager.currentTheme.featureAccent],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                                .frame(width: geometry.size.width * audioService.progress, height: 4)
+                                .animation(.linear(duration: 0.1), value: audioService.progress)
+                        }
+                    }
+                    .frame(height: 4)
+                    .padding(.horizontal, 40)
+                    .padding(.top, 8)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+                }
+
+                // Page indicator with verse dots
                 HStack(spacing: 8) {
                     ForEach(verses.indices, id: \.self) { index in
-                        Circle()
-                            .fill(currentPage == index ? AppColors.primary.teal : Color.secondary.opacity(0.3))
-                            .frame(width: 8, height: 8)
-                            .animation(.spring(response: 0.3), value: currentPage)
+                        ZStack {
+                            Circle()
+                                .fill(currentPage == index ? themeManager.currentTheme.featureAccent : Color.secondary.opacity(0.3))
+                                .frame(width: 8, height: 8)
+
+                            // Playing indicator ring
+                            if isPlaying && audioService.currentVerseIndex == index {
+                                Circle()
+                                    .stroke(themeManager.currentTheme.featureAccent, lineWidth: 2)
+                                    .frame(width: 14, height: 14)
+                                    .scaleEffect(isPlaying ? 1.2 : 1.0)
+                                    .opacity(isPlaying ? 0.6 : 0)
+                                    .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: isPlaying)
+                            }
+                        }
+                        .animation(.spring(response: 0.3), value: currentPage)
                     }
                 }
-                .padding(.top, 8)
+                .padding(.top, audioService.playbackState == .idle ? 8 : 4)
 
                 // Interactive controls
                 HStack(spacing: 20) {
@@ -107,7 +159,7 @@ struct QuranReaderDemo: View {
                     } label: {
                         Image(systemName: "chevron.left")
                             .font(.title3)
-                            .foregroundColor(currentPage > 0 ? AppColors.primary.teal : .secondary)
+                            .foregroundColor(currentPage > 0 ? themeManager.currentTheme.featureAccent : .secondary)
                             .frame(width: 44, height: 44)
                             .background(
                                 Circle()
@@ -116,14 +168,25 @@ struct QuranReaderDemo: View {
                     }
                     .disabled(currentPage == 0)
 
-                    // Play audio button
+                    // Play/Pause audio button
                     Button {
                         toggleAudio()
                     } label: {
-                        Image(systemName: isPlaying ? "pause.circle.fill" : "play.circle.fill")
-                            .font(.system(size: 48))
-                            .foregroundColor(AppColors.primary.green)
-                            .symbolEffect(.bounce, value: isPlaying)
+                        ZStack {
+                            // Outer glow when playing
+                            if isPlaying {
+                                Circle()
+                                    .fill(AppColors.primary.green.opacity(0.2))
+                                    .frame(width: 64, height: 64)
+                                    .scaleEffect(isPlaying ? 1.1 : 1.0)
+                                    .animation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true), value: isPlaying)
+                            }
+
+                            Image(systemName: isPlaying ? "pause.circle.fill" : "play.circle.fill")
+                                .font(.system(size: 48))
+                                .foregroundColor(AppColors.primary.green)
+                                .symbolEffect(.bounce, value: audioService.playbackState)
+                        }
                     }
 
                     // Next button
@@ -137,7 +200,7 @@ struct QuranReaderDemo: View {
                     } label: {
                         Image(systemName: "chevron.right")
                             .font(.title3)
-                            .foregroundColor(currentPage < verses.count - 1 ? AppColors.primary.teal : .secondary)
+                            .foregroundColor(currentPage < verses.count - 1 ? themeManager.currentTheme.featureAccent : .secondary)
                             .frame(width: 44, height: 44)
                             .background(
                                 Circle()
@@ -159,7 +222,7 @@ struct QuranReaderDemo: View {
                         Text(showTranslation ? "Hide Translation" : "Show Translation")
                             .font(.caption)
                     }
-                    .foregroundColor(AppColors.primary.teal)
+                    .foregroundColor(themeManager.currentTheme.featureAccent)
                 }
                 .buttonStyle(.borderless)
 
@@ -178,23 +241,46 @@ struct QuranReaderDemo: View {
         .background(themeManager.currentTheme.backgroundColor)
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .shadow(color: .black.opacity(0.1), radius: 8, y: 4)
+        .onChange(of: audioService.currentVerseIndex) { _, newIndex in
+            // Auto-advance page when verse changes during playback
+            if audioService.playbackState == .playing && newIndex != currentPage {
+                withAnimation(.smooth(duration: 0.4)) {
+                    currentPage = newIndex
+                }
+            }
+        }
+        .onDisappear {
+            // Stop audio when view disappears
+            audioService.stop()
+        }
     }
 
     // MARK: - Verse View
     @ViewBuilder
-    private func verseView(verse: (arabic: String, translation: String, transliteration: String), verseNumber: Int) -> some View {
+    private func verseView(verse: (arabic: String, translation: String, transliteration: String), verseNumber: Int, index: Int) -> some View {
+        let isThisVersePlaying = isPlaying && audioService.currentVerseIndex == index
+
         ScrollView {
             VStack(spacing: 24) {
                 Spacer()
                     .frame(height: 20)
 
-                // Verse number badge
+                // Verse number badge with playing indicator
                 HStack {
                     Spacer()
                     ZStack {
+                        // Outer glow when playing
+                        if isThisVersePlaying {
+                            Image(systemName: "seal.fill")
+                                .font(.system(size: 52))
+                                .foregroundColor(AppColors.primary.green.opacity(0.3))
+                                .scaleEffect(isThisVersePlaying ? 1.15 : 1.0)
+                                .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: isThisVersePlaying)
+                        }
+
                         Image(systemName: "seal.fill")
                             .font(.system(size: 40))
-                            .foregroundColor(AppColors.primary.green.opacity(0.2))
+                            .foregroundColor(isThisVersePlaying ? AppColors.primary.green.opacity(0.4) : AppColors.primary.green.opacity(0.2))
 
                         Text("\(verseNumber)")
                             .font(.caption.weight(.bold))
@@ -203,13 +289,18 @@ struct QuranReaderDemo: View {
                     Spacer()
                 }
 
-                // Arabic text
+                // Arabic text with highlight effect
                 Text(verse.arabic)
                     .font(.custom("Arial", size: fontSize))
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 20)
                     .foregroundColor(themeManager.currentTheme.textColor)
                     .environment(\.layoutDirection, .rightToLeft)
+                    .shadow(
+                        color: isThisVersePlaying ? AppColors.primary.green.opacity(0.3) : .clear,
+                        radius: isThisVersePlaying ? 8 : 0
+                    )
+                    .animation(.easeInOut(duration: 0.3), value: isThisVersePlaying)
 
                 // Transliteration
                 Text(verse.transliteration)
@@ -241,26 +332,25 @@ struct QuranReaderDemo: View {
             }
         }
         .padding(.horizontal, 16)
+        // Highlight background when playing
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(isThisVersePlaying ? AppColors.primary.green.opacity(0.05) : Color.clear)
+                .animation(.easeInOut(duration: 0.3), value: isThisVersePlaying)
+        )
     }
 
     // MARK: - Methods
     private func toggleAudio() {
-        withAnimation(.spring(response: 0.3)) {
-            isPlaying.toggle()
-        }
+        HapticManager.shared.trigger(.selection)
 
-        if isPlaying {
-            HapticManager.shared.trigger(.success)
-            AudioHapticCoordinator.shared.playSuccess()
-
-            // Simulate audio playback (3 seconds)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
-                withAnimation(.spring(response: 0.3)) {
-                    isPlaying = false
-                }
-            }
+        if audioService.playbackState == .playing {
+            audioService.pause()
+        } else if audioService.playbackState == .paused {
+            audioService.resume()
         } else {
-            HapticManager.shared.trigger(.light)
+            // Start from current page
+            audioService.play(fromVerse: currentPage)
         }
     }
 }

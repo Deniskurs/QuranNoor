@@ -26,7 +26,7 @@ struct DailyStatsRow: View {
             // Verses read stat
             HomeStatCard(
                 icon: "book.fill",
-                iconColor: AppColors.primary.teal,
+                iconColor: themeManager.currentTheme.featureAccent,
                 value: "\(stats.versesReadToday)",
                 label: "Verses Today",
                 showAnimation: stats.hasReadToday

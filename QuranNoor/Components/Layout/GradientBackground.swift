@@ -81,8 +81,8 @@ struct GradientBackground: View {
 
         case .home:
             return Gradient(colors: [
-                AppColors.primary.teal.opacity(theme.gradientOpacity(for: AppColors.primary.teal)),
-                AppColors.primary.green.opacity(theme.gradientOpacity(for: AppColors.primary.green))
+                theme.featureAccent.opacity(theme.gradientOpacity(for: theme.featureAccent)),
+                theme.featureAccentSecondary.opacity(theme.gradientOpacity(for: theme.featureAccentSecondary))
             ])
 
         case .serenity:
@@ -200,7 +200,7 @@ struct MeshGradientBackground: View {
         LinearGradient(
             gradient: Gradient(colors: [
                 AppColors.primary.green.opacity(0.2),
-                AppColors.primary.teal.opacity(0.3),
+                ThemeMode.light.featureAccent.opacity(0.3),
                 AppColors.primary.midnight.opacity(0.4)
             ]),
             startPoint: .topLeading,
@@ -222,7 +222,7 @@ struct AnimatedGradientBackground: View {
     init(
         colors: [Color] = [
             AppColors.primary.green,
-            AppColors.primary.teal,
+            ThemeMode.light.featureAccent,
             AppColors.primary.midnight
         ],
         duration: Double = 8.0
@@ -336,7 +336,7 @@ struct ThemeAwareBackground: View {
             // Radial gradient
             ZStack {
                 RadialGradientBackground(
-                    centerColor: AppColors.primary.teal,
+                    centerColor: ThemeMode.light.featureAccent,
                     edgeColor: AppColors.primary.midnight,
                     opacity: 0.3
                 )

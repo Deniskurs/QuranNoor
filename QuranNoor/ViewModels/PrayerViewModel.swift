@@ -152,9 +152,15 @@ class PrayerViewModel {
             if !locationService.hasLocationPermission() {
                 locationService.requestLocationPermission()
 
-                let deadline = Date().addingTimeInterval(10)
+                // Wait efficiently for permission using exponential backoff (max 5 seconds)
+                // Much more efficient than constant 0.3s polling
+                var waitTime: UInt64 = 100_000_000  // Start at 0.1s
+                let maxWaitTime: UInt64 = 1_000_000_000  // Max 1s between checks
+                let deadline = Date().addingTimeInterval(5)
+
                 while !locationService.hasLocationPermission() && Date() < deadline {
-                    try await Task.sleep(nanoseconds: 300_000_000) // 0.3s
+                    try await Task.sleep(nanoseconds: waitTime)
+                    waitTime = min(waitTime * 2, maxWaitTime)  // Exponential backoff
                 }
 
                 guard locationService.hasLocationPermission() else {

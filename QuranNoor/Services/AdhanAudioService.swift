@@ -77,37 +77,51 @@ final class AdhanAudioService: NSObject {
             return
         }
 
-        await MainActor.run {
-            do {
-                // Get the audio file URL
-                guard let audioURL = selectedAdhan.fileURL else {
-                    print("❌ Adhan audio file not found: \(selectedAdhan.fileName)")
-                    return
+        // Get the audio file URL
+        guard let audioURL = selectedAdhan.fileURL else {
+            print("❌ Adhan audio file not found: \(selectedAdhan.fileName)")
+            return
+        }
+
+        // Load audio file off main thread to prevent UI blocking
+        let loadedPlayer: AVAudioPlayer?
+        do {
+            loadedPlayer = try await Task.detached(priority: .userInitiated) {
+                try AVAudioPlayer(contentsOf: audioURL)
+            }.value
+        } catch {
+            print("❌ Error loading Adhan audio: \(error.localizedDescription)")
+            return
+        }
+
+        guard let player = loadedPlayer else {
+            print("❌ Failed to create audio player for Adhan")
+            return
+        }
+
+        // Configure player and start playback on main thread
+        player.delegate = self
+        player.volume = volume
+        player.prepareToPlay()
+
+        do {
+            // Activate audio session
+            try AVAudioSession.sharedInstance().setActive(true)
+
+            // Play the audio
+            let success = player.play()
+            if success {
+                audioPlayer = player
+                isPlaying = true
+                if let prayer = prayer {
+                    print("🔊 Playing Adhan (\(selectedAdhan.displayName)) for \(prayer.displayName)")
+                } else {
+                    print("🔊 Playing Adhan (\(selectedAdhan.displayName))")
                 }
-
-                // Create and configure the audio player
-                audioPlayer = try AVAudioPlayer(contentsOf: audioURL)
-                audioPlayer?.delegate = self
-                audioPlayer?.volume = volume
-                audioPlayer?.prepareToPlay()
-
-                // Activate audio session
-                try AVAudioSession.sharedInstance().setActive(true)
-
-                // Play the audio
-                let success = audioPlayer?.play() ?? false
-                if success {
-                    isPlaying = true
-                    if let prayer = prayer {
-                        print("🔊 Playing Adhan (\(selectedAdhan.displayName)) for \(prayer.displayName)")
-                    } else {
-                        print("🔊 Playing Adhan (\(selectedAdhan.displayName))")
-                    }
-                }
-            } catch {
-                print("❌ Error playing Adhan: \(error.localizedDescription)")
-                isPlaying = false
             }
+        } catch {
+            print("❌ Error playing Adhan: \(error.localizedDescription)")
+            isPlaying = false
         }
     }
 
@@ -190,11 +204,9 @@ final class AdhanAudioService: NSObject {
         do {
             let session = AVAudioSession.sharedInstance()
 
-            // Set category to playback to allow background audio
-            try session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
-
-            // Allow audio to play even when silent switch is on
-            try session.setCategory(.playback, mode: .default)
+            // Set category to playback to allow background audio and bypass silent mode
+            // Note: Only call setCategory ONCE to avoid redundancy and potential conflicts
+            try session.setCategory(.playback, mode: .default, options: [])
 
             print("✅ Audio session configured for Adhan playback")
         } catch {

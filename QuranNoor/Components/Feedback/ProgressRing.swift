@@ -193,7 +193,7 @@ struct QuranProgressRing: View {
                 progress: 0.6,
                 lineWidth: 10,
                 size: 100,
-                color: AppColors.primary.teal
+                color: ThemeMode.light.featureAccent
             )
 
             ProgressRing(

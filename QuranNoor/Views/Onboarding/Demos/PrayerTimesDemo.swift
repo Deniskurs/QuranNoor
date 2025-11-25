@@ -7,7 +7,6 @@
 //
 
 import SwiftUI
-import Combine
 
 struct PrayerTimesDemo: View {
     // MARK: - Properties
@@ -15,11 +14,9 @@ struct PrayerTimesDemo: View {
     @State private var currentTime = Date()
     @State private var selectedPrayer = 2 // Asr (upcoming)
 
-    private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
-
     // Sample prayer times
     private let prayers: [(name: String, time: String, icon: String, color: Color)] = [
-        ("Fajr", "05:42 AM", "sunrise.fill", AppColors.primary.teal),
+        ("Fajr", "05:42 AM", "sunrise.fill", ThemeMode.light.featureAccent),
         ("Dhuhr", "12:35 PM", "sun.max.fill", AppColors.primary.gold),
         ("Asr", "03:48 PM", "sun.haze.fill", Color.orange),
         ("Maghrib", "06:22 PM", "sunset.fill", Color.pink),
@@ -33,7 +30,7 @@ struct PrayerTimesDemo: View {
             VStack(spacing: 12) {
                 HStack(spacing: 8) {
                     Image(systemName: "mappin.circle.fill")
-                        .foregroundColor(AppColors.primary.teal)
+                        .foregroundColor(themeManager.currentTheme.featureAccent)
                     ThemedText("San Francisco, CA", style: .heading)
                         .foregroundColor(AppColors.primary.green)
                 }
@@ -91,8 +88,12 @@ struct PrayerTimesDemo: View {
         .background(themeManager.currentTheme.backgroundColor)
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .shadow(color: .black.opacity(0.1), radius: 8, y: 4)
-        .onReceive(timer) { _ in
-            currentTime = Date()
+        .task {
+            // Modern timer pattern - automatically cancels when view disappears
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(1))
+                currentTime = Date()
+            }
         }
     }
 
@@ -121,11 +122,11 @@ struct PrayerTimesDemo: View {
                 countdownComponent(value: 2, label: "h")
                 Text(":")
                     .font(.title.weight(.bold))
-                    .foregroundColor(AppColors.primary.teal)
+                    .foregroundColor(themeManager.currentTheme.featureAccent)
                 countdownComponent(value: 34, label: "m")
                 Text(":")
                     .font(.title.weight(.bold))
-                    .foregroundColor(AppColors.primary.teal)
+                    .foregroundColor(themeManager.currentTheme.featureAccent)
                 countdownComponent(value: Int(currentTime.timeIntervalSince1970.truncatingRemainder(dividingBy: 60)), label: "s")
             }
 

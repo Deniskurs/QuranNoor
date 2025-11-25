@@ -133,7 +133,7 @@ struct NotificationPrimingView: View {
             HStack(spacing: 12) {
                 Image(systemName: "hand.raised.fill")
                     .font(.system(size: 24))
-                    .foregroundColor(AppColors.primary.teal)
+                    .foregroundColor(themeManager.currentTheme.featureAccent)
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text("You're Always in Control")
@@ -150,10 +150,10 @@ struct NotificationPrimingView: View {
             .padding(16)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(AppColors.primary.teal.opacity(0.1))
+                    .fill(themeManager.currentTheme.featureAccent.opacity(0.1))
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
-                            .stroke(AppColors.primary.teal.opacity(0.3), lineWidth: 1)
+                            .stroke(themeManager.currentTheme.featureAccent.opacity(0.3), lineWidth: 1)
                     )
             )
             .padding(.horizontal, 32)
@@ -198,7 +198,7 @@ struct NotificationPrimingView: View {
                 RoundedRectangle(cornerRadius: 8)
                     .fill(
                         LinearGradient(
-                            colors: [AppColors.primary.green, AppColors.primary.teal],
+                            colors: [AppColors.primary.green, themeManager.currentTheme.featureAccent],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )

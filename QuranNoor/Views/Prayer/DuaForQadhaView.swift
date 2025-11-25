@@ -59,7 +59,7 @@ struct DuaForQadhaView: View {
 
                     // Duas
                     ForEach(duas) { dua in
-                        DuaCard(dua: dua)
+                        QadhaDuaCard(dua: dua)
                     }
 
                     // Reminder
@@ -129,9 +129,9 @@ struct DuaForQadhaView: View {
     }
 }
 
-// MARK: - DuaCard
+// MARK: - QadhaDuaCard
 
-struct DuaCard: View {
+struct QadhaDuaCard: View {
     @Environment(ThemeManager.self) var themeManager: ThemeManager
 
     let dua: DuaContent

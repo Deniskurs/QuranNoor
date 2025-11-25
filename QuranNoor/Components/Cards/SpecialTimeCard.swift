@@ -43,7 +43,7 @@ struct SpecialTimeCard: View {
             // Time display
             Text(specialTime.displayTime)
                 .font(.system(size: 20, weight: highlight ? .semibold : .regular))
-                .foregroundColor(highlight ? AppColors.primary.teal : themeManager.currentTheme.textColor)
+                .foregroundColor(highlight ? themeManager.currentTheme.featureAccent : themeManager.currentTheme.textColor)
         }
         .padding()
         .background(
@@ -66,7 +66,7 @@ struct SpecialTimeCard: View {
         case .sunset:
             return Color.orange.opacity(0.8)
         case .midnight:
-            return AppColors.primary.teal
+            return themeManager.currentTheme.featureAccent
         case .firstThird:
             return AppColors.primary.gold
         case .lastThird:
@@ -159,7 +159,7 @@ struct CompactSpecialTimeCard: View {
                     icon: "moon.stars",
                     title: "Midnight",
                     time: "12:37 AM",
-                    color: AppColors.primary.teal
+                    color: ThemeMode.light.featureAccent  // Theme-aware preview color
                 )
             }
             .padding()

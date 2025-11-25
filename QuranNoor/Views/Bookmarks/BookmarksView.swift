@@ -63,7 +63,7 @@ struct BookmarksView: View {
                         }
                     } label: {
                         Image(systemName: "ellipsis.circle")
-                            .foregroundColor(AppColors.primary.teal)
+                            .foregroundColor(themeManager.currentTheme.featureAccent)
                     }
                 }
             }
@@ -160,7 +160,7 @@ struct BookmarksView: View {
                                 } label: {
                                     Label("Share", systemImage: "square.and.arrow.up")
                                 }
-                                .tint(AppColors.primary.teal)
+                                .tint(themeManager.currentTheme.featureAccent)
                             }
                             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                                 Button(role: .destructive) {
@@ -219,12 +219,12 @@ struct BookmarksView: View {
             // Icon
             ZStack {
                 Circle()
-                    .fill(AppColors.primary.teal.opacity(0.1))
+                    .fill(themeManager.currentTheme.featureAccent.opacity(0.1))
                     .frame(width: 120, height: 120)
 
                 Image(systemName: "bookmark")
                     .font(.system(size: 50))
-                    .foregroundColor(AppColors.primary.teal)
+                    .foregroundColor(themeManager.currentTheme.featureAccent)
             }
 
             // Text
@@ -271,7 +271,7 @@ struct BookmarksView: View {
             Spacer()
             ProgressView()
                 .scaleEffect(1.5)
-                .tint(AppColors.primary.teal)
+                .tint(themeManager.currentTheme.featureAccent)
             Spacer()
         }
     }
@@ -312,13 +312,13 @@ struct BookmarksView: View {
     private func getAccentColor(for type: SpiritualBookmark.ContentType) -> Color {
         switch type {
         case .verse:
-            return AppColors.primary.teal
+            return themeManager.currentTheme.featureAccent
         case .hadith:
             return AppColors.primary.gold
         case .wisdom:
             return AppColors.primary.green
         case .dua:
-            return AppColors.primary.teal
+            return themeManager.currentTheme.featureAccent
         }
     }
 }
@@ -350,22 +350,22 @@ private struct TabButton: View {
                         .padding(.vertical, 2)
                         .background(
                             Capsule()
-                                .fill(isSelected ? AppColors.primary.teal : themeManager.currentTheme.textTertiary.opacity(0.2))
+                                .fill(isSelected ? themeManager.currentTheme.featureAccent : themeManager.currentTheme.textTertiary.opacity(0.2))
                         )
                 }
             }
-            .foregroundColor(isSelected ? AppColors.primary.teal : themeManager.currentTheme.textSecondary)
+            .foregroundColor(isSelected ? themeManager.currentTheme.featureAccent : themeManager.currentTheme.textSecondary)
             .padding(.horizontal, Spacing.sm)
             .padding(.vertical, Spacing.xxs)
             .frame(maxWidth: .infinity)
             .background(
                 RoundedRectangle(cornerRadius: BorderRadius.md)
-                    .fill(isSelected ? AppColors.primary.teal.opacity(0.12) : Color.clear)
+                    .fill(isSelected ? themeManager.currentTheme.featureAccent.opacity(0.12) : Color.clear)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: BorderRadius.md)
                     .strokeBorder(
-                        isSelected ? AppColors.primary.teal : themeManager.currentTheme.textTertiary.opacity(0.3),
+                        isSelected ? themeManager.currentTheme.featureAccent : themeManager.currentTheme.textTertiary.opacity(0.3),
                         lineWidth: isSelected ? 2 : 1
                     )
             )

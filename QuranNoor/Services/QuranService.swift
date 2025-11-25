@@ -134,8 +134,25 @@ class QuranService: ObservableObject {
 
     // Default editions
     private let arabicEdition = "quran-simple" // Simple Arabic text
-    private let translationEdition = "en.sahih" // Sahih International English
     private let audioEdition = "ar.alafasy" // Alafasy recitation
+
+    // Translation preferences (stored in UserDefaults)
+    private let translationPrefsKey = "translation_preferences"
+    private var translationPreferences: TranslationPreferences {
+        get {
+            guard let data = userDefaults.data(forKey: translationPrefsKey),
+                  let prefs = try? JSONDecoder().decode(TranslationPreferences.self, from: data) else {
+                return TranslationPreferences() // Default to Sahih International
+            }
+            return prefs
+        }
+        set {
+            if let encoded = try? JSONEncoder().encode(newValue) {
+                userDefaults.set(encoded, forKey: translationPrefsKey)
+                print("✅ Translation preferences saved: \(newValue.primaryTranslation.displayName)")
+            }
+        }
+    }
 
     // Cache keys
     private let surahListCacheKey = "surah_list"
@@ -280,25 +297,81 @@ class QuranService: ObservableObject {
         }
     }
 
-    /// Get translation for a verse from API
-    func getTranslation(forVerse verse: Verse, edition: String = "en.sahih") async throws -> Translation {
+    /// Get translation for a verse from API using stored preferences
+    func getTranslation(forVerse verse: Verse, edition: TranslationEdition? = nil) async throws -> Translation {
+        let selectedEdition = edition ?? translationPreferences.primaryTranslation
+        let editionId = selectedEdition.rawValue
+
         do {
             let response: QuranAyahResponse = try await apiClient.fetchDirect(
-                url: "https://api.alquran.cloud/v1/ayah/\(verse.surahNumber):\(verse.verseNumber)/\(edition)",
-                cacheKey: translationCacheKey(verse.surahNumber, verse.verseNumber)
+                url: "https://api.alquran.cloud/v1/ayah/\(verse.surahNumber):\(verse.verseNumber)/\(editionId)",
+                cacheKey: "\(editionId)_\(verse.surahNumber)_\(verse.verseNumber)"
             )
 
             return Translation(
                 verseNumber: verse.number,
-                language: "English",
+                language: selectedEdition.language,
                 text: response.text,
-                author: "Sahih International"
+                author: selectedEdition.author
             )
         } catch {
             print("Failed to fetch translation from API: \(error)")
             // Return fallback translation if API fails
             return getSampleTranslation(forVerse: verse)
         }
+    }
+
+    /// Get multiple translations for a verse (for side-by-side comparison)
+    func getMultipleTranslations(forVerse verse: Verse, editions: [TranslationEdition]) async throws -> [Translation] {
+        var translations: [Translation] = []
+
+        for edition in editions {
+            do {
+                let translation = try await getTranslation(forVerse: verse, edition: edition)
+                translations.append(translation)
+            } catch {
+                print("Failed to fetch \(edition.displayName) translation: \(error)")
+            }
+        }
+
+        return translations
+    }
+
+    // MARK: - Translation Preferences
+
+    /// Get current translation preferences
+    func getTranslationPreferences() -> TranslationPreferences {
+        return translationPreferences
+    }
+
+    /// Set primary translation
+    func setPrimaryTranslation(_ edition: TranslationEdition) {
+        var prefs = translationPreferences
+        prefs.primaryTranslation = edition
+        translationPreferences = prefs
+    }
+
+    /// Add secondary translation
+    func addSecondaryTranslation(_ edition: TranslationEdition) {
+        var prefs = translationPreferences
+        if !prefs.secondaryTranslations.contains(edition) {
+            prefs.secondaryTranslations.append(edition)
+            translationPreferences = prefs
+        }
+    }
+
+    /// Remove secondary translation
+    func removeSecondaryTranslation(_ edition: TranslationEdition) {
+        var prefs = translationPreferences
+        prefs.secondaryTranslations.removeAll { $0 == edition }
+        translationPreferences = prefs
+    }
+
+    /// Toggle multiple translations display
+    func toggleMultipleTranslations() {
+        var prefs = translationPreferences
+        prefs.showMultipleTranslations.toggle()
+        translationPreferences = prefs
     }
 
     /// Get audio URL for a specific verse
@@ -823,5 +896,131 @@ class QuranService: ObservableObject {
             text: text,
             author: "Sahih International"
         )
+    }
+
+    // MARK: - Fuzzy Search
+
+    /// Search surahs by name (fuzzy matching)
+    /// - Parameter query: Search query
+    /// - Returns: Array of matching surahs sorted by relevance
+    func searchSurahs(query: String) async -> [SearchResult<Surah>] {
+        guard !query.isEmpty else { return [] }
+
+        do {
+            let allSurahs = try await getSurahs()
+
+            // Search across multiple fields (English name, Arabic name, translation)
+            return FuzzySearchUtility.searchMultipleFields(
+                allSurahs,
+                query: query,
+                keyPaths: [\.englishName, \.name, \.englishNameTranslation],
+                threshold: 0.3
+            )
+        } catch {
+            print("❌ Search error: \(error)")
+            return []
+        }
+    }
+
+    /// Search verses by text content (fuzzy matching)
+    /// - Parameters:
+    ///   - query: Search query
+    ///   - surahNumber: Optional surah number to limit search scope
+    /// - Returns: Array of matching verses sorted by relevance
+    func searchVerses(query: String, inSurah surahNumber: Int? = nil) async -> [SearchResult<Verse>] {
+        guard !query.isEmpty else { return [] }
+
+        do {
+            var allVerses: [Verse] = []
+
+            if let surahNumber = surahNumber {
+                // Search within specific surah
+                allVerses = try await getVerses(forSurah: surahNumber)
+            } else {
+                // Search all surahs (expensive operation)
+                let surahs = try await getSurahs()
+                for surah in surahs {
+                    let verses = try await getVerses(forSurah: surah.id)
+                    allVerses.append(contentsOf: verses)
+                }
+            }
+
+            // Search verse text (Arabic)
+            return FuzzySearchUtility.search(
+                allVerses,
+                query: query,
+                keyPath: \.text,
+                threshold: 0.4
+            )
+        } catch {
+            print("❌ Search error: \(error)")
+            return []
+        }
+    }
+
+    /// Search translations by text content (fuzzy matching)
+    /// - Parameters:
+    ///   - query: Search query
+    ///   - edition: Translation edition to search
+    ///   - surahNumber: Optional surah number to limit search scope
+    /// - Returns: Array of matching translations sorted by relevance
+    func searchTranslations(
+        query: String,
+        edition: TranslationEdition = .sahihInternational,
+        inSurah surahNumber: Int? = nil
+    ) async -> [SearchResult<Translation>] {
+        guard !query.isEmpty else { return [] }
+
+        do {
+            var allTranslations: [Translation] = []
+
+            if let surahNumber = surahNumber {
+                // Search within specific surah
+                let verses = try await getVerses(forSurah: surahNumber)
+                for verse in verses {
+                    let translation = try await getTranslation(forVerse: verse, edition: edition)
+                    allTranslations.append(translation)
+                }
+            } else {
+                // Search all surahs (expensive operation)
+                let surahs = try await getSurahs()
+                for surah in surahs {
+                    let verses = try await getVerses(forSurah: surah.id)
+                    for verse in verses {
+                        let translation = try await getTranslation(forVerse: verse, edition: edition)
+                        allTranslations.append(translation)
+                    }
+                }
+            }
+
+            // Search translation text
+            return FuzzySearchUtility.wordSearch(
+                allTranslations,
+                query: query,
+                keyPath: \.text,
+                requireAll: false
+            )
+        } catch {
+            print("❌ Search error: \(error)")
+            return []
+        }
+    }
+
+    /// Smart search that searches both surahs and translations
+    /// - Parameters:
+    ///   - query: Search query
+    ///   - edition: Translation edition to search
+    /// - Returns: Tuple of surah results and translation results
+    func smartSearch(
+        query: String,
+        edition: TranslationEdition = .sahihInternational
+    ) async -> (surahs: [SearchResult<Surah>], translations: [SearchResult<Translation>]) {
+        async let surahResults = searchSurahs(query: query)
+        async let translationResults = searchTranslations(query: query, edition: edition)
+
+        let surahs = await surahResults
+        let translations = await translationResults
+
+        return (surahs: surahs, translations: translations)
     }
 }

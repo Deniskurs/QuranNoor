@@ -203,6 +203,66 @@ enum ThemeMode: String, CaseIterable, Identifiable {
         }
     }
 
+    // MARK: - Feature/Decorative Colors (Theme-Aware)
+    // Replaces hardcoded .blue usage throughout the app
+
+    /// Feature accent for icons and decorative elements - replaces .blue usage
+    /// Provides theme-appropriate "feature" highlight color
+    var featureAccent: Color {
+        switch self {
+        case .light: return Color(hex: "#0D7377")   // Emerald green
+        case .dark: return Color(hex: "#14FFEC")    // Bright teal
+        case .night: return Color(hex: "#FFD700")   // Bright gold
+        case .sepia: return Color(hex: "#8B6F47")   // Warm brown
+        }
+    }
+
+    /// Secondary feature accent for gradients and paired decorations
+    var featureAccentSecondary: Color {
+        switch self {
+        case .light: return Color(hex: "#0A5F63")   // Darker emerald
+        case .dark: return Color(hex: "#0D7377")    // Medium green
+        case .night: return Color(hex: "#14FFEC")   // Teal
+        case .sepia: return Color(hex: "#6B5D47")   // Darker brown
+        }
+    }
+
+    /// Background tint for subtle fills - replaces .blue.opacity(0.1)
+    var featureBackgroundTint: Color {
+        switch self {
+        case .light: return Color(hex: "#0D7377").opacity(0.10)
+        case .dark: return Color(hex: "#14FFEC").opacity(0.15)
+        case .night: return Color(hex: "#FFD700").opacity(0.12)
+        case .sepia: return Color(hex: "#8B6F47").opacity(0.12)
+        }
+    }
+
+    /// Feature gradient colors for decorative backgrounds
+    var featureGradient: [Color] {
+        switch self {
+        case .light: return [Color(hex: "#0D7377").opacity(0.10), Color(hex: "#0A5F63").opacity(0.10)]
+        case .dark: return [Color(hex: "#14FFEC").opacity(0.15), Color(hex: "#0D7377").opacity(0.15)]
+        case .night: return [Color(hex: "#FFD700").opacity(0.12), Color(hex: "#14FFEC").opacity(0.10)]
+        case .sepia: return [Color(hex: "#8B6F47").opacity(0.12), Color(hex: "#6B5D47").opacity(0.10)]
+        }
+    }
+
+    /// Maps category color strings to theme-appropriate colors
+    func categoryColor(for colorName: String) -> Color {
+        switch colorName.lowercased() {
+        case "blue": return featureAccent
+        case "purple": return featureAccentSecondary
+        case "green": return Color(hex: "#0D7377")
+        case "yellow", "gold": return AppColors.primary.gold
+        case "orange": return Color.orange
+        case "red": return Color.red
+        case "brown": return Color.brown
+        case "pink": return Color.pink
+        case "teal": return AppColors.primary.teal
+        default: return textTertiary
+        }
+    }
+
     /// Active prayer card background (solid gold with high contrast text)
     var prayerActiveBackground: Color {
         AppColors.primary.gold  // #C7A566

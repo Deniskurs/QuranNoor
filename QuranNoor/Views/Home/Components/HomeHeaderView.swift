@@ -130,15 +130,15 @@ private extension HijriDate {
     HomeHeaderView(
         greeting: "As Salamu Alaykum",
         hijriDate: HijriDate(
+            day: 15,
+            month: HijriMonthData(number: 7, en: "Rajab", ar: "رَجَب", days: 30),
+            year: 1446,
+            weekday: WeekdayData(en: "Monday", ar: "الإثنين"),
             date: "15-07-1446",
             format: "DD-MM-YYYY",
-            day: "15",
-            weekday: Weekday(en: "Monday", ar: "الإثنين"),
-            month: HijriMonth(number: 7, en: "Rajab", ar: "رَجَب", days: 30),
-            year: "1446",
-            designation: Designation(abbreviated: "AH", expanded: "Anno Hegirae"),
+            designation: DesignationData(abbreviated: "AH", expanded: "Anno Hegirae"),
             holidays: ["Laylat al-Mi'raj"],
-            adjustedHolidays: nil,
+            adjustedHolidays: [],
             method: nil
         )
     )
@@ -151,15 +151,15 @@ private extension HijriDate {
     HomeHeaderView(
         greeting: "As Salamu Alaykum",
         hijriDate: HijriDate(
+            day: 1,
+            month: HijriMonthData(number: 9, en: "Ramadan", ar: "رَمَضان", days: 30),
+            year: 1446,
+            weekday: WeekdayData(en: "Saturday", ar: "السبت"),
             date: "01-09-1446",
             format: "DD-MM-YYYY",
-            day: "1",
-            weekday: Weekday(en: "Saturday", ar: "السبت"),
-            month: HijriMonth(number: 9, en: "Ramadan", ar: "رَمَضان", days: 30),
-            year: "1446",
-            designation: Designation(abbreviated: "AH", expanded: "Anno Hegirae"),
+            designation: DesignationData(abbreviated: "AH", expanded: "Anno Hegirae"),
             holidays: ["First Day of Ramadan"],
-            adjustedHolidays: nil,
+            adjustedHolidays: [],
             method: nil
         )
     )

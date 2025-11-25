@@ -127,7 +127,7 @@ struct SettingsView: View {
                         ThemedText.heading("Madhab and Asr Time")
                         ThemedText.body("The chosen madhab affects only the Asr time: \n• Shafi / Standard: Asr begins when an object's shadow equals its length (after noon).\n• Hanafi: Asr begins when the shadow is twice the object's length.")
                         ThemedText.caption("Tip: If you are unsure, Shafi / Standard is commonly used in many regions.")
-                            .foregroundColor(AppColors.primary.teal)
+                            .foregroundColor(themeManager.currentTheme.featureAccent)
                     }
                     .padding()
                 }
@@ -194,7 +194,7 @@ struct SettingsView: View {
                         ThemedText.heading("About the Developer")
                         ThemedText.body("Qur'an Noor Team is dedicated to crafting a serene and accurate experience for prayer times, Qur'an reading, and spiritual tools.")
                         ThemedText.caption("Contact")
-                            .foregroundColor(AppColors.primary.teal)
+                            .foregroundColor(themeManager.currentTheme.featureAccent)
                         VStack(alignment: .leading, spacing: 8) {
                             Link("Website", destination: URL(string: "https://example.com")!)
                             Link("Support Email", destination: URL(string: "mailto:support@example.com")!)
@@ -377,7 +377,7 @@ struct SettingsView: View {
                             progressFeatureItem(
                                 icon: "chart.bar.fill",
                                 title: "Statistics",
-                                color: AppColors.primary.teal
+                                color: themeManager.currentTheme.featureAccent
                             )
 
                             progressFeatureItem(
@@ -447,7 +447,7 @@ struct SettingsView: View {
                             icon: "globe",
                             title: "Madhab",
                             value: prayerVM.selectedMadhab.rawValue,
-                            color: AppColors.primary.teal
+                            color: themeManager.currentTheme.featureAccent
                         )
                     }
 
@@ -540,7 +540,7 @@ struct SettingsView: View {
                         HStack(spacing: 12) {
                             Image(systemName: "speaker.wave.2.fill")
                                 .font(.system(size: 20))
-                                .foregroundColor(AppColors.primary.teal)
+                                .foregroundColor(themeManager.currentTheme.featureAccent)
                                 .frame(width: 32)
 
                             VStack(alignment: .leading, spacing: 2) {
@@ -641,7 +641,7 @@ struct SettingsView: View {
                         HStack(spacing: 12) {
                             Image(systemName: "heart.fill")
                                 .font(.system(size: 20))
-                                .foregroundColor(AppColors.primary.teal)
+                                .foregroundColor(themeManager.currentTheme.featureAccent)
                                 .frame(width: 32)
 
                             ThemedText.body("Rate This App")
@@ -696,7 +696,7 @@ struct SettingsView: View {
                         HStack(spacing: 12) {
                             Image(systemName: "speaker.wave.3.fill")
                                 .font(.system(size: 20))
-                                .foregroundColor(AppColors.primary.teal)
+                                .foregroundColor(themeManager.currentTheme.featureAccent)
                                 .frame(width: 32)
 
                             ThemedText.body("Test Audio Playback")

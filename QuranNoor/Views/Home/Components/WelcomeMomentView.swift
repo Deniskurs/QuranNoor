@@ -33,7 +33,7 @@ struct WelcomeMomentView: View {
                 // Animated crescent moon icon
                 Image(systemName: "moon.stars.fill")
                     .font(.system(size: 72))
-                    .foregroundColor(AppColors.primary.teal)
+                    .foregroundColor(themeManager.currentTheme.featureAccent)
                     .scaleEffect(animationPhase == 0 ? 0.5 : 1.0)
                     .opacity(animationPhase == 0 ? 0 : 1)
 
@@ -62,7 +62,7 @@ struct WelcomeMomentView: View {
                     VStack(spacing: 16) {
                         suggestionRow(
                             icon: "book.pages",
-                            iconColor: AppColors.primary.teal,
+                            iconColor: themeManager.currentTheme.featureAccent,
                             title: "Read Today's Verse",
                             subtitle: "Inspire yourself with a beautiful Quranic message",
                             isPrimary: true
@@ -120,7 +120,7 @@ struct WelcomeMomentView: View {
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
-                        .background(AppColors.primary.teal)
+                        .background(themeManager.currentTheme.featureAccent)
                         .cornerRadius(16)
                 }
                 .padding(.horizontal, 32)

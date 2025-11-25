@@ -43,24 +43,24 @@ struct HijriCalendarCard: View {
 
                         HStack(alignment: .firstTextBaseline, spacing: 8) {
                             // Day
-                            Text(hijri.day)
+                            Text("\(hijri.day)")
                                 .font(.system(size: 48, weight: .light))
                                 .foregroundColor(themeManager.currentTheme.accentSecondary)
 
                             // Year
-                            Text(hijri.year + " AH")
+                            Text("\(hijri.year) AH")
                                 .font(.title3)
                                 .foregroundColor(themeManager.currentTheme.textSecondary)
                         }
                     }
 
                     // Special occasions
-                    if let holidays = hijri.holidays, !holidays.isEmpty {
+                    if !hijri.holidays.isEmpty {
                         Divider()
                             .background(themeManager.currentTheme.textTertiary.opacity(0.3))
 
                         VStack(alignment: .leading, spacing: 8) {
-                            ForEach(holidays, id: \.self) { holiday in
+                            ForEach(hijri.holidays, id: \.self) { holiday in
                                 HStack(spacing: 8) {
                                     Image(systemName: "star.circle.fill")
                                         .font(.caption)
@@ -140,7 +140,7 @@ struct HijriCalendarCard: View {
         if currentMonth < ramadanMonth {
             // Approximate days (29.5 days per month average)
             let monthsUntil = ramadanMonth - currentMonth
-            return monthsUntil * 30 - (Int(hijri.day) ?? 0)
+            return monthsUntil * 30 - hijri.day
         } else if currentMonth > ramadanMonth {
             // Next year's Ramadan
             let monthsUntil = (12 - currentMonth) + ramadanMonth
@@ -157,8 +157,8 @@ struct HijriCalendarCard: View {
 
         var text = "Islamic date: \(hijri.day) \(hijri.month.en) \(hijri.year) after Hijra."
 
-        if let holidays = hijri.holidays, !holidays.isEmpty {
-            text += " Today is \(holidays.joined(separator: " and "))."
+        if !hijri.holidays.isEmpty {
+            text += " Today is \(hijri.holidays.joined(separator: " and "))."
         }
 
         if hijri.month.number != 9, let daysUntil = calculateDaysUntilRamadan(from: hijri) {
@@ -174,15 +174,15 @@ struct HijriCalendarCard: View {
 #Preview("With Holiday") {
     HijriCalendarCard(
         hijriDate: HijriDate(
+            day: 15,
+            month: HijriMonthData(number: 7, en: "Rajab", ar: "رَجَب", days: 30),
+            year: 1446,
+            weekday: WeekdayData(en: "Monday", ar: "الإثنين"),
             date: "15-07-1446",
             format: "DD-MM-YYYY",
-            day: "15",
-            weekday: Weekday(en: "Monday", ar: "الإثنين"),
-            month: HijriMonth(number: 7, en: "Rajab", ar: "رَجَب", days: 30),
-            year: "1446",
-            designation: Designation(abbreviated: "AH", expanded: "Anno Hegirae"),
+            designation: DesignationData(abbreviated: "AH", expanded: "Anno Hegirae"),
             holidays: ["Laylat al-Mi'raj"],
-            adjustedHolidays: nil,
+            adjustedHolidays: [],
             method: nil
         )
     )
@@ -194,15 +194,15 @@ struct HijriCalendarCard: View {
 #Preview("Ramadan") {
     HijriCalendarCard(
         hijriDate: HijriDate(
+            day: 1,
+            month: HijriMonthData(number: 9, en: "Ramadan", ar: "رَمَضان", days: 30),
+            year: 1446,
+            weekday: WeekdayData(en: "Saturday", ar: "السبت"),
             date: "01-09-1446",
             format: "DD-MM-YYYY",
-            day: "1",
-            weekday: Weekday(en: "Saturday", ar: "السبت"),
-            month: HijriMonth(number: 9, en: "Ramadan", ar: "رَمَضان", days: 30),
-            year: "1446",
-            designation: Designation(abbreviated: "AH", expanded: "Anno Hegirae"),
+            designation: DesignationData(abbreviated: "AH", expanded: "Anno Hegirae"),
             holidays: ["First Day of Ramadan"],
-            adjustedHolidays: nil,
+            adjustedHolidays: [],
             method: nil
         )
     )
@@ -214,15 +214,15 @@ struct HijriCalendarCard: View {
 #Preview("No Holiday") {
     HijriCalendarCard(
         hijriDate: HijriDate(
+            day: 10,
+            month: HijriMonthData(number: 3, en: "Rabi' al-awwal", ar: "رَبيع الأوّل", days: 29),
+            year: 1446,
+            weekday: WeekdayData(en: "Wednesday", ar: "الأربعاء"),
             date: "10-03-1446",
             format: "DD-MM-YYYY",
-            day: "10",
-            weekday: Weekday(en: "Wednesday", ar: "الأربعاء"),
-            month: HijriMonth(number: 3, en: "Rabi' al-awwal", ar: "رَبيع الأوّل", days: 29),
-            year: "1446",
-            designation: Designation(abbreviated: "AH", expanded: "Anno Hegirae"),
-            holidays: nil,
-            adjustedHolidays: nil,
+            designation: DesignationData(abbreviated: "AH", expanded: "Anno Hegirae"),
+            holidays: [],
+            adjustedHolidays: [],
             method: nil
         )
     )
@@ -241,15 +241,15 @@ struct HijriCalendarCard: View {
 #Preview("Dark Mode") {
     HijriCalendarCard(
         hijriDate: HijriDate(
+            day: 15,
+            month: HijriMonthData(number: 7, en: "Rajab", ar: "رَجَب", days: 30),
+            year: 1446,
+            weekday: WeekdayData(en: "Monday", ar: "الإثنين"),
             date: "15-07-1446",
             format: "DD-MM-YYYY",
-            day: "15",
-            weekday: Weekday(en: "Monday", ar: "الإثنين"),
-            month: HijriMonth(number: 7, en: "Rajab", ar: "رَجَب", days: 30),
-            year: "1446",
-            designation: Designation(abbreviated: "AH", expanded: "Anno Hegirae"),
+            designation: DesignationData(abbreviated: "AH", expanded: "Anno Hegirae"),
             holidays: ["Laylat al-Mi'raj"],
-            adjustedHolidays: nil,
+            adjustedHolidays: [],
             method: nil
         )
     )

@@ -81,7 +81,7 @@ struct PrayerTimeCard: View {
                                 Text(countdown)
                                     .font(.system(size: 14, weight: .medium))
                             }
-                            .foregroundColor(AppColors.primary.teal)
+                            .foregroundColor(themeManager.currentTheme.featureAccent)
                         }
                     }
 

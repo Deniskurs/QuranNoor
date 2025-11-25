@@ -27,7 +27,7 @@ struct LocationPrimingView: View {
                 // Pulsing rings
                 ForEach(0..<3) { index in
                     Circle()
-                        .stroke(AppColors.primary.teal.opacity(0.3), lineWidth: 2)
+                        .stroke(themeManager.currentTheme.featureAccent.opacity(0.3), lineWidth: 2)
                         .frame(width: 120 + CGFloat(index * 30), height: 120 + CGFloat(index * 30))
                         .scaleEffect(animateIcon ? 1.2 : 0.8)
                         .opacity(animateIcon ? 0 : 0.6)
@@ -45,8 +45,8 @@ struct LocationPrimingView: View {
                         .fill(
                             RadialGradient(
                                 colors: [
-                                    AppColors.primary.teal.opacity(0.3),
-                                    AppColors.primary.teal.opacity(0.1)
+                                    themeManager.currentTheme.featureAccent.opacity(0.3),
+                                    themeManager.currentTheme.featureAccent.opacity(0.1)
                                 ],
                                 center: .center,
                                 startRadius: 0,
@@ -57,7 +57,7 @@ struct LocationPrimingView: View {
 
                     Image(systemName: "map.fill")
                         .font(.system(size: 60))
-                        .foregroundColor(AppColors.primary.teal)
+                        .foregroundColor(themeManager.currentTheme.featureAccent)
                         .symbolEffect(.pulse, value: animateIcon)
                 }
             }
@@ -88,19 +88,19 @@ struct LocationPrimingView: View {
                 benefitRow(
                     icon: "clock.badge.checkmark.fill",
                     text: "Precise prayer times based on your exact location",
-                    color: AppColors.primary.teal
+                    color: themeManager.currentTheme.featureAccent
                 )
 
                 benefitRow(
                     icon: "location.north.fill",
                     text: "Accurate Qibla direction to Mecca",
-                    color: AppColors.primary.teal
+                    color: themeManager.currentTheme.featureAccent
                 )
 
                 benefitRow(
                     icon: "bell.badge.fill",
                     text: "Location-aware prayer notifications",
-                    color: AppColors.primary.teal
+                    color: themeManager.currentTheme.featureAccent
                 )
             }
             .padding(.horizontal, 40)
@@ -152,7 +152,7 @@ struct LocationPrimingView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
-                .tint(AppColors.primary.teal)
+                .tint(themeManager.currentTheme.featureAccent)
 
                 Button {
                     onSkip()

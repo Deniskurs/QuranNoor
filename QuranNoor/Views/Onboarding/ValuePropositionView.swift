@@ -126,6 +126,35 @@ struct ValuePropositionView: View {
                     }
                 }
 
+                // MARK: - Preview Banner
+                HStack(spacing: 6) {
+                    Image(systemName: "eye.fill")
+                        .font(.caption2)
+                    Text("App Preview")
+                        .font(.caption.weight(.semibold))
+                    Text("—")
+                        .font(.caption2)
+                    Text("Try it out!")
+                        .font(.caption)
+                }
+                .foregroundColor(.white)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(
+                    Capsule()
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    themeManager.currentTheme.accentPrimary,
+                                    themeManager.currentTheme.accentSecondary
+                                ],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                )
+                .accessibilityLabel("This is an app preview. Try interacting with the demo below.")
+
                 // MARK: - Demo Area
                 ZStack {
                     if selectedDemo == .quran {

@@ -13,7 +13,7 @@ import Combine
 /// Response data from Aladhan Hijri calendar API (already unwrapped by APIClient)
 struct HijriCalendarResponse: Codable {
     let gregorian: GregorianDate
-    let hijri: HijriDate
+    let hijri: APIHijriDate
 }
 
 struct GregorianDate: Codable {
@@ -27,12 +27,12 @@ struct GregorianDate: Codable {
     let lunarSighting: Bool?
 }
 
-struct HijriDate: Codable {
+struct APIHijriDate: Codable {
     let date: String
     let format: String
     let day: String
     let weekday: Weekday
-    let month: HijriMonth
+    let month: APIHijriMonth
     let year: String
     let designation: Designation
     let holidays: [String]?
@@ -50,7 +50,7 @@ struct Month: Codable {
     let en: String
 }
 
-struct HijriMonth: Codable {
+struct APIHijriMonth: Codable {
     let number: Int
     let en: String
     let ar: String
@@ -82,7 +82,8 @@ class HijriCalendarService {
         dateFormatter.dateFormat = "dd-MM-yyyy"
         let todayString = dateFormatter.string(from: Date())
 
-        return try await convertGregorianToHijri(date: todayString)
+        let apiDate = try await convertGregorianToHijriInternal(date: todayString)
+        return convertToDomainModel(apiDate)
     }
 
     /// Get cached Hijri date (synchronous version using cached data only)
@@ -99,7 +100,7 @@ class HijriCalendarService {
                 // Check expiration
                 if Date() <= cachedEntry.expirationDate {
                     if let cachedResponse = try? decoder.decode(HijriCalendarResponse.self, from: cachedEntry.data) {
-                        return cachedResponse.hijri
+                        return convertToDomainModel(cachedResponse.hijri)
                     }
                 } else {
                     // Expired, remove it
@@ -111,8 +112,8 @@ class HijriCalendarService {
         return nil
     }
 
-    /// Convert Gregorian date to Hijri
-    func convertGregorianToHijri(date: String) async throws -> HijriDate {
+    /// Convert Gregorian date to Hijri (internal - returns API model)
+    private func convertGregorianToHijriInternal(date: String) async throws -> APIHijriDate {
         let response: HijriCalendarResponse = try await apiClient.fetch(
             endpoint: .hijriCalendar(date),
             cacheKey: hijriDateCacheKey(for: date)
@@ -130,18 +131,21 @@ class HijriCalendarService {
 
     /// Get formatted Hijri date string
     func getFormattedHijriDate(hijriDate: HijriDate) -> String {
-        return "\(hijriDate.day) \(hijriDate.month.en) \(hijriDate.year) \(hijriDate.designation.abbreviated)"
+        return hijriDate.formatted
     }
 
     /// Get formatted Hijri date string in Arabic
     func getFormattedHijriDateArabic(hijriDate: HijriDate) -> String {
-        return "\(hijriDate.day) \(hijriDate.month.ar) \(hijriDate.year) \(hijriDate.designation.abbreviated)"
+        return hijriDate.formattedArabic
     }
 
     /// Check if today is an Islamic holiday
     func getTodayHolidays() async throws -> [String] {
-        let hijriDate = try await getCurrentHijriDate()
-        return hijriDate.holidays ?? []
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "dd-MM-yyyy"
+        let todayString = dateFormatter.string(from: Date())
+        let apiDate = try await convertGregorianToHijriInternal(date: todayString)
+        return apiDate.holidays ?? []
     }
 
     /// Get Hijri month name (English)
@@ -173,20 +177,20 @@ class HijriCalendarService {
     /// Get days until Ramadan
     func getDaysUntilRamadan() async throws -> Int {
         let hijriDate = try await getCurrentHijriDate()
-        let currentMonth = hijriDate.month.number
-        let currentDay = Int(hijriDate.day) ?? 1
+        let currentMonth = hijriDate.month
+        let currentDay = hijriDate.day
 
-        if currentMonth == 9 {
+        if currentMonth.number == 9 {
             // Already in Ramadan
             return 0
-        } else if currentMonth < 9 {
+        } else if currentMonth.number < 9 {
             // Ramadan is later this year
-            let monthsUntilRamadan = 9 - currentMonth
+            let monthsUntilRamadan = 9 - currentMonth.number
             // Approximate calculation (each month ~29-30 days)
             return (monthsUntilRamadan * 30) - currentDay
         } else {
             // Ramadan is next year
-            let monthsUntilNextYear = 12 - currentMonth
+            let monthsUntilNextYear = 12 - currentMonth.number
             let monthsUntilRamadan = monthsUntilNextYear + 9
             return (monthsUntilRamadan * 30) - currentDay
         }
@@ -220,6 +224,33 @@ class HijriCalendarService {
         keys.filter { $0.hasPrefix("cache_hijri_date_") }.forEach { key in
             userDefaults.removeObject(forKey: key)
         }
+    }
+
+    /// Convert API Hijri date to domain model
+    private func convertToDomainModel(_ apiDate: APIHijriDate) -> HijriDate {
+        return HijriDate(
+            day: Int(apiDate.day) ?? 1,
+            month: HijriMonthData(
+                number: apiDate.month.number,
+                en: apiDate.month.en,
+                ar: apiDate.month.ar,
+                days: apiDate.month.days
+            ),
+            year: Int(apiDate.year) ?? 1400,
+            weekday: WeekdayData(
+                en: apiDate.weekday.en,
+                ar: apiDate.weekday.ar ?? ""
+            ),
+            date: apiDate.date,
+            format: apiDate.format,
+            designation: DesignationData(
+                abbreviated: apiDate.designation.abbreviated,
+                expanded: apiDate.designation.expanded
+            ),
+            holidays: apiDate.holidays ?? [],
+            adjustedHolidays: apiDate.adjustedHolidays ?? [],
+            method: apiDate.method
+        )
     }
 }
 

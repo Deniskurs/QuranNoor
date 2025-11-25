@@ -35,8 +35,7 @@ struct LocationAndCalculationView: View {
         ("Egypt", "Egyptian General Authority", "Egyptian authority standard", "Egypt, Sudan, Africa"),
         ("Makkah", "Umm al-Qura", "Used in Saudi Arabia", "Saudi Arabia, Middle East"),
         ("Karachi", "University of Islamic Sciences", "Standard for South Asia", "Pakistan, India, Bangladesh, Afghanistan"),
-        ("Tehran", "Institute of Geophysics", "Standard for Iran", "Iran, Azerbaijan, parts of Russia"),
-        ("Jafari", "Shia Ithna-Ashari", "Shia calculation method", "Shia communities worldwide")
+        ("Tehran", "Institute of Geophysics", "Standard for Iran", "Iran, Azerbaijan, parts of Russia")
     ]
 
     // MARK: - Body

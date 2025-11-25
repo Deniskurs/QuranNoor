@@ -109,9 +109,9 @@ struct LiquidGlassCardView<Content: View>: View {
         case .light:
             return Color(hex: "#E8DCC8").opacity(intensity.tintOpacity * 0.5)  // Warm gold tint
         case .dark:
-            return AppColors.primary.teal.opacity(intensity.tintOpacity * 0.7)
+            return themeManager.currentTheme.featureAccent.opacity(intensity.tintOpacity * 0.7)
         case .night:
-            return AppColors.primary.teal.opacity(intensity.tintOpacity * 0.5)
+            return themeManager.currentTheme.featureAccent.opacity(intensity.tintOpacity * 0.5)
         case .sepia:
             return AppColors.primary.gold.opacity(intensity.tintOpacity)
         }

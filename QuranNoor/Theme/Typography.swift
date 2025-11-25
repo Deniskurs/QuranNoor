@@ -33,13 +33,19 @@ struct AppTypography {
     // MARK: - Interactive
     static let button = Font.system(size: FontSizes.base, weight: .semibold, design: .default)
 
-    // MARK: - Arabic Text
-    static let arabicVerse = Font.custom("UthmanicHafs", size: FontSizes.xl)
-    static let arabicTitle = Font.custom("UthmanicHafs", size: FontSizes.xxl)
+    // MARK: - Arabic Text (Uthmanic Hafs)
+    static let arabicVerse = Font.custom("KFGQPC HAFS Uthmanic Script Regular", size: FontSizes.xl)
+    static let arabicTitle = Font.custom("KFGQPC HAFS Uthmanic Script Regular", size: FontSizes.xxl)
+    static let arabicLarge = Font.custom("KFGQPC HAFS Uthmanic Script Regular", size: FontSizes.xxxl)
 
     // MARK: - Fallback Arabic (system font)
     static let arabicVerseSystem = Font.system(size: FontSizes.xl, weight: .regular, design: .default)
     static let arabicTitleSystem = Font.system(size: FontSizes.xxl, weight: .medium, design: .default)
+
+    // MARK: - Scalable Arabic fonts for user preferences
+    static func arabicScalable(size: CGFloat) -> Font {
+        Font.custom("KFGQPC HAFS Uthmanic Script Regular", size: size)
+    }
 }
 
 // MARK: - Text Styles
@@ -69,7 +75,12 @@ extension Text {
     }
 
     func arabicVerseStyle() -> some View {
-        self.font(AppTypography.arabicVerseSystem) // Using system font fallback
+        self.font(AppTypography.arabicVerse) // Using Uthmanic Hafs font
             .lineSpacing(8)
+    }
+
+    func arabicTitleStyle() -> some View {
+        self.font(AppTypography.arabicTitle)
+            .lineSpacing(6)
     }
 }

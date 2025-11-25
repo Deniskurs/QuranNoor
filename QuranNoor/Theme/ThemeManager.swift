@@ -62,6 +62,23 @@ class ThemeManager {
         currentTheme.cardColor
     }
 
+    // MARK: - Feature Colors (Theme-Aware)
+    var featureAccent: Color {
+        currentTheme.featureAccent
+    }
+
+    var featureAccentSecondary: Color {
+        currentTheme.featureAccentSecondary
+    }
+
+    var featureBackgroundTint: Color {
+        currentTheme.featureBackgroundTint
+    }
+
+    var featureGradient: [Color] {
+        currentTheme.featureGradient
+    }
+
     // MARK: - Initialization
     init() {
         // Load saved theme or default to light
