@@ -32,7 +32,7 @@ struct WelcomeView: View {
 
                 Image(systemName: "book.fill")
                     .font(.system(size: 60))
-                    .foregroundColor(.white)
+                    .foregroundColor(themeManager.currentTheme.backgroundColor)
             }
 
             // Welcome text

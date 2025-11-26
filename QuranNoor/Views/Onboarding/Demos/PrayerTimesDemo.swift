@@ -14,14 +14,16 @@ struct PrayerTimesDemo: View {
     @State private var currentTime = Date()
     @State private var selectedPrayer = 2 // Asr (upcoming)
 
-    // Sample prayer times
-    private let prayers: [(name: String, time: String, icon: String, color: Color)] = [
-        ("Fajr", "05:42 AM", "sunrise.fill", ThemeMode.light.featureAccent),
-        ("Dhuhr", "12:35 PM", "sun.max.fill", AppColors.primary.gold),
-        ("Asr", "03:48 PM", "sun.haze.fill", Color.orange),
-        ("Maghrib", "06:22 PM", "sunset.fill", Color.pink),
-        ("Isha", "07:45 PM", "moon.stars.fill", Color.indigo)
-    ]
+    // Sample prayer times - colors will be resolved dynamically based on theme
+    private var prayers: [(name: String, time: String, icon: String, color: Color)] {
+        [
+            ("Fajr", "05:42 AM", "sunrise.fill", themeManager.currentTheme.featureAccent),
+            ("Dhuhr", "12:35 PM", "sun.max.fill", themeManager.currentTheme.accentSecondary),
+            ("Asr", "03:48 PM", "sun.haze.fill", themeManager.currentTheme.accentInteractive),
+            ("Maghrib", "06:22 PM", "sunset.fill", themeManager.currentTheme.accentPrimary),
+            ("Isha", "07:45 PM", "moon.stars.fill", themeManager.currentTheme.featureAccent)
+        ]
+    }
 
     // MARK: - Body
     var body: some View {
@@ -32,7 +34,7 @@ struct PrayerTimesDemo: View {
                     Image(systemName: "mappin.circle.fill")
                         .foregroundColor(themeManager.currentTheme.featureAccent)
                     ThemedText("San Francisco, CA", style: .heading)
-                        .foregroundColor(AppColors.primary.green)
+                        .foregroundColor(themeManager.currentTheme.accentPrimary)
                 }
 
                 // Hijri date
@@ -42,13 +44,13 @@ struct PrayerTimesDemo: View {
                     Text("21 Jumada al-Awwal 1446")
                         .font(.caption)
                 }
-                .foregroundColor(.secondary)
+                .foregroundColor(themeManager.currentTheme.textSecondary)
             }
             .padding(.vertical, 16)
             .frame(maxWidth: .infinity)
             .background(
                 themeManager.currentTheme.cardColor
-                    .shadow(color: .black.opacity(0.05), radius: 2, y: 2)
+                    .shadow(color: themeManager.currentTheme.textPrimary.opacity(0.05), radius: 2, y: 2)
             )
 
             Divider()
@@ -87,7 +89,7 @@ struct PrayerTimesDemo: View {
         }
         .background(themeManager.currentTheme.backgroundColor)
         .clipShape(RoundedRectangle(cornerRadius: 16))
-        .shadow(color: .black.opacity(0.1), radius: 8, y: 4)
+        .shadow(color: themeManager.currentTheme.textPrimary.opacity(0.1), radius: 8, y: 4)
         .task {
             // Modern timer pattern - automatically cancels when view disappears
             while !Task.isCancelled {
@@ -115,7 +117,7 @@ struct PrayerTimesDemo: View {
             // Prayer name
             Text(prayers[selectedPrayer].name)
                 .font(.system(size: 32, weight: .bold, design: .rounded))
-                .foregroundColor(AppColors.primary.green)
+                .foregroundColor(themeManager.currentTheme.accentPrimary)
 
             // Countdown timer
             HStack(spacing: 4) {
@@ -159,10 +161,10 @@ struct PrayerTimesDemo: View {
                 VStack(spacing: 4) {
                     Text("65%")
                         .font(.title2.weight(.bold))
-                        .foregroundColor(AppColors.primary.green)
+                        .foregroundColor(themeManager.currentTheme.accentPrimary)
                     Text("of day passed")
                         .font(.caption2)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(themeManager.currentTheme.textSecondary)
                 }
             }
             .frame(width: 120, height: 120)
@@ -255,7 +257,7 @@ struct PrayerTimesDemo: View {
                             Text("Prayed")
                                 .font(.caption2)
                         }
-                        .foregroundColor(AppColors.primary.green)
+                        .foregroundColor(themeManager.currentTheme.featureAccent)
                     }
                 }
 

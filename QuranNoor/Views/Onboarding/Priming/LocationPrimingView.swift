@@ -71,7 +71,7 @@ struct LocationPrimingView: View {
             // MARK: - Title
             VStack(spacing: 12) {
                 ThemedText("See Your Exact Prayer Times", style: .title)
-                    .foregroundColor(AppColors.primary.green)
+                    .foregroundColor(themeManager.currentTheme.accentPrimary)
                     .multilineTextAlignment(.center)
 
                 ThemedText.body("We use your location once to calculate accurate prayer times for your area")
@@ -112,7 +112,7 @@ struct LocationPrimingView: View {
             HStack(spacing: 12) {
                 Image(systemName: "lock.shield.fill")
                     .font(.system(size: 24))
-                    .foregroundColor(AppColors.primary.gold)
+                    .foregroundColor(themeManager.currentTheme.accentSecondary)
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Your Privacy is Protected")
@@ -121,7 +121,7 @@ struct LocationPrimingView: View {
 
                     Text("Your location stays on your device and is never shared or tracked")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(themeManager.currentTheme.textSecondary)
                 }
 
                 Spacer()
@@ -129,10 +129,10 @@ struct LocationPrimingView: View {
             .padding(16)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(AppColors.primary.gold.opacity(0.1))
+                    .fill(themeManager.currentTheme.accentSecondary.opacity(0.1))
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
-                            .stroke(AppColors.primary.gold.opacity(0.3), lineWidth: 1)
+                            .stroke(themeManager.currentTheme.accentSecondary.opacity(0.3), lineWidth: 1)
                     )
             )
             .padding(.horizontal, 32)

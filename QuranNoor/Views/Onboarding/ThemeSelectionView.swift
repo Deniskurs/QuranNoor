@@ -195,7 +195,7 @@ struct ThemeOptionCard: View {
                             if isSuggested {
                                 Text("SUGGESTED")
                                     .font(.caption2.weight(.bold))
-                                    .foregroundColor(.white)
+                                    .foregroundColor(themeManager.currentTheme.backgroundColor)
                                     .padding(.horizontal, 8)
                                     .padding(.vertical, 4)
                                     .background(
@@ -312,50 +312,20 @@ extension ThemeMode {
         }
     }
 
+    /// Accent color used in theme selection UI - delegates to featureAccent from Colors.swift
     var accentColor: Color {
-        switch self {
-        case .light: return AppColors.primary.green  // Emerald - softer than teal
-        case .dark: return featureAccent             // Theme-appropriate accent
-        case .night: return AppColors.primary.gold
-        case .sepia: return Color(hex: "#C7A566")
-        }
+        featureAccent
     }
 
+    /// Creates a Theme struct for preview purposes, using the canonical color values from Colors.swift
     var theme: Theme {
-        switch self {
-        case .light:
-            return Theme(
-                name: "Light",
-                backgroundColor: Color(hex: "#F8F4EA"),
-                cardColor: .white,
-                textColor: Color(hex: "#1A2332"),
-                accentColor: AppColors.primary.green  // Emerald - softer than teal
-            )
-        case .dark:
-            return Theme(
-                name: "Dark",
-                backgroundColor: Color(hex: "#1A2332"),
-                cardColor: Color(hex: "#2A3442"),
-                textColor: Color(hex: "#F8F4EA"),
-                accentColor: featureAccent  // Theme-appropriate accent
-            )
-        case .night:
-            return Theme(
-                name: "Night",
-                backgroundColor: .black,
-                cardColor: Color(hex: "#1A1A1A"),
-                textColor: Color(hex: "#E5E5E5"),
-                accentColor: AppColors.primary.gold
-            )
-        case .sepia:
-            return Theme(
-                name: "Sepia",
-                backgroundColor: Color(hex: "#F4E8D0"),
-                cardColor: Color(hex: "#FFF9E6"),
-                textColor: Color(hex: "#5D4E37"),
-                accentColor: Color(hex: "#C7A566")
-            )
-        }
+        Theme(
+            name: displayName,
+            backgroundColor: backgroundColor,  // From Colors.swift
+            cardColor: cardColor,              // From Colors.swift
+            textColor: textPrimary,            // From Colors.swift
+            accentColor: featureAccent         // From Colors.swift
+        )
     }
 }
 

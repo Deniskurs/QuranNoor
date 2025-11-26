@@ -28,7 +28,7 @@ struct NotificationPrimingView: View {
                 // Pulsing rings
                 ForEach(0..<3) { index in
                     Circle()
-                        .stroke(AppColors.primary.gold.opacity(0.3), lineWidth: 2)
+                        .stroke(themeManager.currentTheme.featureAccent.opacity(0.3), lineWidth: 2)
                         .frame(width: 120 + CGFloat(index * 30), height: 120 + CGFloat(index * 30))
                         .scaleEffect(animateIcon ? 1.2 : 0.8)
                         .opacity(animateIcon ? 0 : 0.6)
@@ -46,8 +46,8 @@ struct NotificationPrimingView: View {
                         .fill(
                             RadialGradient(
                                 colors: [
-                                    AppColors.primary.gold.opacity(0.3),
-                                    AppColors.primary.gold.opacity(0.1)
+                                    themeManager.currentTheme.featureAccent.opacity(0.3),
+                                    themeManager.currentTheme.featureAccent.opacity(0.1)
                                 ],
                                 center: .center,
                                 startRadius: 0,
@@ -58,7 +58,7 @@ struct NotificationPrimingView: View {
 
                     Image(systemName: "bell.badge.fill")
                         .font(.system(size: 60))
-                        .foregroundColor(AppColors.primary.gold)
+                        .foregroundColor(themeManager.currentTheme.featureAccent)
                         .symbolEffect(.bounce, value: animateIcon)
                 }
             }
@@ -78,7 +78,7 @@ struct NotificationPrimingView: View {
             // MARK: - Title
             VStack(spacing: 12) {
                 ThemedText("Never Miss a Prayer", style: .title)
-                    .foregroundColor(AppColors.primary.green)
+                    .foregroundColor(themeManager.currentTheme.accentPrimary)
                     .multilineTextAlignment(.center)
 
                 ThemedText.body("Get gentle reminders before each prayer time so you can pray on time, every time")
@@ -103,25 +103,25 @@ struct NotificationPrimingView: View {
                 benefitRow(
                     icon: "clock.badge.checkmark",
                     text: "Timely reminders for all 5 daily prayers",
-                    color: AppColors.primary.gold
+                    color: themeManager.currentTheme.featureAccent
                 )
 
                 benefitRow(
                     icon: "speaker.wave.3.fill",
                     text: "Beautiful Adhan call to prayer (optional)",
-                    color: AppColors.primary.gold
+                    color: themeManager.currentTheme.featureAccent
                 )
 
                 benefitRow(
                     icon: "slider.horizontal.3",
                     text: "Fully customizable notification settings",
-                    color: AppColors.primary.gold
+                    color: themeManager.currentTheme.featureAccent
                 )
 
                 benefitRow(
                     icon: "moon.stars.fill",
                     text: "Special reminders for Tahajjud and Witr",
-                    color: AppColors.primary.gold
+                    color: themeManager.currentTheme.featureAccent
                 )
             }
             .padding(.horizontal, 40)
@@ -173,7 +173,7 @@ struct NotificationPrimingView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
-                .tint(AppColors.primary.gold)
+                .tint(themeManager.currentTheme.featureAccent)
 
                 Button {
                     onSkip()
@@ -198,7 +198,7 @@ struct NotificationPrimingView: View {
                 RoundedRectangle(cornerRadius: 8)
                     .fill(
                         LinearGradient(
-                            colors: [AppColors.primary.green, themeManager.currentTheme.featureAccent],
+                            colors: [themeManager.currentTheme.accentPrimary, themeManager.currentTheme.accentSecondary],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
@@ -206,7 +206,7 @@ struct NotificationPrimingView: View {
                     .frame(width: 40, height: 40)
 
                 Image(systemName: "moon.stars.fill")
-                    .foregroundColor(.white)
+                    .foregroundColor(themeManager.currentTheme.backgroundColor)
                     .font(.system(size: 20))
             }
 
@@ -237,7 +237,7 @@ struct NotificationPrimingView: View {
         .background(
             RoundedRectangle(cornerRadius: 12)
                 .fill(themeManager.currentTheme.cardColor)
-                .shadow(color: .black.opacity(0.1), radius: 8, y: 4)
+                .shadow(color: themeManager.currentTheme.textPrimary.opacity(0.1), radius: 8, y: 4)
         )
     }
 

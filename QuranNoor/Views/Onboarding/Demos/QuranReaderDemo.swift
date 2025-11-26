@@ -62,23 +62,23 @@ struct QuranReaderDemo: View {
                     Image(systemName: "book.closed.fill")
                         .foregroundColor(themeManager.currentTheme.featureAccent)
                     ThemedText("Surah Al-Fatiha", style: .heading)
-                        .foregroundColor(AppColors.primary.green)
+                        .foregroundColor(themeManager.currentTheme.accentPrimary)
                     Spacer()
                     Text("1:1-4")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(themeManager.currentTheme.textSecondary)
                 }
 
                 Text("The Opening")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(themeManager.currentTheme.textSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 12)
             .background(
                 themeManager.currentTheme.cardColor
-                    .shadow(color: .black.opacity(0.05), radius: 2, y: 2)
+                    .shadow(color: themeManager.currentTheme.textPrimary.opacity(0.05), radius: 2, y: 2)
             )
 
             Divider()
@@ -108,7 +108,7 @@ struct QuranReaderDemo: View {
                             RoundedRectangle(cornerRadius: 2)
                                 .fill(
                                     LinearGradient(
-                                        colors: [AppColors.primary.green, themeManager.currentTheme.featureAccent],
+                                        colors: [themeManager.currentTheme.accentPrimary, themeManager.currentTheme.featureAccent],
                                         startPoint: .leading,
                                         endPoint: .trailing
                                     )
@@ -176,7 +176,7 @@ struct QuranReaderDemo: View {
                             // Outer glow when playing
                             if isPlaying {
                                 Circle()
-                                    .fill(AppColors.primary.green.opacity(0.2))
+                                    .fill(themeManager.currentTheme.featureAccent.opacity(0.2))
                                     .frame(width: 64, height: 64)
                                     .scaleEffect(isPlaying ? 1.1 : 1.0)
                                     .animation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true), value: isPlaying)
@@ -184,7 +184,7 @@ struct QuranReaderDemo: View {
 
                             Image(systemName: isPlaying ? "pause.circle.fill" : "play.circle.fill")
                                 .font(.system(size: 48))
-                                .foregroundColor(AppColors.primary.green)
+                                .foregroundColor(themeManager.currentTheme.featureAccent)
                                 .symbolEffect(.bounce, value: audioService.playbackState)
                         }
                     }
@@ -240,7 +240,7 @@ struct QuranReaderDemo: View {
         }
         .background(themeManager.currentTheme.backgroundColor)
         .clipShape(RoundedRectangle(cornerRadius: 16))
-        .shadow(color: .black.opacity(0.1), radius: 8, y: 4)
+        .shadow(color: themeManager.currentTheme.textPrimary.opacity(0.1), radius: 8, y: 4)
         .onChange(of: audioService.currentVerseIndex) { _, newIndex in
             // Auto-advance page when verse changes during playback
             if audioService.playbackState == .playing && newIndex != currentPage {
@@ -273,18 +273,18 @@ struct QuranReaderDemo: View {
                         if isThisVersePlaying {
                             Image(systemName: "seal.fill")
                                 .font(.system(size: 52))
-                                .foregroundColor(AppColors.primary.green.opacity(0.3))
+                                .foregroundColor(themeManager.currentTheme.featureAccent.opacity(0.3))
                                 .scaleEffect(isThisVersePlaying ? 1.15 : 1.0)
                                 .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: isThisVersePlaying)
                         }
 
                         Image(systemName: "seal.fill")
                             .font(.system(size: 40))
-                            .foregroundColor(isThisVersePlaying ? AppColors.primary.green.opacity(0.4) : AppColors.primary.green.opacity(0.2))
+                            .foregroundColor(isThisVersePlaying ? themeManager.currentTheme.featureAccent.opacity(0.4) : themeManager.currentTheme.featureAccent.opacity(0.2))
 
                         Text("\(verseNumber)")
                             .font(.caption.weight(.bold))
-                            .foregroundColor(AppColors.primary.green)
+                            .foregroundColor(themeManager.currentTheme.featureAccent)
                     }
                     Spacer()
                 }
@@ -297,7 +297,7 @@ struct QuranReaderDemo: View {
                     .foregroundColor(themeManager.currentTheme.textColor)
                     .environment(\.layoutDirection, .rightToLeft)
                     .shadow(
-                        color: isThisVersePlaying ? AppColors.primary.green.opacity(0.3) : .clear,
+                        color: isThisVersePlaying ? themeManager.currentTheme.featureAccent.opacity(0.3) : .clear,
                         radius: isThisVersePlaying ? 8 : 0
                     )
                     .animation(.easeInOut(duration: 0.3), value: isThisVersePlaying)
@@ -335,7 +335,7 @@ struct QuranReaderDemo: View {
         // Highlight background when playing
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(isThisVersePlaying ? AppColors.primary.green.opacity(0.05) : Color.clear)
+                .fill(isThisVersePlaying ? themeManager.currentTheme.featureAccent.opacity(0.05) : Color.clear)
                 .animation(.easeInOut(duration: 0.3), value: isThisVersePlaying)
         )
     }

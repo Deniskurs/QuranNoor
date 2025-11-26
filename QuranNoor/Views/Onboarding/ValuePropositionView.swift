@@ -137,7 +137,7 @@ struct ValuePropositionView: View {
                     Text("Try it out!")
                         .font(.caption)
                 }
-                .foregroundColor(.white)
+                .foregroundColor(themeManager.currentTheme.backgroundColor)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
                 .background(

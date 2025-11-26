@@ -32,7 +32,7 @@ struct QiblaCompassDemo: View {
                     Image(systemName: "location.north.circle.fill")
                         .foregroundColor(themeManager.currentTheme.featureAccent)
                     ThemedText("Qibla Direction", style: .heading)
-                        .foregroundColor(AppColors.primary.green)
+                        .foregroundColor(themeManager.currentTheme.accentPrimary)
                 }
 
                 HStack(spacing: 4) {
@@ -41,13 +41,13 @@ struct QiblaCompassDemo: View {
                     Text(locationName)
                         .font(.caption)
                 }
-                .foregroundColor(.secondary)
+                .foregroundColor(themeManager.currentTheme.textSecondary)
             }
             .padding(.vertical, 16)
             .frame(maxWidth: .infinity)
             .background(
                 themeManager.currentTheme.cardColor
-                    .shadow(color: .black.opacity(0.05), radius: 2, y: 2)
+                    .shadow(color: themeManager.currentTheme.textPrimary.opacity(0.05), radius: 2, y: 2)
             )
 
             Divider()
@@ -63,7 +63,7 @@ struct QiblaCompassDemo: View {
                         HStack(spacing: 8) {
                             Image(systemName: "building.2.crop.circle.fill")
                                 .font(.title3)
-                                .foregroundColor(AppColors.primary.gold)
+                                .foregroundColor(themeManager.currentTheme.accentSecondary)
 
                             Text("Holy Kaaba, Makkah")
                                 .font(.headline)
@@ -73,11 +73,11 @@ struct QiblaCompassDemo: View {
                         HStack(spacing: 4) {
                             Text(distanceToMakkah)
                                 .font(.title.weight(.bold).monospacedDigit())
-                                .foregroundColor(AppColors.primary.green)
+                                .foregroundColor(themeManager.currentTheme.accentPrimary)
 
                             Text("km away")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(themeManager.currentTheme.textSecondary)
                         }
                     }
                     .padding(16)
@@ -118,11 +118,11 @@ struct QiblaCompassDemo: View {
                                         endRadius: 120
                                     )
                                 )
-                                .shadow(color: AppColors.primary.green.opacity(0.3), radius: 20)
+                                .shadow(color: themeManager.currentTheme.featureAccent.opacity(0.3), radius: 20)
 
                             // Outer ring
                             Circle()
-                                .stroke(AppColors.primary.green.opacity(0.3), lineWidth: 3)
+                                .stroke(themeManager.currentTheme.featureAccent.opacity(0.3), lineWidth: 3)
 
                             // Cardinal directions
                             ForEach([("N", 0.0), ("E", 90.0), ("S", 180.0), ("W", 270.0)], id: \.0) { direction in
@@ -147,21 +147,21 @@ struct QiblaCompassDemo: View {
                             VStack(spacing: 4) {
                                 Image(systemName: "house.fill")
                                     .font(.system(size: 32))
-                                    .foregroundColor(AppColors.primary.gold)
-                                    .shadow(color: AppColors.primary.gold.opacity(0.5), radius: 8)
+                                    .foregroundColor(themeManager.currentTheme.accentSecondary)
+                                    .shadow(color: themeManager.currentTheme.accentSecondary.opacity(0.5), radius: 8)
 
                                 Text("QIBLA")
                                     .font(.caption2.weight(.bold))
-                                    .foregroundColor(AppColors.primary.gold)
+                                    .foregroundColor(themeManager.currentTheme.accentSecondary)
                             }
                             .offset(y: -70)
                             .rotationEffect(.degrees(-compassRotation))
 
                             // Center dot
                             Circle()
-                                .fill(AppColors.primary.green)
+                                .fill(themeManager.currentTheme.featureAccent)
                                 .frame(width: 12, height: 12)
-                                .shadow(color: AppColors.primary.green.opacity(0.5), radius: 4)
+                                .shadow(color: themeManager.currentTheme.featureAccent.opacity(0.5), radius: 4)
 
                             // Direction arrow (device heading)
                             Image(systemName: "location.north.fill")
@@ -228,7 +228,7 @@ struct QiblaCompassDemo: View {
         }
         .background(themeManager.currentTheme.backgroundColor)
         .clipShape(RoundedRectangle(cornerRadius: 16))
-        .shadow(color: .black.opacity(0.1), radius: 8, y: 4)
+        .shadow(color: themeManager.currentTheme.textPrimary.opacity(0.1), radius: 8, y: 4)
         .onReceive(timer) { _ in
             // Simulate compass rotation for demo
             if !isCalibrating {

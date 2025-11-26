@@ -163,9 +163,9 @@ struct LocationAndCalculationView: View {
                                     HStack {
                                         ProgressView()
                                             .progressViewStyle(.circular)
-                                            .tint(.white)
+                                            .tint(themeManager.currentTheme.backgroundColor)
                                         Text("Requesting...")
-                                            .foregroundColor(.white)
+                                            .foregroundColor(themeManager.currentTheme.backgroundColor)
                                     }
                                     .frame(maxWidth: .infinity)
                                 } else {
@@ -496,7 +496,7 @@ struct MethodCard: View {
                         if isRecommended {
                             Text("RECOMMENDED")
                                 .font(.caption2.weight(.bold))
-                                .foregroundColor(.white)
+                                .foregroundColor(themeManager.currentTheme.backgroundColor)
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 4)
                                 .background(
