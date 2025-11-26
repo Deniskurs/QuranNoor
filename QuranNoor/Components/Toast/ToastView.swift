@@ -104,7 +104,7 @@ struct ToastView: View {
                 RoundedRectangle(cornerRadius: 12)
                     .fill(themeManager.currentTheme.cardColor)
                     .shadow(
-                        color: Color.black.opacity(0.15),
+                        color: themeManager.currentTheme.textPrimary.opacity(0.15),
                         radius: 12,
                         x: 0,
                         y: 4
@@ -215,30 +215,61 @@ extension View {
 
 // MARK: - Encouraging Messages Generator
 struct EncouragingMessages {
-    /// Get a random encouraging message for prayer completion
+    /// Get a stable encouraging message for prayer completion
+    /// Uses day of year + prayer name to provide variety without changing on every render
+    /// Now includes prayer-specific messages for more meaningful feedback
     static func prayerComplete(prayerName: String) -> String {
-        let messages = [
-            "Alhamdulillah",
-            "May Allah accept your prayer",
-            "Masha'Allah",
-            "Barakallahu feek",
-            "May your prayers be answered"
+        // Prayer-specific messages for more meaningful feedback
+        let prayerSpecificMessages: [String: [String]] = [
+            "fajr": [
+                "\(prayerName) complete! May your day be blessed",
+                "Alhamdulillah! \(prayerName) prayed on time",
+                "\(prayerName) done - angels witnessed your prayer"
+            ],
+            "dhuhr": [
+                "\(prayerName) complete! May Allah accept it",
+                "Alhamdulillah! \(prayerName) prayed",
+                "Masha'Allah! \(prayerName) completed"
+            ],
+            "asr": [
+                "\(prayerName) complete! Blessed afternoon",
+                "Alhamdulillah! \(prayerName) prayed",
+                "\(prayerName) done - afternoon blessed"
+            ],
+            "maghrib": [
+                "\(prayerName) complete! May it be accepted",
+                "Alhamdulillah! \(prayerName) prayed",
+                "Masha'Allah! Sunset prayer completed"
+            ],
+            "isha": [
+                "\(prayerName) complete! Rest peacefully",
+                "Alhamdulillah! Day's prayers completed",
+                "\(prayerName) done - may you have blessed dreams"
+            ]
         ]
-        return messages.randomElement() ?? "Alhamdulillah"
+
+        // Generic fallback messages
+        let genericMessages = [
+            "\(prayerName) complete! Alhamdulillah",
+            "May Allah accept your \(prayerName)",
+            "Masha'Allah! \(prayerName) prayed",
+            "Barakallahu feek - \(prayerName) done"
+        ]
+
+        // Try to get prayer-specific messages first
+        let messages = prayerSpecificMessages[prayerName.lowercased()] ?? genericMessages
+
+        // Use stable selection based on day and prayer name hash
+        let dayOfYear = Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 1
+        let prayerHash = abs(prayerName.hashValue)
+        let index = (dayOfYear + prayerHash) % messages.count
+        return messages[index]
     }
 
-    /// Get time-specific message
+    /// Get time-specific message (legacy - kept for compatibility)
     static func timeSpecific(prayerName: String) -> String {
-        switch prayerName.lowercased() {
-        case "fajr":
-            return "May Allah bless your early wake"
-        case "maghrib":
-            return "May your fast be accepted"  // Relevant during Ramadan
-        case "isha":
-            return "May Allah grant you restful sleep"
-        default:
-            return prayerComplete(prayerName: prayerName)
-        }
+        // Now delegates to prayerComplete which handles prayer-specific messages
+        return prayerComplete(prayerName: prayerName)
     }
 
     /// Streak achievement messages

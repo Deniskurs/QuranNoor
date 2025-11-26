@@ -19,6 +19,15 @@ struct CurrentPrayerHeader: View {
 
     @Environment(ThemeManager.self) var themeManager: ThemeManager
 
+    // MARK: - Stable Message Selection
+    /// Returns a stable index for message selection based on hour and prayer name
+    /// This prevents messages from changing on every render while still providing variety
+    private func stableIndex(for messages: [String], prayer: PrayerName) -> Int {
+        let hour = Calendar.current.component(.hour, from: Date())
+        let prayerHash = abs(prayer.rawValue.hashValue)
+        return (hour + prayerHash) % messages.count
+    }
+
     // MARK: - Body
 
     var body: some View {
@@ -229,7 +238,8 @@ struct CurrentPrayerHeader: View {
         }
 
         let prayerMessages = messages[prayer] ?? ["Time for \(prayer.displayName) Prayer"]
-        return prayerMessages.randomElement() ?? prayerMessages[0]
+        let index = stableIndex(for: prayerMessages, prayer: prayer)
+        return prayerMessages[index]
     }
 
     private func getUrgentMessage(for prayer: PrayerName) -> String {
@@ -262,7 +272,8 @@ struct CurrentPrayerHeader: View {
         ]
 
         let prayerMessages = urgentMessages[prayer] ?? ["\(prayer.displayName) Ending Soon"]
-        return prayerMessages.randomElement() ?? prayerMessages[0]
+        let index = stableIndex(for: prayerMessages, prayer: prayer)
+        return prayerMessages[index]
     }
 
     private func getBetweenPrayersMessage(for nextPrayer: PrayerName) -> String {
@@ -295,7 +306,8 @@ struct CurrentPrayerHeader: View {
         }
 
         let messages = betweenMessages[nextPrayer] ?? ["\(nextPrayer.displayName) Upcoming"]
-        return messages.randomElement() ?? messages[0]
+        let index = stableIndex(for: messages, prayer: nextPrayer)
+        return messages[index]
     }
 
     private func getAfterIshaMessage() -> String {
@@ -378,7 +390,9 @@ struct CurrentPrayerHeader: View {
         ]
 
         let prayerTips = tips[prayer] ?? []
-        return prayerTips.randomElement() ?? ""
+        guard !prayerTips.isEmpty else { return "" }
+        let index = stableIndex(for: prayerTips, prayer: prayer)
+        return prayerTips[index]
     }
 
     private func getUrgentTip(for prayer: PrayerName) -> String {
@@ -395,7 +409,9 @@ struct CurrentPrayerHeader: View {
         ]
 
         let prayerTips = tips[nextPrayer] ?? []
-        return prayerTips.randomElement() ?? ""
+        guard !prayerTips.isEmpty else { return "" }
+        let index = stableIndex(for: prayerTips, prayer: nextPrayer)
+        return prayerTips[index]
     }
 }
 

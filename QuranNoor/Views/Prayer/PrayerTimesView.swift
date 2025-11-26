@@ -276,12 +276,10 @@ struct PrayerTimesView: View {
                             completionService.toggleCompletion(prayer.name)
 
                             // Show encouraging toast only when marking complete
+                            // Note: Sound is already played by SmartPrayerRow
                             if isMarkingComplete {
                                 completedPrayerName = prayer.name.displayName
                                 showCompletionToast = true
-
-                                // Play toast notification sound
-                                AudioHapticCoordinator.shared.playToast()
                             }
                         }
                     )
