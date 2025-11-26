@@ -58,13 +58,13 @@ struct PrayerTimesPreviewCard: View {
                     Spacer()
 
                     Image(systemName: prayers[2].icon)
-                        .foregroundColor(AppColors.primary.green)
+                        .foregroundColor(theme.accentColor)
                 }
 
                 HStack {
                     Text(prayers[2].name)
                         .font(.title3.weight(.bold))
-                        .foregroundColor(AppColors.primary.green)
+                        .foregroundColor(theme.accentColor)
 
                     Spacer()
 
@@ -75,14 +75,14 @@ struct PrayerTimesPreviewCard: View {
 
                         Text("in 1h 23m")
                             .font(.caption)
-                            .foregroundColor(AppColors.primary.green)
+                            .foregroundColor(theme.accentColor)
                     }
                 }
             }
             .padding(12)
             .background(
                 RoundedRectangle(cornerRadius: 10)
-                    .fill(AppColors.primary.green.opacity(0.1))
+                    .fill(theme.accentColor.opacity(0.1))
             )
 
             // Other prayers
@@ -108,7 +108,7 @@ struct PrayerTimesPreviewCard: View {
                         if index < 2 {
                             Image(systemName: "checkmark.circle.fill")
                                 .font(.caption)
-                                .foregroundColor(AppColors.primary.green)
+                                .foregroundColor(theme.accentColor)
                         }
                     }
                 }
