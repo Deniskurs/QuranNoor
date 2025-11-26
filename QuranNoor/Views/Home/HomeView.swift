@@ -178,14 +178,9 @@ struct HomeView: View {
                 HijriCalendarCard(hijriDate: homeVM.currentHijriDate)
                     .transition(.scale.combined(with: .opacity))
 
-                // Recent activity feed
-                RecentActivityFeed(
-                    bookmarks: Array(quranVM.bookmarks.prefix(3)),
-                    lastReadSurah: quranVM.readingProgress?.lastReadSurah.description,
-                    lastReadVerse: quranVM.readingProgress?.lastReadVerse,
-                    prayersCompleted: PrayerCompletionService.shared.getTodayCompletionCount()
-                )
-                .transition(.move(edge: .bottom).combined(with: .opacity))
+                // Adhkar quick access
+                AdhkarQuickAccessCard()
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
             }
             .padding(.horizontal, Spacing.screenHorizontal) // 24pt edge spacing for all cards
             .padding(.vertical, Spacing.md) // Enhanced with specific spacing (24pt)

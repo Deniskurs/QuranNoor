@@ -24,6 +24,22 @@ struct MoreView: View {
 
                         // Main sections
                         VStack(spacing: Spacing.sm) {
+                            // Adhkar
+                            NavigationLink {
+                                AdhkarView()
+                            } label: {
+                                MoreMenuItem(
+                                    icon: "sparkles",
+                                    title: "Adhkar",
+                                    subtitle: "Daily remembrances",
+                                    accentColor: .teal
+                                )
+                            }
+                            .buttonStyle(PlainButtonStyle())
+
+                            Divider()
+                                .padding(.horizontal, Spacing.sm)
+
                             // Bookmarks
                             NavigationLink {
                                 BookmarksView()

@@ -47,19 +47,12 @@ struct ContentView: View {
                 }
                 .tag(3)
 
-            // Adhkar Tab
-            AdhkarView()
-                .tabItem {
-                    Label("Adhkar", systemImage: "sparkles")
-                }
-                .tag(4)
-
-            // More Tab
+            // More Tab (includes Adhkar access)
             MoreView()
                 .tabItem {
                     Label("More", systemImage: "ellipsis.circle.fill")
                 }
-                .tag(5)
+                .tag(4)
             }
             .tabViewStyle(.automatic) // iOS 26: Enable scroll minimize behavior
             .tint(themeManager.currentTheme.accentColor)  // Use theme-aware accent color

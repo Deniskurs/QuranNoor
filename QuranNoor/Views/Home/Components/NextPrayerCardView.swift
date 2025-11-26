@@ -15,14 +15,23 @@ struct NextPrayerCardView: View {
     @State var prayerVM: PrayerViewModel
     @Binding var selectedTab: Int
 
+    /// Tracks the last state to detect when deadline is crossed
+    @State private var lastStateDescription: String = ""
+
     // MARK: - Body
 
     var body: some View {
-        TimelineView(.periodic(from: .now, by: 1.0)) { _ in
+        TimelineView(.periodic(from: .now, by: 1.0)) { context in
             LiquidGlassCardView(intensity: .prominent) {
                 VStack(spacing: Spacing.md) {
                     if let period = prayerVM.currentPrayerPeriod {
                         unifiedContent(for: period)
+                            .onAppear {
+                                checkForDeadlineCrossing(period: period, date: context.date)
+                            }
+                            .onChange(of: context.date) { _, newDate in
+                                checkForDeadlineCrossing(period: period, date: newDate)
+                            }
                     } else {
                         loadingContent
                     }
@@ -218,6 +227,28 @@ struct NextPrayerCardView: View {
         let timeRemaining = period.formattedTimeRemaining
 
         return "\(prayerName) in \(timeRemaining). \(urgency.accessibilityDescription)"
+    }
+
+    // MARK: - Deadline Crossing Detection
+
+    /// Checks if the deadline has been crossed and triggers recalculation
+    /// This fixes the issue where countdown shows 00:00 but state doesn't update
+    private func checkForDeadlineCrossing(period: PrayerPeriod, date: Date) {
+        // If countdown has reached or passed 0, recalculate immediately
+        if period.timeUntilNextEvent <= 0 {
+            // Only recalculate if state hasn't already changed (prevents duplicate calls)
+            let currentDescription = period.state.description
+            if lastStateDescription != currentDescription || lastStateDescription.isEmpty {
+                lastStateDescription = currentDescription
+                prayerVM.recalculatePeriod()
+            }
+        } else {
+            // Update tracked state when not at deadline
+            let currentDescription = period.state.description
+            if lastStateDescription != currentDescription {
+                lastStateDescription = currentDescription
+            }
+        }
     }
 }
 
