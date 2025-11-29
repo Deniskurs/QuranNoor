@@ -280,7 +280,7 @@ struct QuranReaderDemo: View {
 
                         Image(systemName: "seal.fill")
                             .font(.system(size: 40))
-                            .foregroundColor(isThisVersePlaying ? themeManager.currentTheme.featureAccent.opacity(0.4) : themeManager.currentTheme.featureAccent.opacity(0.2))
+                            .foregroundColor(isThisVersePlaying ? themeManager.currentTheme.featureAccent.opacity(0.5) : themeManager.currentTheme.featureAccent.opacity(0.35))
 
                         Text("\(verseNumber)")
                             .font(.caption.weight(.bold))

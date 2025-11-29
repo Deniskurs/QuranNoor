@@ -101,16 +101,28 @@ struct ValuePropositionView: View {
                     traits: .isHeader
                 )
 
-                // MARK: - Tab Picker
+                // MARK: - Tab Picker (Native iOS 26 Segmented Control)
                 Picker("Feature", selection: $selectedDemo) {
                     ForEach(DemoType.allCases) { demo in
-                        Text(demo.rawValue)
-                            .tag(demo)
+                        Text(demo.rawValue).tag(demo)
                     }
                 }
                 .pickerStyle(.segmented)
+                .padding(4)
+                .background(
+                    // Subtle glass container for Night mode visibility
+                    Group {
+                        if themeManager.currentTheme == .night {
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .fill(.ultraThinMaterial)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                        .strokeBorder(Color.white.opacity(0.1), lineWidth: 0.5)
+                                )
+                        }
+                    }
+                )
                 .padding(.horizontal, 24)
-                .conditionalAnimation(.spring(response: 0.4, dampingFraction: 0.8), value: selectedDemo)
                 .accessibleElement(
                     label: "Choose feature to preview",
                     hint: "Swipe right or left to switch between Quran reader, Prayer times, and Qibla compass demos",
