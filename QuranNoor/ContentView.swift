@@ -6,11 +6,13 @@
 //
 
 import SwiftUI
+import UserNotifications
 
 struct ContentView: View {
     // MARK: - Properties
     @Environment(ThemeManager.self) var themeManager: ThemeManager
     @Environment(DeepLinkHandler.self) var deepLinkHandler
+    @Environment(\.scenePhase) var scenePhase
     @State private var selectedTab = 0
     @State private var audioService = QuranAudioService.shared
     @State private var showingFullAudioPlayer = false
@@ -79,6 +81,12 @@ struct ContentView: View {
             .onReceive(NotificationCenter.default.publisher(for: Notification.Name("QuickActionTriggered"))) { notification in
                 if let shortcutItem = notification.object as? UIApplicationShortcutItem {
                     deepLinkHandler.handle(shortcutItem: shortcutItem)
+                }
+            }
+            // Clear app icon badge when app comes to foreground
+            .onChange(of: scenePhase) { _, newPhase in
+                if newPhase == .active {
+                    UNUserNotificationCenter.current().setBadgeCount(0)
                 }
             }
 

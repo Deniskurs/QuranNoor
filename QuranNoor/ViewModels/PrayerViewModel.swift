@@ -399,34 +399,44 @@ class PrayerViewModel {
         recalculatePeriod()
     }
 
-    /// Toggle prayer notifications
+    /// Toggle prayer notifications (legacy - prefer setNotificationsEnabled for explicit state setting)
     func toggleNotifications() async {
+        let newState = !notificationService.notificationsEnabled
+        await setNotificationsEnabled(newState)
+    }
+
+    /// Set notifications enabled/disabled explicitly
+    /// This method ALWAYS saves the preference, even if prayer times aren't loaded yet
+    func setNotificationsEnabled(_ enabled: Bool) async {
         do {
-            if !notificationService.isAuthorized {
+            // Request permission if enabling and not yet authorized
+            if enabled && !notificationService.isAuthorized {
                 let granted = try await notificationService.requestPermission()
                 if !granted {
                     throw NotificationError.permissionDenied
                 }
             }
 
+            // Set the state
+            notificationService.notificationsEnabled = enabled
+
+            // ALWAYS save the preference (this is critical!)
+            notificationService.saveNotificationSettings()
+
+            // Schedule or cancel notifications if we have prayer times
             if let prayerTimes = todayPrayerTimes {
-                if notificationService.notificationsEnabled {
-                    // Disable
-                    await notificationService.cancelPrayerNotifications()
-                    notificationService.notificationsEnabled = false
-                } else {
-                    // Enable - Get location info for rich notifications
+                if enabled {
+                    // Enable - schedule notifications
                     let locationInfo = getLocationInfo()
                     try await notificationService.schedulePrayerNotifications(
                         prayerTimes,
                         city: locationInfo.city,
                         countryCode: locationInfo.countryCode
                     )
-                    notificationService.notificationsEnabled = true
+                } else {
+                    // Disable - cancel notifications
+                    await notificationService.cancelPrayerNotifications()
                 }
-
-                // CRITICAL: Persist the change to UserDefaults
-                notificationService.saveNotificationSettings()
             }
         } catch {
             handleError(error)

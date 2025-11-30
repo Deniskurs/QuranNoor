@@ -11,7 +11,8 @@ import StoreKit
 struct SettingsView: View {
     // MARK: - Properties
     @Environment(ThemeManager.self) var themeManager: ThemeManager
-    @State private var notificationsEnabled = true
+    @State private var notificationsEnabled = false  // Start false, sync from service on appear
+    @State private var hasInitializedNotifications = false  // Track initial sync
     @State private var soundEnabled = true
     @State private var showPrayerCalcInfo = false
     @State private var showMethodSheet = false
@@ -88,32 +89,32 @@ struct SettingsView: View {
             #endif
             .onAppear {
                 // Sync toggle state with actual notification service
+                // Do this BEFORE setting hasInitializedNotifications to avoid triggering onChange
                 notificationsEnabled = prayerVM.notificationService.notificationsEnabled
+
+                // Mark as initialized AFTER setting the value
+                // This prevents onChange from firing during initial sync
+                DispatchQueue.main.async {
+                    hasInitializedNotifications = true
+                }
+            }
+            .onDisappear {
+                // Reset initialization flag so it works correctly when returning
+                hasInitializedNotifications = false
             }
             .onChange(of: notificationsEnabled) { oldValue, newValue in
-                // React to notification toggle changes
+                // Skip if this is the initial sync from onAppear
+                guard hasInitializedNotifications else { return }
+
+                // React to user-initiated notification toggle changes
                 Task {
-                    do {
-                        if newValue {
-                            // User wants to enable notifications
-                            if !prayerVM.notificationService.isAuthorized {
-                                // Request permission first
-                                let granted = try await prayerVM.notificationService.requestPermission()
-                                if !granted {
-                                    // Permission denied, revert toggle
-                                    notificationsEnabled = false
-                                    return
-                                }
-                            }
-                        }
+                    // Set notifications state directly (not toggle!)
+                    // setNotificationsEnabled() handles permission requests and ALWAYS saves
+                    await prayerVM.setNotificationsEnabled(newValue)
 
-                        // Toggle notifications (schedules or cancels)
-                        await prayerVM.toggleNotifications()
-
-                    } catch {
-                        // Error occurred, revert toggle
-                        notificationsEnabled = oldValue
-                        print("⚠️ Failed to toggle notifications: \(error.localizedDescription)")
+                    // Sync local state with actual service state (in case permission was denied)
+                    if notificationsEnabled != prayerVM.notificationService.notificationsEnabled {
+                        notificationsEnabled = prayerVM.notificationService.notificationsEnabled
                     }
                 }
             }
