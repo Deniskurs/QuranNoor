@@ -7,6 +7,7 @@
 
 import Foundation
 import Combine
+import SwiftData
 
 // MARK: - API Response Models
 
@@ -126,11 +127,12 @@ class QuranService: ObservableObject {
     @Published private(set) var readingProgress: ReadingProgress?
     @Published private(set) var bookmarks: [Bookmark] = []
 
+    // MARK: - SwiftData Context
+    private var modelContext: ModelContext?
+
     // MARK: - Private Properties
     private let apiClient = APIClient.shared
     private let userDefaults = UserDefaults.standard
-    private let bookmarksKey = "quran_bookmarks"
-    private let progressKey = "reading_progress"
 
     // Default editions
     private let arabicEdition = "quran-simple" // Simple Arabic text
@@ -166,83 +168,92 @@ class QuranService: ObservableObject {
     // MARK: - Initialization
 
     private init() {
-        // Load initial data from UserDefaults
-        self.readingProgress = loadProgressFromDefaults()
-        self.bookmarks = loadBookmarksFromDefaults()
-
-        // Migrate old progress history to ProgressHistoryManager (one-time migration)
-        migrateProgressHistoryIfNeeded()
-
-        print("✅ QuranService.shared initialized")
+        // Initial data will be loaded when SwiftData context is set via setupWithContext()
+        print("✅ QuranService.shared initialized (awaiting SwiftData context)")
     }
 
-    private func loadProgressFromDefaults() -> ReadingProgress? {
-        guard let data = userDefaults.data(forKey: progressKey) else {
-            print("⚠️ No progress data found in UserDefaults")
-            return nil
-        }
-
-        do {
-            let progress = try JSONDecoder().decode(ReadingProgress.self, from: data)
-            print("✅ Loaded progress from defaults: \(progress.readVerses.count) verses")
-            return progress
-        } catch {
-            print("❌ Failed to decode progress: \(error)")
-            return nil
-        }
-    }
-
-    /// Migrate old progressHistory from UserDefaults to ProgressHistoryManager (one-time migration)
-    private func migrateProgressHistoryIfNeeded() {
-        // Check if we've already migrated
-        let migrationKey = "progressHistoryMigrated_v2"
-        guard !userDefaults.bool(forKey: migrationKey) else {
-            print("ℹ️ Progress history already migrated to ProgressHistoryManager")
+    /// Setup QuranService with SwiftData ModelContext
+    /// Call this from QuranNoorApp after ModelContainer is initialized
+    @MainActor
+    func setupWithContext(_ context: ModelContext) {
+        guard modelContext == nil else {
+            print("ℹ️ QuranService already configured with SwiftData context")
             return
         }
 
-        // Try to load old format with progressHistory
-        guard let data = userDefaults.data(forKey: progressKey) else { return }
+        self.modelContext = context
+        print("✅ QuranService configured with SwiftData context")
+
+        // Load initial data from SwiftData
+        loadProgressFromSwiftData()
+        loadBookmarksFromSwiftData()
+    }
+
+    /// Load reading progress from SwiftData
+    @MainActor
+    private func loadProgressFromSwiftData() {
+        guard let context = modelContext else {
+            print("⚠️ No SwiftData context - cannot load progress")
+            return
+        }
 
         do {
-            // Temporarily decode to a structure that includes progressHistory
-            struct OldReadingProgress: Codable {
-                var readVerses: [String: VerseReadData]
-                var progressHistory: [ProgressSnapshot]?
+            // Fetch global stats
+            let statsDescriptor = FetchDescriptor<ReadingStatsRecord>(
+                predicate: #Predicate { $0.id == "global" }
+            )
+            let statsRecords = try context.fetch(statsDescriptor)
+            let stats = statsRecords.first
+
+            // Fetch all verse progress records
+            let progressDescriptor = FetchDescriptor<ReadingProgressRecord>()
+            let progressRecords = try context.fetch(progressDescriptor)
+
+            // Convert to ReadingProgress struct for API compatibility
+            var readVerses: [String: VerseReadData] = [:]
+            for record in progressRecords {
+                readVerses[record.verseId] = VerseReadData(
+                    timestamp: record.firstReadDate,
+                    readCount: record.readCount,
+                    source: VerseReadData.ReadSource(rawValue: record.source) ?? .autoTracked
+                )
             }
 
-            let decoder = JSONDecoder()
-            let oldFormat = try decoder.decode(OldReadingProgress.self, from: data)
+            self.readingProgress = ReadingProgress(
+                lastReadSurah: stats?.lastReadSurah ?? 1,
+                lastReadVerse: stats?.lastReadVerse ?? 1,
+                readVerses: readVerses,
+                streakDays: stats?.streakDays ?? 0,
+                lastReadDate: stats?.lastReadDate ?? Date.distantPast
+            )
 
-            if let history = oldFormat.progressHistory, !history.isEmpty {
-                print("🔄 Migrating \(history.count) snapshots to ProgressHistoryManager...")
-
-                // Migrate to FileManager
-                ProgressHistoryManager.shared.migrateFromUserDefaults(oldHistory: history)
-
-                // Re-save progress without history (will be much smaller)
-                if let progress = readingProgress {
-                    saveProgress(progress)
-                    print("✅ Saved cleaned progress to UserDefaults (removed \(history.count) snapshots)")
-                }
-            }
-
-            // Mark migration as complete
-            userDefaults.set(true, forKey: migrationKey)
-            print("✅ Progress history migration complete")
+            print("✅ Loaded progress from SwiftData: \(readVerses.count) verses, streak: \(stats?.streakDays ?? 0) days")
         } catch {
-            // If decoding fails, it's already in the new format
-            print("ℹ️ No old progress history to migrate: \(error.localizedDescription)")
-            userDefaults.set(true, forKey: migrationKey)
+            print("❌ Failed to load progress from SwiftData: \(error)")
+            self.readingProgress = nil
         }
     }
 
-    private func loadBookmarksFromDefaults() -> [Bookmark] {
-        guard let data = userDefaults.data(forKey: bookmarksKey),
-              let bookmarks = try? JSONDecoder().decode([Bookmark].self, from: data) else {
-            return []
+    /// Load bookmarks from SwiftData
+    @MainActor
+    private func loadBookmarksFromSwiftData() {
+        guard let context = modelContext else {
+            print("⚠️ No SwiftData context - cannot load bookmarks")
+            return
         }
-        return bookmarks
+
+        do {
+            let descriptor = FetchDescriptor<BookmarkRecord>(
+                sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
+            )
+            let records = try context.fetch(descriptor)
+
+            self.bookmarks = records.map { $0.toBookmark() }
+            print("✅ Loaded \(bookmarks.count) bookmarks from SwiftData")
+        } catch {
+            print("❌ Failed to load bookmarks from SwiftData: \(error)")
+            self.bookmarks = []
+        }
     }
 
     // MARK: - Surah Methods
@@ -464,154 +475,185 @@ class QuranService: ObservableObject {
 
     // MARK: - Bookmarks
 
-    /// Get all bookmarks
+    /// Get all bookmarks (uses cached @Published property)
     func getBookmarks() -> [Bookmark] {
-        guard let data = userDefaults.data(forKey: bookmarksKey),
-              let bookmarks = try? JSONDecoder().decode([Bookmark].self, from: data) else {
-            return []
-        }
         return bookmarks
     }
 
     /// Add a bookmark
+    @MainActor
     func addBookmark(surahNumber: Int, verseNumber: Int, note: String? = nil) {
-        var bookmarks = getBookmarks()
-        let bookmark = Bookmark(surahNumber: surahNumber, verseNumber: verseNumber, note: note)
-        bookmarks.append(bookmark)
-        saveBookmarks(bookmarks)
+        guard let context = modelContext else {
+            print("⚠️ No SwiftData context - cannot add bookmark")
+            return
+        }
+
+        // Create new bookmark record
+        let record = BookmarkRecord(surahNumber: surahNumber, verseNumber: verseNumber, note: note)
+        context.insert(record)
+
+        // Save context
+        do {
+            try context.save()
+            // Update published property
+            loadBookmarksFromSwiftData()
+            print("✅ Bookmark added: \(surahNumber):\(verseNumber)")
+        } catch {
+            print("❌ Failed to save bookmark: \(error)")
+        }
     }
 
     /// Remove a bookmark
+    @MainActor
     func removeBookmark(id: UUID) {
-        var bookmarks = getBookmarks()
-        bookmarks.removeAll { $0.id == id }
-        saveBookmarks(bookmarks)
+        guard let context = modelContext else {
+            print("⚠️ No SwiftData context - cannot remove bookmark")
+            return
+        }
+
+        do {
+            let descriptor = FetchDescriptor<BookmarkRecord>(
+                predicate: #Predicate { $0.id == id }
+            )
+            let records = try context.fetch(descriptor)
+
+            for record in records {
+                context.delete(record)
+            }
+
+            try context.save()
+            // Update published property
+            loadBookmarksFromSwiftData()
+            print("✅ Bookmark removed: \(id)")
+        } catch {
+            print("❌ Failed to remove bookmark: \(error)")
+        }
     }
 
     /// Check if verse is bookmarked
     func isBookmarked(surahNumber: Int, verseNumber: Int) -> Bool {
-        return getBookmarks().contains { $0.surahNumber == surahNumber && $0.verseNumber == verseNumber }
-    }
-
-    private func saveBookmarks(_ bookmarks: [Bookmark]) {
-        // Update @Published property immediately for UI responsiveness
-        self.bookmarks = bookmarks
-
-        // Capture values needed for background task
-        let key = bookmarksKey
-        let count = bookmarks.count
-
-        // Perform encoding and UserDefaults write on background queue
-        Task.detached(priority: .utility) {
-            if let encoded = try? JSONEncoder().encode(bookmarks) {
-                UserDefaults.standard.set(encoded, forKey: key)
-                print("✅ Bookmarks saved to disk: \(count) bookmarks")
-            }
-        }
-
-        print("✅ Bookmarks published to observers: \(count) bookmarks")
+        return bookmarks.contains { $0.surahNumber == surahNumber && $0.verseNumber == verseNumber }
     }
 
     // MARK: - Reading Progress
 
-    /// Get reading progress
+    /// Get reading progress (uses cached @Published property or fetches from SwiftData)
     func getReadingProgress() -> ReadingProgress {
-        guard let data = userDefaults.data(forKey: progressKey) else {
-            print("⚠️ No progress data found in UserDefaults - returning default")
-            return ReadingProgress(
-                lastReadSurah: 1,
-                lastReadVerse: 1,
-                readVerses: [:],
-                streakDays: 0,
-                lastReadDate: Date.distantPast
-            )
+        if let cached = readingProgress {
+            return cached
         }
 
-        do {
-            let progress = try JSONDecoder().decode(ReadingProgress.self, from: data)
-            print("✅ Loaded progress: \(progress.readVerses.count) verses, streak: \(progress.streakDays) days")
-            return progress
-        } catch {
-            print("❌ Failed to decode progress: \(error)")
-            if let jsonString = String(data: data, encoding: .utf8) {
-                print("   Saved data: \(jsonString)")
-            }
-            print("   Returning default progress")
-            return ReadingProgress(
-                lastReadSurah: 1,
-                lastReadVerse: 1,
-                readVerses: [:],
-                streakDays: 0,
-                lastReadDate: Date.distantPast
-            )
-        }
+        // Return default if no data available
+        return ReadingProgress(
+            lastReadSurah: 1,
+            lastReadVerse: 1,
+            readVerses: [:],
+            streakDays: 0,
+            lastReadDate: Date.distantPast
+        )
     }
 
     /// Update reading progress (called by auto-tracking system)
+    @MainActor
     func updateReadingProgress(surahNumber: Int, verseNumber: Int) {
-        var progress = getReadingProgress()
+        guard let context = modelContext else {
+            print("⚠️ No SwiftData context - cannot update progress")
+            return
+        }
 
-        // Create unique verse identifier
         let verseId = "\(surahNumber):\(verseNumber)"
 
-        // Check if this is a new verse or update existing
-        if let existingData = progress.readVerses[verseId] {
-            // Verse already read - increment read count
-            progress.readVerses[verseId] = VerseReadData(
-                timestamp: existingData.timestamp,  // Keep original timestamp
-                readCount: existingData.readCount + 1,
-                source: existingData.source  // Keep original source
+        do {
+            // Check if verse record already exists
+            let descriptor = FetchDescriptor<ReadingProgressRecord>(
+                predicate: #Predicate { $0.verseId == verseId }
             )
-        } else {
-            // New verse - add with timestamp
-            progress.readVerses[verseId] = VerseReadData(
-                timestamp: Date(),
-                readCount: 1,
-                source: .autoTracked
+            let existingRecords = try context.fetch(descriptor)
+
+            if let existingRecord = existingRecords.first {
+                // Update existing record
+                existingRecord.markAsRead()
+            } else {
+                // Create new record
+                let newRecord = ReadingProgressRecord(
+                    surahNumber: surahNumber,
+                    verseNumber: verseNumber,
+                    source: "autoTracked"
+                )
+                context.insert(newRecord)
+            }
+
+            // Update global stats
+            updateGlobalStats(surahNumber: surahNumber, verseNumber: verseNumber, context: context)
+
+            try context.save()
+
+            // Refresh published property
+            loadProgressFromSwiftData()
+
+            print("✅ Auto-tracked: \(verseId)")
+        } catch {
+            print("❌ Failed to update progress: \(error)")
+        }
+    }
+
+    /// Update global reading stats (streak, last read position)
+    @MainActor
+    private func updateGlobalStats(surahNumber: Int, verseNumber: Int, context: ModelContext) {
+        do {
+            let descriptor = FetchDescriptor<ReadingStatsRecord>(
+                predicate: #Predicate { $0.id == "global" }
             )
+            let existingStats = try context.fetch(descriptor)
+
+            let stats: ReadingStatsRecord
+            if let existing = existingStats.first {
+                stats = existing
+            } else {
+                stats = ReadingStatsRecord()
+                context.insert(stats)
+            }
+
+            // Update last read position
+            stats.lastReadSurah = surahNumber
+            stats.lastReadVerse = verseNumber
+
+            // Update streak logic
+            let calendar = Calendar.current
+            let today = Date()
+
+            if stats.lastReadDate == Date.distantPast || stats.streakDays == 0 {
+                stats.streakDays = 1
+                stats.lastReadDate = today
+            } else if calendar.isDateInToday(stats.lastReadDate) {
+                stats.lastReadDate = today
+            } else if calendar.isDateInYesterday(stats.lastReadDate) {
+                stats.streakDays += 1
+                stats.lastReadDate = today
+            } else {
+                stats.streakDays = 1
+                stats.lastReadDate = today
+            }
+        } catch {
+            print("❌ Failed to update global stats: \(error)")
         }
-
-        // Always update last read position
-        progress.lastReadSurah = surahNumber
-        progress.lastReadVerse = verseNumber
-
-        // Update streak logic
-        let calendar = Calendar.current
-        let today = Date()
-
-        // Check if this is the first ever read OR if streak is at 0 (needs initialization)
-        if progress.lastReadDate == Date.distantPast || progress.streakDays == 0 {
-            // First time reading OR streak was reset to 0 - start streak at 1
-            progress.streakDays = 1
-            progress.lastReadDate = today
-        } else if calendar.isDateInToday(progress.lastReadDate) {
-            // Already read today, no change to streak
-            // But update the timestamp
-            progress.lastReadDate = today
-        } else if calendar.isDateInYesterday(progress.lastReadDate) {
-            // Reading for the first time today after reading yesterday - increment streak
-            progress.streakDays += 1
-            progress.lastReadDate = today
-        } else {
-            // Gap in reading - streak broken, restart at 1
-            progress.streakDays = 1
-            progress.lastReadDate = today
-        }
-
-        // Save progress
-        saveProgress(progress)
-        print("✅ Auto-tracked: \(verseId), total: \(progress.readVerses.count) verses, streak: \(progress.streakDays) days")
     }
 
     // MARK: - Progress Management
 
     /// Manually mark a verse as read
+    @MainActor
     func markVerseAsRead(surahNumber: Int, verseNumber: Int, manual: Bool = true) {
-        var progress = getReadingProgress()
+        guard let context = modelContext else {
+            print("⚠️ No SwiftData context - cannot mark verse as read")
+            return
+        }
+
         let verseId = "\(surahNumber):\(verseNumber)"
 
-        // Create snapshot if manual action (stored in ProgressHistoryManager - FileManager-backed)
+        // Create snapshot if manual action
         if manual {
+            let progress = getReadingProgress()
             let snapshot = ProgressSnapshot(
                 actionType: .manualMarkRead,
                 readVerses: progress.readVerses,
@@ -621,32 +663,46 @@ class QuranService: ObservableObject {
             ProgressHistoryManager.shared.addSnapshot(snapshot)
         }
 
-        if let existingData = progress.readVerses[verseId] {
-            // Increment read count
-            progress.readVerses[verseId] = VerseReadData(
-                timestamp: existingData.timestamp,
-                readCount: existingData.readCount + 1,
-                source: manual ? .manualMark : existingData.source
+        do {
+            let descriptor = FetchDescriptor<ReadingProgressRecord>(
+                predicate: #Predicate { $0.verseId == verseId }
             )
-        } else {
-            // First time reading
-            progress.readVerses[verseId] = VerseReadData(
-                timestamp: Date(),
-                readCount: 1,
-                source: manual ? .manualMark : .autoTracked
-            )
-        }
+            let existingRecords = try context.fetch(descriptor)
 
-        saveProgress(progress)
-        print("✅ Manually marked \(verseId) as read")
+            if let existingRecord = existingRecords.first {
+                existingRecord.markAsRead()
+                if manual {
+                    existingRecord.source = "manualMark"
+                }
+            } else {
+                let newRecord = ReadingProgressRecord(
+                    surahNumber: surahNumber,
+                    verseNumber: verseNumber,
+                    source: manual ? "manualMark" : "autoTracked"
+                )
+                context.insert(newRecord)
+            }
+
+            try context.save()
+            loadProgressFromSwiftData()
+            print("✅ Manually marked \(verseId) as read")
+        } catch {
+            print("❌ Failed to mark verse as read: \(error)")
+        }
     }
 
     /// Manually mark a verse as unread
+    @MainActor
     func markVerseAsUnread(surahNumber: Int, verseNumber: Int) {
-        var progress = getReadingProgress()
+        guard let context = modelContext else {
+            print("⚠️ No SwiftData context - cannot mark verse as unread")
+            return
+        }
+
         let verseId = "\(surahNumber):\(verseNumber)"
 
-        // Create snapshot (stored in ProgressHistoryManager - FileManager-backed)
+        // Create snapshot
+        let progress = getReadingProgress()
         let snapshot = ProgressSnapshot(
             actionType: .manualMarkUnread,
             readVerses: progress.readVerses,
@@ -655,12 +711,26 @@ class QuranService: ObservableObject {
         )
         ProgressHistoryManager.shared.addSnapshot(snapshot)
 
-        progress.readVerses.removeValue(forKey: verseId)
-        saveProgress(progress)
-        print("❌ Marked \(verseId) as unread")
+        do {
+            let descriptor = FetchDescriptor<ReadingProgressRecord>(
+                predicate: #Predicate { $0.verseId == verseId }
+            )
+            let records = try context.fetch(descriptor)
+
+            for record in records {
+                context.delete(record)
+            }
+
+            try context.save()
+            loadProgressFromSwiftData()
+            print("❌ Marked \(verseId) as unread")
+        } catch {
+            print("❌ Failed to mark verse as unread: \(error)")
+        }
     }
 
     /// Toggle verse read status
+    @MainActor
     func toggleVerseReadStatus(surahNumber: Int, verseNumber: Int) {
         let progress = getReadingProgress()
         let verseId = "\(surahNumber):\(verseNumber)"
@@ -673,25 +743,51 @@ class QuranService: ObservableObject {
     }
 
     /// Reset all reading progress
+    @MainActor
     func resetAllProgress() {
-        let progress = ReadingProgress(
-            lastReadSurah: 1,
-            lastReadVerse: 1,
-            readVerses: [:],
-            streakDays: 0,
-            lastReadDate: Date.distantPast
-            // progressHistory is now managed by ProgressHistoryManager
-        )
-        saveProgress(progress)
-        ProgressHistoryManager.shared.clearHistory()  // Also clear undo history
-        print("🔄 All reading progress reset")
+        guard let context = modelContext else {
+            print("⚠️ No SwiftData context - cannot reset progress")
+            return
+        }
+
+        do {
+            // Delete all progress records
+            let progressDescriptor = FetchDescriptor<ReadingProgressRecord>()
+            let progressRecords = try context.fetch(progressDescriptor)
+            for record in progressRecords {
+                context.delete(record)
+            }
+
+            // Reset global stats
+            let statsDescriptor = FetchDescriptor<ReadingStatsRecord>()
+            let statsRecords = try context.fetch(statsDescriptor)
+            for record in statsRecords {
+                context.delete(record)
+            }
+
+            // Create fresh stats
+            let freshStats = ReadingStatsRecord()
+            context.insert(freshStats)
+
+            try context.save()
+            loadProgressFromSwiftData()
+            ProgressHistoryManager.shared.clearHistory()
+            print("🔄 All reading progress reset")
+        } catch {
+            print("❌ Failed to reset progress: \(error)")
+        }
     }
 
     /// Reset progress for a specific surah
+    @MainActor
     func resetSurahProgress(surahNumber: Int) {
-        var progress = getReadingProgress()
+        guard let context = modelContext else {
+            print("⚠️ No SwiftData context - cannot reset surah progress")
+            return
+        }
 
-        // Create snapshot (stored in ProgressHistoryManager - FileManager-backed)
+        // Create snapshot
+        let progress = getReadingProgress()
         let snapshot = ProgressSnapshot(
             actionType: .resetSurah,
             readVerses: progress.readVerses,
@@ -700,20 +796,34 @@ class QuranService: ObservableObject {
         )
         ProgressHistoryManager.shared.addSnapshot(snapshot)
 
-        // Remove all verses from this surah
-        progress.readVerses = progress.readVerses.filter { verseId, _ in
-            !verseId.starts(with: "\(surahNumber):")
-        }
+        do {
+            let descriptor = FetchDescriptor<ReadingProgressRecord>(
+                predicate: #Predicate { $0.surahNumber == surahNumber }
+            )
+            let records = try context.fetch(descriptor)
 
-        saveProgress(progress)
-        print("🔄 Reset progress for Surah \(surahNumber)")
+            for record in records {
+                context.delete(record)
+            }
+
+            try context.save()
+            loadProgressFromSwiftData()
+            print("🔄 Reset progress for Surah \(surahNumber)")
+        } catch {
+            print("❌ Failed to reset surah progress: \(error)")
+        }
     }
 
     /// Reset progress for specific verse range
+    @MainActor
     func resetVerseRange(surahNumber: Int, fromVerse: Int, toVerse: Int) {
-        var progress = getReadingProgress()
+        guard let context = modelContext else {
+            print("⚠️ No SwiftData context - cannot reset verse range")
+            return
+        }
 
-        // Create snapshot (stored in ProgressHistoryManager - FileManager-backed)
+        // Create snapshot
+        let progress = getReadingProgress()
         let snapshot = ProgressSnapshot(
             actionType: .resetSurah,
             readVerses: progress.readVerses,
@@ -722,40 +832,74 @@ class QuranService: ObservableObject {
         )
         ProgressHistoryManager.shared.addSnapshot(snapshot)
 
-        // Remove verses in range
-        for verseNumber in fromVerse...toVerse {
-            let verseId = "\(surahNumber):\(verseNumber)"
-            progress.readVerses.removeValue(forKey: verseId)
-        }
+        do {
+            // Fetch all records for this surah
+            let descriptor = FetchDescriptor<ReadingProgressRecord>(
+                predicate: #Predicate { $0.surahNumber == surahNumber }
+            )
+            let records = try context.fetch(descriptor)
 
-        saveProgress(progress)
-        print("🔄 Reset verses \(fromVerse)-\(toVerse) in Surah \(surahNumber)")
+            // Delete only records in the specified range
+            for record in records where record.verseNumber >= fromVerse && record.verseNumber <= toVerse {
+                context.delete(record)
+            }
+
+            try context.save()
+            loadProgressFromSwiftData()
+            print("🔄 Reset verses \(fromVerse)-\(toVerse) in Surah \(surahNumber)")
+        } catch {
+            print("❌ Failed to reset verse range: \(error)")
+        }
     }
 
     /// Undo last progress action
+    @MainActor
     @discardableResult
     func undoLastAction() -> Bool {
+        guard let context = modelContext else {
+            print("⚠️ No SwiftData context - cannot undo")
+            return false
+        }
+
         guard let lastSnapshot = ProgressHistoryManager.shared.getLastSnapshot() else {
             print("⚠️ No actions to undo")
             return false
         }
 
-        // Restore from snapshot
-        let progress = ReadingProgress(
-            lastReadSurah: lastSnapshot.readVerses.keys.compactMap { verseId -> Int? in
-                let components = verseId.split(separator: ":")
-                return components.first.flatMap { Int($0) }
-            }.max() ?? 1,
-            lastReadVerse: 1,
-            readVerses: lastSnapshot.readVerses,
-            streakDays: lastSnapshot.streakDays,
-            lastReadDate: lastSnapshot.lastReadDate
-        )
+        do {
+            // Clear current progress
+            let progressDescriptor = FetchDescriptor<ReadingProgressRecord>()
+            let currentRecords = try context.fetch(progressDescriptor)
+            for record in currentRecords {
+                context.delete(record)
+            }
 
-        saveProgress(progress)
-        ProgressHistoryManager.shared.removeLastSnapshot()
-        print("⏪ Undone action: \(lastSnapshot.actionType.rawValue)")
-        return true
+            // Restore from snapshot
+            for (verseId, verseData) in lastSnapshot.readVerses {
+                let record = ReadingProgressRecord(verseId: verseId, data: verseData)
+                context.insert(record)
+            }
+
+            // Update global stats
+            let statsDescriptor = FetchDescriptor<ReadingStatsRecord>()
+            let statsRecords = try context.fetch(statsDescriptor)
+            let stats = statsRecords.first ?? ReadingStatsRecord()
+            if statsRecords.isEmpty {
+                context.insert(stats)
+            }
+
+            stats.streakDays = lastSnapshot.streakDays
+            stats.lastReadDate = lastSnapshot.lastReadDate
+
+            try context.save()
+            loadProgressFromSwiftData()
+            ProgressHistoryManager.shared.removeLastSnapshot()
+            print("⏪ Undone action: \(lastSnapshot.actionType.rawValue)")
+            return true
+        } catch {
+            print("❌ Failed to undo: \(error)")
+            return false
+        }
     }
 
     /// Check if undo is available
@@ -788,36 +932,138 @@ class QuranService: ObservableObject {
 
     /// Get surah-specific statistics
     func getSurahStatistics(surahNumber: Int, totalVerses: Int) -> SurahProgressStats {
-        // Use cached readingProgress to avoid repeated UserDefaults reads (performance optimization)
         let progress = readingProgress ?? getReadingProgress()
         return progress.surahProgress(surahNumber: surahNumber, totalVerses: totalVerses)
     }
 
-    // MARK: - Private Helper Methods
+    // MARK: - Import/Export Support
 
-    /// Save progress to UserDefaults and publish changes
-    private func saveProgress(_ progress: ReadingProgress) {
-        // Update @Published property immediately for UI responsiveness
-        self.readingProgress = progress
-
-        // Capture values needed for background task
-        let key = progressKey
-        let count = progress.readVerses.count
-
-        // Encode on main thread (required for Encodable conformance)
-        do {
-            let encoded = try JSONEncoder().encode(progress)
-
-            // Perform UserDefaults write on background queue (encoding already done)
-            Task.detached(priority: .utility) {
-                UserDefaults.standard.set(encoded, forKey: key)
-                print("✅ Progress saved to disk: \(count) verses")
-            }
-        } catch {
-            print("❌ Failed to encode progress: \(error)")
+    /// Import reading progress from external ReadingProgress data
+    /// - Parameters:
+    ///   - importedProgress: The progress to import
+    ///   - strategy: How to handle conflicts (replace, merge, addOnly)
+    @MainActor
+    func importProgress(_ importedProgress: ReadingProgress, strategy: ImportStrategy = .replace) {
+        guard let context = modelContext else {
+            print("⚠️ No SwiftData context - cannot import progress")
+            return
         }
 
-        print("✅ Progress published to observers: \(count) verses")
+        do {
+            switch strategy {
+            case .replace:
+                // Clear existing progress first
+                let progressDescriptor = FetchDescriptor<ReadingProgressRecord>()
+                let existingRecords = try context.fetch(progressDescriptor)
+                for record in existingRecords {
+                    context.delete(record)
+                }
+
+                // Import all new records
+                for (verseId, verseData) in importedProgress.readVerses {
+                    let record = ReadingProgressRecord(verseId: verseId, data: verseData)
+                    context.insert(record)
+                }
+
+                // Update global stats
+                let statsDescriptor = FetchDescriptor<ReadingStatsRecord>()
+                let statsRecords = try context.fetch(statsDescriptor)
+                let stats = statsRecords.first ?? ReadingStatsRecord()
+                if statsRecords.isEmpty {
+                    context.insert(stats)
+                }
+                stats.lastReadSurah = importedProgress.lastReadSurah
+                stats.lastReadVerse = importedProgress.lastReadVerse
+                stats.streakDays = importedProgress.streakDays
+                stats.lastReadDate = importedProgress.lastReadDate
+
+            case .merge:
+                // Merge - keep most recent timestamp for each verse
+                for (verseId, importedData) in importedProgress.readVerses {
+                    let descriptor = FetchDescriptor<ReadingProgressRecord>(
+                        predicate: #Predicate { $0.verseId == verseId }
+                    )
+                    let existingRecords = try context.fetch(descriptor)
+
+                    if let existingRecord = existingRecords.first {
+                        // Keep the one with most recent timestamp
+                        if importedData.timestamp > existingRecord.firstReadDate {
+                            existingRecord.firstReadDate = importedData.timestamp
+                            existingRecord.lastReadDate = importedData.timestamp
+                            existingRecord.readCount = importedData.readCount
+                            existingRecord.source = importedData.source.rawValue
+                        }
+                    } else {
+                        // New verse - add it
+                        let record = ReadingProgressRecord(verseId: verseId, data: importedData)
+                        context.insert(record)
+                    }
+                }
+
+            case .addOnly:
+                // Add only verses not already read
+                for (verseId, importedData) in importedProgress.readVerses {
+                    let descriptor = FetchDescriptor<ReadingProgressRecord>(
+                        predicate: #Predicate { $0.verseId == verseId }
+                    )
+                    let existingRecords = try context.fetch(descriptor)
+
+                    if existingRecords.isEmpty {
+                        let record = ReadingProgressRecord(verseId: verseId, data: importedData)
+                        context.insert(record)
+                    }
+                }
+            }
+
+            try context.save()
+            loadProgressFromSwiftData()
+            print("✅ Imported progress with strategy: \(strategy)")
+        } catch {
+            print("❌ Failed to import progress: \(error)")
+        }
+    }
+
+    /// Restore verses from a snapshot (for undo operations)
+    /// - Parameter snapshot: Dictionary of verseId to VerseReadData
+    @MainActor
+    func restoreVersesFromSnapshot(_ snapshot: [String: VerseReadData]) {
+        guard let context = modelContext else {
+            print("⚠️ No SwiftData context - cannot restore snapshot")
+            return
+        }
+
+        do {
+            // Add or update verses from snapshot
+            for (verseId, verseData) in snapshot {
+                let descriptor = FetchDescriptor<ReadingProgressRecord>(
+                    predicate: #Predicate { $0.verseId == verseId }
+                )
+                let existingRecords = try context.fetch(descriptor)
+
+                if let existingRecord = existingRecords.first {
+                    existingRecord.firstReadDate = verseData.timestamp
+                    existingRecord.lastReadDate = verseData.timestamp
+                    existingRecord.readCount = verseData.readCount
+                    existingRecord.source = verseData.source.rawValue
+                } else {
+                    let record = ReadingProgressRecord(verseId: verseId, data: verseData)
+                    context.insert(record)
+                }
+            }
+
+            try context.save()
+            loadProgressFromSwiftData()
+            print("✅ Restored \(snapshot.count) verses from snapshot")
+        } catch {
+            print("❌ Failed to restore snapshot: \(error)")
+        }
+    }
+
+    /// Import strategy for merging progress data
+    enum ImportStrategy {
+        case replace    // Replace all existing data
+        case merge      // Keep most recent for each verse
+        case addOnly    // Only add new verses
     }
 
     // MARK: - Fallback Sample Data
@@ -922,105 +1168,177 @@ class QuranService: ObservableObject {
         }
     }
 
-    /// Search verses by text content (fuzzy matching)
+    /// Search verses by text content (fuzzy matching) with pagination
     /// - Parameters:
     ///   - query: Search query
     ///   - surahNumber: Optional surah number to limit search scope
-    /// - Returns: Array of matching verses sorted by relevance
-    func searchVerses(query: String, inSurah surahNumber: Int? = nil) async -> [SearchResult<Verse>] {
+    ///   - limit: Maximum number of results to return (default: 50)
+    /// - Returns: Array of matching verses sorted by relevance (limited to `limit` results)
+    func searchVerses(query: String, inSurah surahNumber: Int? = nil, limit: Int = 50) async -> [SearchResult<Verse>] {
         guard !query.isEmpty else { return [] }
 
         do {
-            var allVerses: [Verse] = []
+            var results: [SearchResult<Verse>] = []
 
             if let surahNumber = surahNumber {
-                // Search within specific surah
-                allVerses = try await getVerses(forSurah: surahNumber)
+                // Search within specific surah (fast path)
+                let verses = try await getVerses(forSurah: surahNumber)
+                results = FuzzySearchUtility.search(
+                    verses,
+                    query: query,
+                    keyPath: \.text,
+                    threshold: 0.4
+                )
             } else {
-                // Search all surahs (expensive operation)
+                // Search with early termination - stop when we have enough results
                 let surahs = try await getSurahs()
+
                 for surah in surahs {
+                    // Stop searching if we have enough high-quality results
+                    if results.count >= limit * 2 {
+                        break
+                    }
+
                     let verses = try await getVerses(forSurah: surah.id)
-                    allVerses.append(contentsOf: verses)
+                    let surahResults = FuzzySearchUtility.search(
+                        verses,
+                        query: query,
+                        keyPath: \.text,
+                        threshold: 0.4
+                    )
+                    results.append(contentsOf: surahResults)
                 }
+
+                // Sort all results by score
+                results.sort { $0.score > $1.score }
             }
 
-            // Search verse text (Arabic)
-            return FuzzySearchUtility.search(
-                allVerses,
-                query: query,
-                keyPath: \.text,
-                threshold: 0.4
-            )
+            // Return limited results
+            return Array(results.prefix(limit))
         } catch {
             print("❌ Search error: \(error)")
             return []
         }
     }
 
-    /// Search translations by text content (fuzzy matching)
+    /// Search translations by text content (fuzzy matching) with pagination
+    /// - Important: This method only searches within a specific surah to avoid excessive API calls.
+    ///              For full Quran translation search, use `smartSearch` which searches surah names first.
     /// - Parameters:
     ///   - query: Search query
     ///   - edition: Translation edition to search
-    ///   - surahNumber: Optional surah number to limit search scope
-    /// - Returns: Array of matching translations sorted by relevance
+    ///   - surahNumber: Surah number to search within (REQUIRED for performance)
+    ///   - limit: Maximum number of results to return (default: 30)
+    /// - Returns: Array of matching translations sorted by relevance (limited to `limit` results)
     func searchTranslations(
         query: String,
         edition: TranslationEdition = .sahihInternational,
-        inSurah surahNumber: Int? = nil
+        inSurah surahNumber: Int,
+        limit: Int = 30
     ) async -> [SearchResult<Translation>] {
         guard !query.isEmpty else { return [] }
 
         do {
-            var allTranslations: [Translation] = []
+            var translations: [Translation] = []
 
-            if let surahNumber = surahNumber {
-                // Search within specific surah
-                let verses = try await getVerses(forSurah: surahNumber)
-                for verse in verses {
-                    let translation = try await getTranslation(forVerse: verse, edition: edition)
-                    allTranslations.append(translation)
-                }
-            } else {
-                // Search all surahs (expensive operation)
-                let surahs = try await getSurahs()
-                for surah in surahs {
-                    let verses = try await getVerses(forSurah: surah.id)
-                    for verse in verses {
-                        let translation = try await getTranslation(forVerse: verse, edition: edition)
-                        allTranslations.append(translation)
-                    }
-                }
+            // Only search within the specified surah to prevent API abuse
+            let verses = try await getVerses(forSurah: surahNumber)
+
+            // Limit the number of API calls
+            let versesToSearch = Array(verses.prefix(min(verses.count, 300)))
+
+            for verse in versesToSearch {
+                let translation = try await getTranslation(forVerse: verse, edition: edition)
+                translations.append(translation)
             }
 
             // Search translation text
-            return FuzzySearchUtility.wordSearch(
-                allTranslations,
+            let results = FuzzySearchUtility.wordSearch(
+                translations,
                 query: query,
                 keyPath: \.text,
                 requireAll: false
             )
+
+            return Array(results.prefix(limit))
         } catch {
             print("❌ Search error: \(error)")
             return []
         }
     }
 
-    /// Smart search that searches both surahs and translations
+    /// Search translations across multiple surahs (limited scope for performance)
     /// - Parameters:
     ///   - query: Search query
     ///   - edition: Translation edition to search
+    ///   - surahNumbers: Array of surah numbers to search (max 10 surahs for performance)
+    ///   - limit: Maximum number of results to return (default: 50)
+    /// - Returns: Array of matching translations sorted by relevance
+    func searchTranslationsMultipleSurahs(
+        query: String,
+        edition: TranslationEdition = .sahihInternational,
+        inSurahs surahNumbers: [Int],
+        limit: Int = 50
+    ) async -> [SearchResult<Translation>] {
+        guard !query.isEmpty else { return [] }
+
+        // Limit to max 10 surahs to prevent excessive API calls
+        let limitedSurahs = Array(surahNumbers.prefix(10))
+        var allResults: [SearchResult<Translation>] = []
+
+        for surahNumber in limitedSurahs {
+            let results = await searchTranslations(
+                query: query,
+                edition: edition,
+                inSurah: surahNumber,
+                limit: 20
+            )
+            allResults.append(contentsOf: results)
+
+            // Early termination if we have enough results
+            if allResults.count >= limit {
+                break
+            }
+        }
+
+        // Sort by score and limit
+        allResults.sort { $0.score > $1.score }
+        return Array(allResults.prefix(limit))
+    }
+
+    /// Smart search that searches surahs first, then translations in matching surahs
+    /// - Parameters:
+    ///   - query: Search query
+    ///   - edition: Translation edition to search
+    ///   - translationLimit: Maximum translation results (default: 30)
     /// - Returns: Tuple of surah results and translation results
     func smartSearch(
         query: String,
-        edition: TranslationEdition = .sahihInternational
+        edition: TranslationEdition = .sahihInternational,
+        translationLimit: Int = 30
     ) async -> (surahs: [SearchResult<Surah>], translations: [SearchResult<Translation>]) {
-        async let surahResults = searchSurahs(query: query)
-        async let translationResults = searchTranslations(query: query, edition: edition)
+        // First, search surah names (fast operation)
+        let surahResults = await searchSurahs(query: query)
 
-        let surahs = await surahResults
-        let translations = await translationResults
+        // If we found matching surahs, search translations only in those surahs
+        // Otherwise, search in first 5 surahs as a fallback (Al-Fatiha to Al-Ma'idah)
+        let surahsToSearch: [Int]
+        if !surahResults.isEmpty {
+            // Search in matched surahs (max 5 for performance)
+            surahsToSearch = Array(surahResults.prefix(5).map { $0.item.id })
+        } else {
+            // Fallback: search in commonly read surahs
+            surahsToSearch = [1, 2, 18, 36, 67] // Al-Fatiha, Al-Baqarah, Al-Kahf, Ya-Sin, Al-Mulk
+        }
 
-        return (surahs: surahs, translations: translations)
+        // Search translations in selected surahs
+        let translationResults = await searchTranslationsMultipleSurahs(
+            query: query,
+            edition: edition,
+            inSurahs: surahsToSearch,
+            limit: translationLimit
+        )
+
+        return (surahs: surahResults, translations: translationResults)
     }
 }

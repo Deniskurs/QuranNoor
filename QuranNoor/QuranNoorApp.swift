@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import SwiftData
 import UserNotifications
 
 @main
@@ -15,10 +16,32 @@ struct QuranNoorApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @State private var themeManager = ThemeManager()
     @State private var deepLinkHandler = DeepLinkHandler()
+    @StateObject private var localizationManager = LocalizationManager.shared
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
+
+    // SwiftData Model Container
+    let modelContainer: ModelContainer
 
     // MARK: - Initializer
     init() {
+        // Initialize SwiftData ModelContainer
+        do {
+            let schema = Schema([
+                ReadingProgressRecord.self,
+                ReadingStatsRecord.self,
+                BookmarkRecord.self
+            ])
+            let modelConfiguration = ModelConfiguration(
+                schema: schema,
+                isStoredInMemoryOnly: false,
+                allowsSave: true
+            )
+            modelContainer = try ModelContainer(for: schema, configurations: [modelConfiguration])
+            print("✅ SwiftData ModelContainer initialized successfully")
+        } catch {
+            fatalError("❌ Failed to initialize SwiftData ModelContainer: \(error)")
+        }
+
         // Migrate UserDefaults schema if needed
         // This ensures smooth upgrades between app versions
         UserDefaultsMigrator().migrateIfNeeded()
@@ -36,6 +59,18 @@ struct QuranNoorApp: App {
         // DEVELOPMENT ONLY: Uncomment the line below to reset onboarding for testing
         // UserDefaults.standard.removeObject(forKey: "hasCompletedOnboarding")
         #endif
+    }
+
+    // MARK: - SwiftData Setup & Migration
+    @MainActor
+    private func setupSwiftDataServices() async {
+        let context = modelContainer.mainContext
+
+        // First, migrate any existing UserDefaults data to SwiftData
+        await DataMigrationService.shared.migrateIfNeeded(context: context)
+
+        // Then, configure QuranService with SwiftData context
+        QuranService.shared.setupWithContext(context)
     }
 
     // MARK: - Body
@@ -68,7 +103,16 @@ struct QuranNoorApp: App {
                         .zIndex(2)
                 }
             }
+            // Apply RTL layout direction based on current language (Arabic, Urdu)
+            .environment(\.layoutDirection, localizationManager.layoutDirection)
+            .environmentObject(localizationManager)
+            // Inject SwiftData model container
+            .modelContainer(modelContainer)
             .animation(.easeInOut(duration: 0.6), value: hasCompletedOnboarding)
+            // Setup SwiftData services and perform migration on first launch
+            .task {
+                await setupSwiftDataServices()
+            }
             // Handle custom URL schemes (e.g., qurannoor://next-prayer)
             .onOpenURL { url in
                 _ = deepLinkHandler.handle(url: url)

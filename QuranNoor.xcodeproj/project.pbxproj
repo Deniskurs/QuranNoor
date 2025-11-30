@@ -10,22 +10,9 @@
 		92813D3F2EB4E1590018C9BA /* QuranNoor.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = QuranNoor.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		92813D812EB4EAAA0018C9BA /* Exceptions for "QuranNoor" folder in "QuranNoor" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Resources/Assets.xcassets,
-			);
-			target = 92813D3E2EB4E1580018C9BA /* QuranNoor */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		92813D412EB4E1590018C9BA /* QuranNoor */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				92813D812EB4EAAA0018C9BA /* Exceptions for "QuranNoor" folder in "QuranNoor" target */,
-			);
 			path = QuranNoor;
 			sourceTree = "<group>";
 		};

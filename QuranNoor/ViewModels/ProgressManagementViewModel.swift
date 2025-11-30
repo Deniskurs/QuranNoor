@@ -8,10 +8,6 @@
 import Foundation
 import Combine
 
-#if os(iOS)
-import UIKit
-#endif
-
 @MainActor
 class ProgressManagementViewModel: ObservableObject {
     // MARK: - Published Properties
@@ -37,10 +33,6 @@ class ProgressManagementViewModel: ObservableObject {
     // MARK: - Private Properties
     private let quranService = QuranService.shared
     private var cancellables = Set<AnyCancellable>()
-
-    // MARK: - Undo Support
-    private var lastResetSurah: Int?
-    private var lastResetSnapshot: [String: VerseReadData]?
 
     // MARK: - Enums
 
@@ -187,35 +179,6 @@ class ProgressManagementViewModel: ObservableObject {
         applyFiltersAndSorting()
     }
 
-    /// Async version of updateSurahStatistics - computes in background to avoid blocking UI
-    @MainActor
-    private func updateSurahStatisticsAsync() async {
-        guard !surahs.isEmpty else { return }
-
-        // Capture progress before entering detached task (Swift 6 concurrency requirement)
-        let currentProgress = readingProgress ?? quranService.getReadingProgress()
-
-        // Compute statistics on background thread
-        let stats = await Task.detached(priority: .userInitiated) { [surahs] in
-            surahs.map { surah in
-                // Inline computation to avoid actor isolation issues
-                let surahVerses = currentProgress.readVerses.filter { $0.key.starts(with: "\(surah.id):") }
-                return SurahProgressStats(
-                    surahNumber: surah.id,
-                    totalVerses: surah.numberOfVerses,
-                    readVerses: surahVerses.count,
-                    completionPercentage: Double(surahVerses.count) / Double(surah.numberOfVerses) * 100,
-                    lastReadDate: surahVerses.values.map(\.timestamp).max(),
-                    firstReadDate: surahVerses.values.map(\.timestamp).min()
-                )
-            }
-        }.value
-
-        // Update UI on main thread
-        self.surahStats = stats
-        self.applyFiltersAndSorting()
-    }
-
     // MARK: - Search and Filter
 
     private func setupSearchAndFilter() {
@@ -330,16 +293,8 @@ class ProgressManagementViewModel: ObservableObject {
     }
 
     func resetSurah(_ surahNumber: Int) {
-        // Store current state for undo
-        let currentProgress = quranService.getReadingProgress()
-        let surahVerses = currentProgress.readVerses.filter { $0.key.starts(with: "\(surahNumber):") }
-        lastResetSurah = surahNumber
-        lastResetSnapshot = surahVerses
-
-        // Perform reset
         requestReset(type: .surah(surahNumber))
 
-        // Show toast with undo
         if let surah = getSurah(forNumber: surahNumber) {
             showResetToast(for: surah.englishName, surahNumber: surahNumber)
         }
@@ -408,77 +363,25 @@ class ProgressManagementViewModel: ObservableObject {
 
             let importedProgress = try decoder.decode(ReadingProgress.self, from: jsonData)
 
-            // Apply merge strategy
-            var finalProgress: ReadingProgress
-
+            // Convert ViewModel strategy to QuranService strategy and delegate import
+            let serviceStrategy: QuranService.ImportStrategy
             switch strategy {
             case .replace:
-                // Replace all - use imported data directly
-                finalProgress = importedProgress
-
+                serviceStrategy = .replace
             case .merge:
-                // Merge - keep most recent timestamp for each verse
-                guard let currentProgress = readingProgress else {
-                    finalProgress = importedProgress
-                    break
-                }
-
-                var mergedVerses = currentProgress.readVerses
-                for (verseId, importedData) in importedProgress.readVerses {
-                    if let existingData = mergedVerses[verseId] {
-                        // Keep the one with most recent timestamp
-                        if importedData.timestamp > existingData.timestamp {
-                            mergedVerses[verseId] = importedData
-                        }
-                    } else {
-                        // New verse - add it
-                        mergedVerses[verseId] = importedData
-                    }
-                }
-
-                finalProgress = ReadingProgress(
-                    lastReadSurah: max(currentProgress.lastReadSurah, importedProgress.lastReadSurah),
-                    lastReadVerse: currentProgress.lastReadVerse,
-                    readVerses: mergedVerses,
-                    streakDays: max(currentProgress.streakDays, importedProgress.streakDays),
-                    lastReadDate: max(currentProgress.lastReadDate, importedProgress.lastReadDate)
-                    // progressHistory is now managed by ProgressHistoryManager
-                )
-
+                serviceStrategy = .merge
             case .addOnly:
-                // Add-only - only import verses not already read
-                guard let currentProgress = readingProgress else {
-                    finalProgress = importedProgress
-                    break
-                }
-
-                var updatedVerses = currentProgress.readVerses
-                for (verseId, importedData) in importedProgress.readVerses {
-                    if updatedVerses[verseId] == nil {
-                        updatedVerses[verseId] = importedData
-                    }
-                }
-
-                finalProgress = ReadingProgress(
-                    lastReadSurah: currentProgress.lastReadSurah,
-                    lastReadVerse: currentProgress.lastReadVerse,
-                    readVerses: updatedVerses,
-                    streakDays: currentProgress.streakDays,
-                    lastReadDate: currentProgress.lastReadDate
-                    // progressHistory is now managed by ProgressHistoryManager
-                )
+                serviceStrategy = .addOnly
             }
 
-            // Save to UserDefaults
-            let encoder = JSONEncoder()
-            let encodedData = try encoder.encode(finalProgress)
-            UserDefaults.standard.set(encodedData, forKey: "readingProgress")
+            // Delegate to QuranService (uses SwiftData)
+            quranService.importProgress(importedProgress, strategy: serviceStrategy)
 
             loadProgress()
             isImporting = false
 
             #if DEBUG
-            print("📥 Imported \(finalProgress.totalVersesRead) verses with strategy: \(strategy)")
+            print("📥 Imported \(importedProgress.totalVersesRead) verses with strategy: \(strategy)")
             #endif
         } catch {
             importError = "Failed to import: \(error.localizedDescription)"
@@ -534,46 +437,9 @@ class ProgressManagementViewModel: ObservableObject {
     // MARK: - Toast Methods
 
     private func showResetToast(for surahName: String, surahNumber: Int) {
-        // Use new Toast API
         toastMessage = "Progress reset for \(surahName)"
         toastStyle = .info
         showToast = true
-
-        // Haptic feedback using HapticManager
         HapticManager.shared.trigger(.success)
-    }
-
-    private func undoSurahReset() {
-        guard let surahNumber = lastResetSurah,
-              let snapshot = lastResetSnapshot else {
-            return
-        }
-
-        // Restore verses from snapshot
-        var progress = quranService.getReadingProgress()
-        for (verseId, verseData) in snapshot {
-            progress.readVerses[verseId] = verseData
-        }
-
-        // Save without creating new undo snapshot
-        let encoder = JSONEncoder()
-        if let encodedData = try? encoder.encode(progress) {
-            UserDefaults.standard.set(encodedData, forKey: "reading_progress")
-            loadProgress()
-        }
-
-        // Show confirmation toast
-        if let surah = getSurah(forNumber: surahNumber) {
-            toastMessage = "Restored \(surah.englishName)"
-            toastStyle = .success
-            showToast = true
-        }
-
-        // Haptic feedback using HapticManager
-        HapticManager.shared.trigger(.success)
-
-        // Clear undo state
-        lastResetSurah = nil
-        lastResetSnapshot = nil
     }
 }
