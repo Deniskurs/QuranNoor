@@ -82,7 +82,7 @@ struct SpiritualContentDetailSheet: View {
                 }
                 .padding(Spacing.cardPadding)
             }
-            .background(themeManager.currentTheme.backgroundColor)
+            .background(themeManager.currentTheme.backgroundColor.ignoresSafeArea())
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -118,6 +118,7 @@ struct SpiritualContentDetailSheet: View {
                 ShareSheet(items: [shareText])
             }
         }
+        .presentationBackground(themeManager.currentTheme.backgroundColor)
         .onAppear {
             checkBookmarkStatus()
         }

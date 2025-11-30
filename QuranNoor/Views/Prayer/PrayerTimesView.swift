@@ -451,6 +451,7 @@ struct PrayerTimesView: View {
         NavigationLink {
             MosqueFinderView()
                 .environment(themeManager)
+                .environmentObject(LocationService.shared)
         } label: {
             HStack {
                 Image(systemName: "building.2.fill")

@@ -36,6 +36,71 @@ class NotificationService: ObservableObject {
     private let userDefaults = UserDefaults.standard
     private let notificationsEnabledKey = "notificationsEnabled"
 
+    // MARK: - Dynamic Notification Titles
+    /// Prayer-specific dynamic titles with emojis
+    private let prayerTitles: [PrayerName: [String]] = [
+        .fajr: [
+            "🌅 Rise for Fajr at",
+            "🌙 Dawn Breaks at",
+            "✨ Fajr Awaits at"
+        ],
+        .dhuhr: [
+            "☀️ Dhuhr is Calling at",
+            "🕌 Midday Prayer at",
+            "📿 Time for Dhuhr at"
+        ],
+        .asr: [
+            "🌤️ Asr Has Entered at",
+            "⏰ Afternoon Salah at",
+            "🤲 Asr Awaits You at"
+        ],
+        .maghrib: [
+            "🌅 Maghrib at Sunset",
+            "🍽️ Break Fast & Pray at",
+            "🌙 Maghrib is Here at"
+        ],
+        .isha: [
+            "🌙 Isha Under Stars at",
+            "✨ Night Prayer at",
+            "🌌 Isha Has Arrived at"
+        ]
+    ]
+
+    /// Prayer-specific reminder messages
+    private let reminderMessages: [PrayerName: String] = [
+        .fajr: "angels are gathering to witness your prayer",
+        .dhuhr: "your good deeds rise to Allah at this hour",
+        .asr: "the angels witness Asr and Fajr",
+        .maghrib: "prepare to break fast and connect with Allah",
+        .isha: "half the night's reward awaits you"
+    ]
+
+    /// Prayer-specific reminder emojis
+    private let reminderEmojis: [PrayerName: String] = [
+        .fajr: "🌅",
+        .dhuhr: "☀️",
+        .asr: "🌤️",
+        .maghrib: "🌅",
+        .isha: "🌙"
+    ]
+
+    /// Urgent notification titles
+    private let urgentTitles: [String] = [
+        "⚡ Don't Miss",
+        "⏰",
+        "🚨 Last Call for"
+    ]
+
+    /// Urgent notification body messages
+    private let urgentMessages: [String] = [
+        "Only 30 min left! The Prophet ﷺ never missed a single prayer.",
+        "Your Lord awaits - prayer window is closing 🤲",
+        "Rush to salah! Every prayer is priceless ✨",
+        "Angels are recording - you still have time!",
+        "30 minutes remaining - pray now, regret nothing 💎",
+        "Don't let this slip away - your soul needs this connection 🕌"
+    ]
+
     // MARK: - Initializer
     init() {
         loadNotificationSettings()
@@ -86,13 +151,30 @@ class NotificationService: ObservableObject {
         // Remove existing prayer notifications
         await cancelPrayerNotifications()
 
-        // Schedule for each prayer
+        // Get per-prayer preferences
+        let prefs = NotificationPreferencesService.shared
+
+        // Schedule for each prayer (respecting per-prayer preferences)
         for prayer in prayerTimes.prayerTimes {
+            // Check if this prayer has notifications enabled
+            guard prefs.isNotificationEnabled(for: prayer.name) else {
+                print("⏭️ Skipping \(prayer.name.displayName) notification (disabled in preferences)")
+                continue
+            }
+
+            // Schedule main notification
             try await scheduleNotification(
                 for: prayer,
                 city: city,
                 countryCode: countryCode
             )
+
+            // Schedule reminder if configured
+            let reminderMinutes = prefs.getReminderMinutes(for: prayer.name)
+            if reminderMinutes > 0 {
+                try await scheduleReminderNotification(for: prayer, minutesBefore: reminderMinutes)
+                print("⏰ Scheduled \(reminderMinutes)min reminder for \(prayer.name.displayName)")
+            }
         }
     }
 
@@ -108,17 +190,22 @@ class NotificationService: ObservableObject {
     ) async throws {
         let content = UNMutableNotificationContent()
 
-        // RICH TITLE: "Maghrib at 16:34 in Livingston, GB"
+        // Format time
         let timeFormatter = DateFormatter()
         timeFormatter.dateFormat = "HH:mm"
         let timeString = timeFormatter.string(from: prayer.time)
 
-        content.title = "\(prayer.name.displayName) at \(timeString) in \(city), \(countryCode)"
+        // DYNAMIC TITLE: Pick a random engaging phrase for this prayer
+        let titles = prayerTitles[prayer.name] ?? ["🕌 \(prayer.name.displayName) at"]
+        let titlePhrase = titles.randomElement() ?? titles[0]
+        content.title = "\(titlePhrase) \(timeString)"
 
         // EDUCATIONAL CONTENT: Get rotating Islamic quote/verse
         let islamicContent = await IslamicContentService.shared.getRotatingContent(for: prayer.name)
-        if let subtitle = islamicContent.subtitle {
-            content.subtitle = subtitle
+
+        // SUBTITLE: Show hadith/verse source (e.g., "Sahih Bukhari 645")
+        if let source = islamicContent.subtitle {
+            content.subtitle = source
         }
         content.body = islamicContent.formattedBody
 
@@ -168,8 +255,15 @@ class NotificationService: ObservableObject {
         guard reminderTime > Date() else { return }
 
         let content = UNMutableNotificationContent()
-        content.title = "Prayer Reminder"
-        content.body = "\(prayer.name.displayName) prayer in \(minutesBefore) minutes"
+
+        // DYNAMIC TITLE: Prayer emoji + name + time remaining
+        let emoji = reminderEmojis[prayer.name] ?? "🕌"
+        content.title = "\(emoji) \(prayer.name.displayName) in \(minutesBefore) min"
+
+        // DYNAMIC BODY: Prayer-specific motivational message
+        let message = reminderMessages[prayer.name] ?? "time to prepare for prayer"
+        content.body = "\(prayer.name.displayName) is approaching - \(message)"
+
         content.sound = .default
         content.categoryIdentifier = "PRAYER_REMINDER"
         content.relevanceScore = 0.7 // Medium-high priority for reminders
@@ -204,16 +298,20 @@ class NotificationService: ObservableObject {
         guard urgentTime > Date() else { return }
 
         let content = UNMutableNotificationContent()
-        content.title = "⏰ Prayer Time Ending Soon"
 
-        // Choose motivational message based on prayer
-        let messages = [
-            "Only 30 minutes left for \(prayer.displayName)! Don't miss your connection with Allah ﷻ",
-            "\(prayer.displayName) ends in 30 minutes. Pray now for maximum reward ✨",
-            "Quick reminder: \(prayer.displayName) time is ending soon. Make your salah count! 🤲"
-        ]
+        // DYNAMIC TITLE: Rotating urgent phrases with prayer name
+        let titleIndex = Int.random(in: 0..<urgentTitles.count)
+        let titlePhrase = urgentTitles[titleIndex]
 
-        content.body = messages.randomElement() ?? messages[0]
+        // Special formatting for middle title (just emoji + prayer + "Ending Soon!")
+        if titleIndex == 1 {
+            content.title = "\(titlePhrase) \(prayer.displayName) Ending Soon!"
+        } else {
+            content.title = "\(titlePhrase) \(prayer.displayName)!"
+        }
+
+        // DYNAMIC BODY: 6 rotating motivational messages
+        content.body = urgentMessages.randomElement() ?? urgentMessages[0]
         content.sound = .defaultCritical // More attention-grabbing sound
         content.categoryIdentifier = "PRAYER_URGENT"
         content.interruptionLevel = .timeSensitive // iOS 15+ priority
@@ -292,7 +390,7 @@ class NotificationService: ObservableObject {
         notificationsEnabled = userDefaults.bool(forKey: notificationsEnabledKey)
     }
 
-    private func saveNotificationSettings() {
+    func saveNotificationSettings() {
         userDefaults.set(notificationsEnabled, forKey: notificationsEnabledKey)
     }
 }
@@ -352,3 +450,50 @@ extension NotificationService {
         center.setNotificationCategories([prayerCategory, reminderCategory, urgentCategory])
     }
 }
+
+// MARK: - Debug Helpers
+#if DEBUG
+extension NotificationService {
+    /// Send a test notification (for debugging)
+    /// Fires in 5 seconds to give time to lock the phone
+    func sendTestNotification() async {
+        let content = UNMutableNotificationContent()
+        content.title = "🧪 Test Notification"
+        content.body = "If you see this, notifications are working! Auth: \(isAuthorized), Enabled: \(notificationsEnabled)"
+        content.sound = .default
+        content.categoryIdentifier = "PRAYER_TIME"
+
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 5, repeats: false)
+        let request = UNNotificationRequest(
+            identifier: "test-notification-\(Date().timeIntervalSince1970)",
+            content: content,
+            trigger: trigger
+        )
+
+        do {
+            try await center.add(request)
+            print("✅ Test notification scheduled for 5 seconds from now")
+        } catch {
+            print("❌ Failed to schedule test notification: \(error)")
+        }
+    }
+
+    /// Get debug info about pending notifications
+    func getDebugInfo() async -> String {
+        let pending = await center.pendingNotificationRequests()
+        let prayerNotifs = pending.filter { $0.identifier.hasPrefix("prayer-") }
+        let reminderNotifs = pending.filter { $0.identifier.hasPrefix("reminder-") }
+        let urgentNotifs = pending.filter { $0.identifier.hasPrefix("urgent-") }
+
+        return """
+        📊 Notification Debug Info:
+        - Permission: \(isAuthorized ? "✅ Granted" : "❌ Denied")
+        - Enabled: \(notificationsEnabled ? "✅ Yes" : "❌ No")
+        - Total pending: \(pending.count)
+        - Prayer notifications: \(prayerNotifs.count)
+        - Reminder notifications: \(reminderNotifs.count)
+        - Urgent notifications: \(urgentNotifs.count)
+        """
+    }
+}
+#endif

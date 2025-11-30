@@ -668,6 +668,37 @@ struct SettingsView: View {
 
             CardView {
                 VStack(spacing: 16) {
+                    // Notification Status Display
+                    notificationStatusView
+
+                    IslamicDivider(style: .simple)
+
+                    // Test Notification Button
+                    Button {
+                        testNotification()
+                    } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: "bell.badge.fill")
+                                .font(.system(size: 20))
+                                .foregroundColor(AppColors.primary.gold)
+                                .frame(width: 32)
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                ThemedText.body("Test Notification")
+                                ThemedText.caption("Sends a test notification in 5 seconds")
+                            }
+
+                            Spacer()
+
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 14))
+                                .foregroundColor(themeManager.currentTheme.textTertiary)
+                                .opacity(themeManager.currentTheme.disabledOpacity)
+                        }
+                    }
+
+                    IslamicDivider(style: .simple)
+
                     Button(role: .destructive) {
                         resetOnboarding()
                     } label: {
@@ -714,7 +745,51 @@ struct SettingsView: View {
         }
     }
 
+    /// Shows current notification permission and enabled status
+    private var notificationStatusView: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            // Permission Status
+            HStack(spacing: 12) {
+                Image(systemName: prayerVM.notificationService.isAuthorized ? "checkmark.circle.fill" : "xmark.circle.fill")
+                    .font(.system(size: 20))
+                    .foregroundColor(prayerVM.notificationService.isAuthorized ? .green : .red)
+                    .frame(width: 32)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    ThemedText.body("Permission")
+                    ThemedText.caption(prayerVM.notificationService.isAuthorized ? "Granted" : "Denied")
+                        .foregroundColor(prayerVM.notificationService.isAuthorized ? .green : .red)
+                }
+
+                Spacer()
+            }
+
+            // Enabled Status
+            HStack(spacing: 12) {
+                Image(systemName: prayerVM.notificationService.notificationsEnabled ? "bell.fill" : "bell.slash.fill")
+                    .font(.system(size: 20))
+                    .foregroundColor(prayerVM.notificationService.notificationsEnabled ? .green : .orange)
+                    .frame(width: 32)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    ThemedText.body("Notifications")
+                    ThemedText.caption(prayerVM.notificationService.notificationsEnabled ? "Enabled" : "Disabled")
+                        .foregroundColor(prayerVM.notificationService.notificationsEnabled ? .green : .orange)
+                }
+
+                Spacer()
+            }
+        }
+    }
+
     // MARK: - Developer Actions
+
+    private func testNotification() {
+        Task {
+            await prayerVM.notificationService.sendTestNotification()
+            AudioHapticCoordinator.shared.playSuccess()
+        }
+    }
 
     private func resetOnboarding() {
         UserDefaults.standard.removeObject(forKey: "hasCompletedOnboarding")

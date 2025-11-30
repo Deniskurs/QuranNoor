@@ -20,21 +20,18 @@ struct AdhkarQuickAccessCard: View {
     private let displayCategories: [AdhkarCategory] = [.morning, .evening, .afterPrayer]
 
     var body: some View {
-        LiquidGlassCardView(intensity: .subtle) {
-            VStack(alignment: .leading, spacing: Spacing.cardSpacing) {
-                // Header
-                headerSection
+        VStack(alignment: .leading, spacing: Spacing.cardSpacing) {
+            // Header
+            headerSection
 
-                // Stats Row
-                statsSection
+            // Stats Row
+            statsSection
 
-                // Quick Action Buttons
-                quickActionsSection
+            // Quick Action Buttons
+            quickActionsSection
 
-                // Category Cards
-                categoriesSection
-            }
-            .padding(Spacing.cardPadding)
+            // Category Cards
+            categoriesSection
         }
         .sheet(isPresented: $showTasbih) {
             TasbihCounterView()

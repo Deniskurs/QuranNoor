@@ -125,11 +125,31 @@ class PrayerViewModel {
         periodProgress
     }
 
+    // MARK: - Notification Preferences Observer
+    private var notificationPreferencesObserver: NSObjectProtocol?
+
     // MARK: - Initializer
     init() {
         loadCalculationMethod()
         loadMadhab()
         setupNotificationCategories()
+        setupNotificationPreferencesObserver()
+    }
+
+    // Note: Observer cleanup is handled by NotificationCenter when object is deallocated
+    // since we use addObserver with a closure that captures [weak self]
+
+    /// Listen for notification preference changes and reschedule
+    private func setupNotificationPreferencesObserver() {
+        notificationPreferencesObserver = NotificationCenter.default.addObserver(
+            forName: .notificationPreferencesChanged,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                await self?.rescheduleNotifications()
+            }
+        }
     }
 
     // MARK: - Public Methods
@@ -266,6 +286,13 @@ class PrayerViewModel {
             return
         }
 
+        // Check if urgent notifications are enabled for this prayer
+        let prefs = NotificationPreferencesService.shared
+        guard prefs.isUrgentNotificationEnabled(for: prayer) else {
+            print("⏭️ Skipping urgent notification for \(prayer.displayName) (disabled in preferences)")
+            return
+        }
+
         // Create unique identifier for this prayer+deadline combination
         let notificationKey = "\(prayer.rawValue)-\(deadline.timeIntervalSince1970)"
 
@@ -397,9 +424,34 @@ class PrayerViewModel {
                     )
                     notificationService.notificationsEnabled = true
                 }
+
+                // CRITICAL: Persist the change to UserDefaults
+                notificationService.saveNotificationSettings()
             }
         } catch {
             handleError(error)
+        }
+    }
+
+    /// Reschedule notifications (called when preferences change)
+    func rescheduleNotifications() async {
+        guard notificationService.isAuthorized,
+              notificationService.notificationsEnabled,
+              let prayerTimes = todayPrayerTimes else {
+            print("⏭️ Skipping reschedule: not authorized, not enabled, or no prayer times")
+            return
+        }
+
+        let locationInfo = getLocationInfo()
+        do {
+            try await notificationService.schedulePrayerNotifications(
+                prayerTimes,
+                city: locationInfo.city,
+                countryCode: locationInfo.countryCode
+            )
+            print("✅ Notifications rescheduled after preference change")
+        } catch {
+            print("⚠️ Failed to reschedule notifications: \(error.localizedDescription)")
         }
     }
 
