@@ -10,6 +10,10 @@ import UserNotifications
 
 @Observable
 final class IslamicCalendarService {
+    // MARK: - Cached Codecs (Performance: avoid repeated allocation)
+    private static let decoder = JSONDecoder()
+    private static let encoder = JSONEncoder()
+
     private(set) var allEvents: [IslamicEvent] = []
     private(set) var progress: CalendarProgress
     private(set) var ramadanTrackers: [Int: RamadanTracker] = [:]  // Year -> Tracker
@@ -221,28 +225,28 @@ final class IslamicCalendarService {
 
     private static func loadProgress() -> CalendarProgress {
         if let data = UserDefaults.standard.data(forKey: progressKey),
-           let progress = try? JSONDecoder().decode(CalendarProgress.self, from: data) {
+           let progress = try? decoder.decode(CalendarProgress.self, from: data) {
             return progress
         }
         return CalendarProgress()
     }
 
     private func saveProgress() {
-        if let data = try? JSONEncoder().encode(progress) {
+        if let data = try? Self.encoder.encode(progress) {
             UserDefaults.standard.set(data, forKey: Self.progressKey)
         }
     }
 
     private static func loadRamadanTrackers() -> [Int: RamadanTracker] {
         if let data = UserDefaults.standard.data(forKey: ramadanTrackersKey),
-           let trackers = try? JSONDecoder().decode([Int: RamadanTracker].self, from: data) {
+           let trackers = try? decoder.decode([Int: RamadanTracker].self, from: data) {
             return trackers
         }
         return [:]
     }
 
     private func saveRamadanTrackers() {
-        if let data = try? JSONEncoder().encode(ramadanTrackers) {
+        if let data = try? Self.encoder.encode(ramadanTrackers) {
             UserDefaults.standard.set(data, forKey: Self.ramadanTrackersKey)
         }
     }

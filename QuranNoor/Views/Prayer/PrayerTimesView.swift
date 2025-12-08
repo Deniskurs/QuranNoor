@@ -2,13 +2,14 @@
 //  PrayerTimesView.swift
 //  QuranNoor
 //
-//  Redesigned prayer times view with TimelineView, sticky header, and completion tracking
-//  Updated: 11/1/2025 - Complete UI/UX overhaul with 120fps optimizations
+//  Redesigned prayer times view with immersive hero section,
+//  arc timeline, swipeable rows, and celebration effects.
+//  Complete UI/UX overhaul for premium experience.
 //
 
 import SwiftUI
 
-/// Redesigned Prayer Times view with 120fps optimizations
+/// Redesigned Prayer Times view with premium visual experience
 struct PrayerTimesView: View {
     // MARK: - Properties
 
@@ -16,17 +17,11 @@ struct PrayerTimesView: View {
     @State private var viewModel = PrayerViewModel()
     @State private var transitionHandler: PrayerTransitionHandler?
 
-    // Completion tracking
-    private let completionService = PrayerCompletionService.shared
-
-    // Performance optimization
-    @State private var performanceService = PerformanceOptimizationService.shared
-    @State private var updateInterval: TimeInterval = 1.0
+    // Note: Access singletons directly - don't wrap in @State
 
     // UI State
     @State private var showMethodPicker: Bool = false
     @State private var showMadhabPicker: Bool = false
-    @State private var scrollOffset: CGFloat = 0
     @State private var showPrayerReminder: Bool = false
     @State private var hasShownReminderThisSession: Bool = false
 
@@ -35,64 +30,62 @@ struct PrayerTimesView: View {
     @State private var completedPrayerName: String = ""
     @State private var lastCompletedPrayer: PrayerName? = nil
 
+    // View visibility tracking
+    @State private var isViewVisible: Bool = true
+
+    // Namespace for scroll animations
+    @Namespace private var scrollNamespace
+
     // MARK: - Body
 
     var body: some View {
         NavigationStack {
             ZStack {
-                // Base theme background (ensures pure black in night mode for OLED)
+                // Base background
                 themeManager.currentTheme.backgroundColor
                     .ignoresSafeArea()
 
-                // Gradient overlay (automatically suppressed in night mode)
-                GradientBackground(style: .prayer, opacity: 0.3)
-
-                // Main content with dynamic TimelineView for optimal performance
-                TimelineView(.periodic(from: Date(), by: updateInterval)) { context in
-                    ScrollView {
-                        VStack(spacing: 20) {
-                            // Location header
-                            locationHeader
-
-                            // Current Prayer Period Header (Sticky concept)
-                            if let period = viewModel.currentPrayerPeriod {
-                                CurrentPrayerHeader(
-                                    state: period.state,
-                                    progress: period.periodProgress,
-                                    countdownString: period.countdownString,
-                                    isUrgent: period.isUrgent
-                                )
-                                .onChange(of: period.state) { _, newState in
-                                    // Update timeline frequency based on prayer state
-                                    updateInterval = performanceService.getOptimalUpdateInterval(for: newState)
+                // Main content - Fixed 1s interval for reliable countdown updates
+                TimelineView(.periodic(from: Date(), by: 1.0)) { context in
+                    ScrollViewReader { scrollProxy in
+                        ScrollView {
+                            VStack(spacing: 20) {
+                                // Immersive Hero Section
+                                if let period = viewModel.currentPrayerPeriod {
+                                    PrayerHeroSection(
+                                        period: period,
+                                        currentTime: context.date,  // Live time for real-time countdown
+                                        location: viewModel.userLocation,
+                                        isLoadingLocation: viewModel.isLoadingLocation
+                                    )
                                 }
-                                .transition(.asymmetric(
-                                    insertion: .scale.combined(with: .opacity),
-                                    removal: .opacity
-                                ))
+
+                                // Today's Prayers List
+                                if let times = viewModel.todayPrayerTimes {
+                                    prayerListSection(times, scrollProxy: scrollProxy)
+                                }
+
+                                // Completion Statistics with Celebration
+                                CelebrationCompletionCard()
+
+                                // Settings Section
+                                settingsSection
+
+                                // Mosque Finder
+                                mosqueFinderButton
+
+                                // Qadha Counter
+                                qadhaCounterButton
+
+                                // Bottom padding
+                                Spacer()
+                                    .frame(height: 20)
                             }
-
-                            // Today's Prayers with Smart Rows
-                            if let times = viewModel.todayPrayerTimes {
-                                todayPrayersSection(times)
-                            }
-
-                            // Completion Statistics
-                            completionStatisticsCard
-
-                            // Settings Section
-                            settingsSection
-
-                            // Mosque Finder
-                            mosqueFinderButton
-
-                            // Qadha Counter
-                            qadhaCounterButton
+                            .padding(.horizontal, 16)
                         }
-                        .padding()
-                    }
-                    .refreshable {
-                        await viewModel.refreshPrayerTimes()
+                        .refreshable {
+                            await viewModel.refreshPrayerTimes()
+                        }
                     }
                 }
 
@@ -101,7 +94,7 @@ struct PrayerTimesView: View {
                     LoadingOverlay()
                 }
 
-                // Prayer reminder popup (shows on app launch)
+                // Prayer reminder popup
                 if showPrayerReminder,
                    let currentPrayer = viewModel.currentPrayer,
                    let times = viewModel.todayPrayerTimes,
@@ -109,7 +102,7 @@ struct PrayerTimesView: View {
                     PrayerReminderPopup(
                         prayer: prayer,
                         onComplete: {
-                            completionService.toggleCompletion(currentPrayer)
+                            PrayerCompletionService.shared.toggleCompletion(currentPrayer)
                         },
                         onDismiss: {
                             showPrayerReminder = false
@@ -132,44 +125,17 @@ struct PrayerTimesView: View {
                 }
             }
             .task {
-                await viewModel.initialize()
-
-                // Start transition handler
-                let handler = PrayerTransitionHandler(viewModel: viewModel)
-                handler.start()
-                transitionHandler = handler
-
-                // Initial period calculation
-                viewModel.recalculatePeriod()
-
-                // Perform automatic cache cleanup (runs in background)
-                Task.detached(priority: .background) {
-                    await performanceService.performAutomaticCacheCleanup()
-                }
-
-                // Set initial update interval based on current state
-                updateInterval = performanceService.getOptimalUpdateInterval(for: viewModel.currentPrayerPeriod?.state)
-
-                // Show prayer reminder popup if there's a current prayer not yet completed
-                if !hasShownReminderThisSession,
-                   let currentPrayer = viewModel.currentPrayer,
-                   !completionService.isCompleted(currentPrayer) {
-                    // Delay to let the view settle
-                    try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
-
-                    withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
-                        showPrayerReminder = true
-                        hasShownReminderThisSession = true
-                    }
-                }
+                await initializeView()
+            }
+            .onAppear {
+                isViewVisible = true
             }
             .onDisappear {
+                isViewVisible = false
                 transitionHandler?.stop()
             }
             .onReceive(NotificationCenter.default.publisher(for: .prayerAdjustmentsChanged)) { _ in
-                // Prayer time adjustments changed - refresh prayer times
                 Task {
-                    print("🔄 Adjustments changed, refreshing prayer times...")
                     await viewModel.refreshPrayerTimes()
                 }
             }
@@ -206,12 +172,8 @@ struct PrayerTimesView: View {
                 isPresented: $showCompletionToast,
                 showUndo: true,
                 onUndo: {
-                    // Play back sound for undo action
-                    // AudioHapticCoordinator.shared.playBack() // Removed: button press sound
-
-                    // Undo the completion
                     if let prayer = lastCompletedPrayer {
-                        completionService.toggleCompletion(prayer)
+                        PrayerCompletionService.shared.toggleCompletion(prayer)
                         lastCompletedPrayer = nil
                     }
                 }
@@ -219,178 +181,123 @@ struct PrayerTimesView: View {
         }
     }
 
-    // MARK: - Components
+    // MARK: - View Initialization
 
-    private var locationHeader: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                ThemedText.caption("YOUR LOCATION")
-                ThemedText.body(viewModel.userLocation)
-                    .foregroundColor(themeManager.currentTheme.accentPrimary)
-            }
+    private func initializeView() async {
+        await viewModel.initialize()
 
-            Spacer()
+        // Start transition handler
+        let handler = PrayerTransitionHandler(viewModel: viewModel)
+        handler.start()
+        transitionHandler = handler
 
-            if viewModel.isLoadingLocation {
-                ProgressView()
-                    .scaleEffect(0.8)
+        // Initial period calculation
+        viewModel.recalculatePeriod()
+
+        // Background cache cleanup
+        Task.detached(priority: .background) {
+            await PerformanceOptimizationService.shared.performAutomaticCacheCleanup()
+        }
+
+        // Show prayer reminder popup
+        if !hasShownReminderThisSession,
+           let currentPrayer = viewModel.currentPrayer,
+           !PrayerCompletionService.shared.isCompleted(currentPrayer) {
+            try? await Task.sleep(nanoseconds: 1_000_000_000)
+
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+                showPrayerReminder = true
+                hasShownReminderThisSession = true
             }
         }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(themeManager.currentTheme.cardColor)
-        )
     }
 
-    private func todayPrayersSection(_ times: DailyPrayerTimes) -> some View {
-        VStack(spacing: 0) {
+    // MARK: - Completed Prayers Set
+
+    private var completedPrayersSet: Set<PrayerName> {
+        let _ = PrayerCompletionService.shared.changeCounter
+        return Set(PrayerName.allCases.filter { PrayerCompletionService.shared.isCompleted($0) })
+    }
+
+    // MARK: - Prayer List Section
+
+    private func prayerListSection(_ times: DailyPrayerTimes, scrollProxy: ScrollViewProxy) -> some View {
+        // Observe completion state at parent level - prevents gesture interference in child rows
+        let _ = PrayerCompletionService.shared.changeCounter
+
+        return VStack(spacing: 0) {
             // Section header
             HStack {
-                ThemedText("Today's Prayers", style: .heading)
-                Spacer()
-                Text(Date().formatted(date: .abbreviated, time: .omitted))
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(themeManager.currentTheme.textTertiary)
-            }
-            .padding(.bottom, 12)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("TODAY'S PRAYERS")
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                        .foregroundColor(themeManager.currentTheme.textTertiary)
+                        .tracking(1.5)
 
-            // Smart Prayer Rows
-            VStack(spacing: 12) {
+                    Text(formattedDate)
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(themeManager.currentTheme.textSecondary)
+                }
+
+                Spacer()
+
+                // Swipe hint
+                HStack(spacing: 4) {
+                    Image(systemName: "arrow.left")
+                        .font(.system(size: 10, weight: .medium))
+                    Text("Swipe to complete")
+                        .font(.system(size: 11, weight: .medium))
+                }
+                .foregroundColor(themeManager.currentTheme.textTertiary)
+                .opacity(0.7)
+            }
+            .padding(.bottom, 16)
+
+            // Prayer rows - isCompleted passed from parent to avoid @Observable in gesture views
+            VStack(spacing: 10) {
                 ForEach(times.prayerTimes) { prayer in
-                    SmartPrayerRow(
+                    let isCompleted = PrayerCompletionService.shared.isCompleted(prayer.name)
+
+                    SwipeablePrayerRow(
                         prayer: prayer,
                         isCurrentPrayer: prayer.name == viewModel.currentPrayer,
                         isNextPrayer: prayer.name == viewModel.nextPrayer?.name,
-                        isCompleted: completionService.isCompleted(prayer.name),
                         relatedSpecialTimes: getRelatedSpecialTimes(for: prayer, from: times),
-                        canCheckOff: prayer.hasStarted, // Only allow checking off past/current prayers
+                        canCheckOff: prayer.hasStarted,
+                        isCompleted: isCompleted,
                         onCompletionToggle: {
-                            // Store prayer for undo
-                            lastCompletedPrayer = prayer.name
-
-                            // Check if marking complete or incomplete
-                            let isMarkingComplete = !completionService.isCompleted(prayer.name)
-
-                            // Toggle completion
-                            completionService.toggleCompletion(prayer.name)
-
-                            // Show encouraging toast only when marking complete
-                            // Note: Sound is already played by SmartPrayerRow
-                            if isMarkingComplete {
-                                completedPrayerName = prayer.name.displayName
-                                showCompletionToast = true
-                            }
+                            handlePrayerCompletion(prayer.name)
                         }
                     )
-                    .id(prayer.name.rawValue) // For smooth animations
+                    .id(prayer.name.rawValue)
                 }
             }
         }
     }
 
-    private var completionStatisticsCard: some View {
-        let stats = completionService.getTodayStatistics()
+    // MARK: - Prayer Completion Handler
 
-        return LiquidGlassCardView(intensity: .moderate) {
-            VStack(spacing: 16) {
-                // Header
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        ThemedText.caption("TODAY'S PROGRESS")
-                        ThemedText("Prayer Completion", style: .heading)
-                            .foregroundColor(themeManager.currentTheme.accentPrimary)
-                    }
+    private func handlePrayerCompletion(_ prayer: PrayerName) {
+        lastCompletedPrayer = prayer
+        let isMarkingComplete = !PrayerCompletionService.shared.isCompleted(prayer)
 
-                    Spacer()
+        PrayerCompletionService.shared.toggleCompletion(prayer)
 
-                    // Completion ring
-                    OptimizedProgressRing(
-                        progress: Double(stats.completedCount) / Double(stats.totalCount),
-                        lineWidth: 6,
-                        size: 60,
-                        color: stats.isAllCompleted ? themeManager.currentTheme.accentPrimary : themeManager.currentTheme.accentSecondary,
-                        showPercentage: true
-                    )
-                    .accessibilityLabel("Prayer completion progress")
-                    .accessibilityValue("\(stats.percentage) percent complete")
-                }
-
-                IslamicDivider(style: .simple)
-
-                // Stats row
-                HStack(spacing: 20) {
-                    statItem(
-                        icon: "checkmark.circle.fill",
-                        value: "\(stats.completedCount)",
-                        label: "Completed",
-                        color: themeManager.currentTheme.accentPrimary
-                    )
-
-                    statItem(
-                        icon: "circle.dashed",
-                        value: "\(stats.totalCount - stats.completedCount)",
-                        label: "Remaining",
-                        color: themeManager.currentTheme.accentInteractive
-                    )
-
-                    statItem(
-                        icon: "percent",
-                        value: "\(stats.percentage)",
-                        label: "Progress",
-                        color: themeManager.currentTheme.accentSecondary
-                    )
-                }
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel("Prayer statistics")
-                .accessibilityValue("\(stats.completedCount) completed, \(stats.totalCount - stats.completedCount) remaining, \(stats.percentage) percent progress")
-
-                // All completed celebration
-                if stats.isAllCompleted {
-                    HStack(spacing: 8) {
-                        Image(systemName: "star.fill")
-                            .foregroundColor(themeManager.currentTheme.accentInteractive)
-                            .accessibilityHidden(true)
-                        Text("All prayers completed! ✨")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(themeManager.currentTheme.accentInteractive)
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-                    .background(
-                        Capsule()
-                            .fill(themeManager.currentTheme.accentInteractive.opacity(0.15))
-                    )
-                    .transition(.scale.combined(with: .opacity))
-                    .accessibilityLabel("Celebration: All today's prayers completed")
-                }
-            }
-            .accessibilityElement(children: .contain)
+        if isMarkingComplete {
+            completedPrayerName = prayer.displayName
+            showCompletionToast = true
         }
-        .animation(.spring(response: 0.5, dampingFraction: 0.7), value: stats.completedCount)
     }
 
-    private func statItem(icon: String, value: String, label: String, color: Color) -> some View {
-        VStack(spacing: 6) {
-            Image(systemName: icon)
-                .font(.system(size: 20))
-                .foregroundColor(color)
-
-            Text(value)
-                .font(.system(size: 24, weight: .bold, design: .rounded))
-                .foregroundColor(color)
-
-            Text(label)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundColor(themeManager.currentTheme.textTertiary)
-        }
-        .frame(maxWidth: .infinity)
-    }
+    // MARK: - Settings Section
 
     private var settingsSection: some View {
         VStack(spacing: 12) {
             HStack {
-                ThemedText("Settings", style: .heading)
+                Text("SETTINGS")
+                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .foregroundColor(themeManager.currentTheme.textTertiary)
+                    .tracking(1.5)
                 Spacer()
             }
 
@@ -412,7 +319,7 @@ struct PrayerTimesView: View {
             } label: {
                 settingRow(
                     icon: "globe",
-                    title: "Madhab (Asr Calculation)",
+                    title: "Madhab (Asr)",
                     value: viewModel.selectedMadhab.rawValue,
                     color: themeManager.currentTheme.accentSecondary
                 )
@@ -421,31 +328,43 @@ struct PrayerTimesView: View {
     }
 
     private func settingRow(icon: String, title: String, value: String, color: Color) -> some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.system(size: 20))
-                .foregroundColor(color)
-                .frame(width: 32)
+        HStack(spacing: 14) {
+            // Icon
+            ZStack {
+                Circle()
+                    .fill(color.opacity(0.15))
+                    .frame(width: 40, height: 40)
 
-            VStack(alignment: .leading, spacing: 2) {
-                ThemedText.body(title)
-                ThemedText.caption(value)
+                Image(systemName: icon)
+                    .font(.system(size: 16, weight: .medium))
                     .foregroundColor(color)
+            }
+
+            // Text
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundColor(themeManager.currentTheme.textPrimary)
+
+                Text(value)
+                    .font(.system(size: 13, weight: .regular))
+                    .foregroundColor(themeManager.currentTheme.textSecondary)
             }
 
             Spacer()
 
             Image(systemName: "chevron.right")
-                .font(.system(size: 14))
+                .font(.system(size: 14, weight: .medium))
                 .foregroundColor(themeManager.currentTheme.textTertiary)
-                .opacity(themeManager.currentTheme.tertiaryOpacity)
         }
-        .padding()
+        .padding(16)
         .background(
-            RoundedRectangle(cornerRadius: 12)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .fill(themeManager.currentTheme.cardColor)
         )
     }
+
+    // MARK: - Mosque Finder Button
 
     private var mosqueFinderButton: some View {
         NavigationLink {
@@ -453,104 +372,119 @@ struct PrayerTimesView: View {
                 .environment(themeManager)
                 .environmentObject(LocationService.shared)
         } label: {
-            HStack {
-                Image(systemName: "building.2.fill")
-                    .font(.system(size: 18, weight: .semibold))
-                    .accessibilityHidden(true)
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle()
+                        .fill(themeManager.currentTheme.accentInteractive.opacity(0.15))
+                        .frame(width: 40, height: 40)
+
+                    Image(systemName: "building.2.fill")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(themeManager.currentTheme.accentInteractive)
+                }
+
                 Text("Find Nearby Mosques")
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundColor(themeManager.currentTheme.textPrimary)
+
                 Spacer()
 
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 14))
+                    .font(.system(size: 14, weight: .medium))
                     .foregroundColor(themeManager.currentTheme.textTertiary)
-                    .accessibilityHidden(true)
             }
-            .foregroundColor(themeManager.currentTheme.textPrimary)
-            .padding()
+            .padding(16)
             .background(
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .fill(themeManager.currentTheme.cardColor)
             )
         }
         .accessibilityLabel("Find nearby mosques")
-        .accessibilityHint("Opens map showing mosques near your location")
     }
+
+    // MARK: - Qadha Counter Button
 
     private var qadhaCounterButton: some View {
         NavigationLink {
             QadhaCounterView()
                 .environment(themeManager)
         } label: {
-            HStack {
-                Image(systemName: "clock.arrow.circlepath")
-                    .font(.system(size: 18, weight: .semibold))
-                    .accessibilityHidden(true)
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle()
+                        .fill(Color.orange.opacity(0.15))
+                        .frame(width: 40, height: 40)
+
+                    Image(systemName: "clock.arrow.circlepath")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.orange)
+                }
+
                 Text("Track Qadha Prayers")
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundColor(themeManager.currentTheme.textPrimary)
+
                 Spacer()
 
-                // Show total count badge if any qadha prayers exist
+                // Badge for pending qadha
                 let totalQadha = QadhaTrackerService.shared.totalQadha
                 if totalQadha > 0 {
                     Text("\(totalQadha)")
-                        .font(.system(size: 14, weight: .bold))
+                        .font(.system(size: 13, weight: .bold))
                         .foregroundColor(.white)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 4)
-                        .background(Color.orange)
-                        .clipShape(Capsule())
-                        .accessibilityLabel("\(totalQadha) qadha prayers pending")
+                        .background(Capsule().fill(Color.orange))
                 }
 
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 14))
+                    .font(.system(size: 14, weight: .medium))
                     .foregroundColor(themeManager.currentTheme.textTertiary)
-                    .accessibilityHidden(true)
             }
-            .foregroundColor(themeManager.currentTheme.textPrimary)
-            .padding()
+            .padding(16)
             .background(
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .fill(themeManager.currentTheme.cardColor)
             )
         }
-        .accessibilityLabel(totalQadhaAccessibilityLabel)
-        .accessibilityHint("Opens qadha prayer tracker to manage missed prayers")
+        .accessibilityLabel(qadhaAccessibilityLabel)
     }
 
-    private var totalQadhaAccessibilityLabel: String {
+    private var qadhaAccessibilityLabel: String {
         let totalQadha = QadhaTrackerService.shared.totalQadha
         if totalQadha > 0 {
             return "Track qadha prayers, \(totalQadha) pending"
-        } else {
-            return "Track qadha prayers"
         }
+        return "Track qadha prayers"
     }
-
 
     // MARK: - Helper Methods
 
-    /// Get special times related to a specific prayer
+    private var formattedDate: String {
+        Self.dayDateFormatter.string(from: Date())
+    }
+
+    // Cached DateFormatter for performance
+    private static let dayDateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEEE, MMM d"
+        return formatter
+    }()
+
     private func getRelatedSpecialTimes(for prayer: PrayerTime, from times: DailyPrayerTimes) -> [SpecialTime] {
         var related: [SpecialTime] = []
 
         switch prayer.name {
         case .fajr:
-            // Sunrise ends Fajr
             related.append(SpecialTime(type: .sunrise, time: times.sunrise))
-
         case .isha:
-            // Midnight and last third for night prayers
             if let midnight = times.midnight {
                 related.append(SpecialTime(type: .midnight, time: midnight))
             }
             if let lastThird = times.lastThird {
                 related.append(SpecialTime(type: .lastThird, time: lastThird))
             }
-
         default:
-            // No special times for other prayers
             break
         }
 

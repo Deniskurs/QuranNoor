@@ -23,60 +23,84 @@ final class AccessibilityHelper: ObservableObject {
     @Published var isDarkerSystemColorsEnabled: Bool = UIAccessibility.isDarkerSystemColorsEnabled
     @Published var preferredContentSizeCategory: ContentSizeCategory = .medium
 
+    // MARK: - Observer Tokens (Performance: proper cleanup to prevent leaks)
+    private var observerTokens: [NSObjectProtocol] = []
+
     private init() {
         setupNotificationObservers()
     }
 
+    deinit {
+        // Remove all observers to prevent leaks
+        observerTokens.forEach { NotificationCenter.default.removeObserver($0) }
+        observerTokens.removeAll()
+    }
+
     private func setupNotificationObservers() {
-        NotificationCenter.default.addObserver(
+        // VoiceOver status changes
+        let voiceOverToken = NotificationCenter.default.addObserver(
             forName: UIAccessibility.voiceOverStatusDidChangeNotification,
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            DispatchQueue.main.async {
+            guard let self else { return }
+            Task { @MainActor [weak self] in
                 self?.isVoiceOverRunning = UIAccessibility.isVoiceOverRunning
             }
         }
+        observerTokens.append(voiceOverToken)
 
-        NotificationCenter.default.addObserver(
+        // Reduce Motion status changes
+        let reduceMotionToken = NotificationCenter.default.addObserver(
             forName: UIAccessibility.reduceMotionStatusDidChangeNotification,
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            DispatchQueue.main.async {
+            guard let self else { return }
+            Task { @MainActor [weak self] in
                 self?.isReduceMotionEnabled = UIAccessibility.isReduceMotionEnabled
             }
         }
+        observerTokens.append(reduceMotionToken)
 
-        NotificationCenter.default.addObserver(
+        // Bold Text status changes
+        let boldTextToken = NotificationCenter.default.addObserver(
             forName: UIAccessibility.boldTextStatusDidChangeNotification,
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            DispatchQueue.main.async {
+            guard let self else { return }
+            Task { @MainActor [weak self] in
                 self?.isBoldTextEnabled = UIAccessibility.isBoldTextEnabled
             }
         }
+        observerTokens.append(boldTextToken)
 
-        NotificationCenter.default.addObserver(
+        // Reduce Transparency status changes
+        let reduceTransparencyToken = NotificationCenter.default.addObserver(
             forName: UIAccessibility.reduceTransparencyStatusDidChangeNotification,
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            DispatchQueue.main.async {
+            guard let self else { return }
+            Task { @MainActor [weak self] in
                 self?.isReduceTransparencyEnabled = UIAccessibility.isReduceTransparencyEnabled
             }
         }
+        observerTokens.append(reduceTransparencyToken)
 
-        NotificationCenter.default.addObserver(
+        // Darker System Colors status changes
+        let darkerColorsToken = NotificationCenter.default.addObserver(
             forName: UIAccessibility.darkerSystemColorsStatusDidChangeNotification,
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            DispatchQueue.main.async {
+            guard let self else { return }
+            Task { @MainActor [weak self] in
                 self?.isDarkerSystemColorsEnabled = UIAccessibility.isDarkerSystemColorsEnabled
             }
         }
+        observerTokens.append(darkerColorsToken)
     }
 
     // MARK: - Helper Methods

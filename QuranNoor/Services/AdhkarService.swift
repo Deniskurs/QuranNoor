@@ -10,6 +10,10 @@ import Observation
 
 @Observable
 final class AdhkarService {
+    // MARK: - Cached Codecs (Performance: avoid repeated allocation)
+    private static let decoder = JSONDecoder()
+    private static let encoder = JSONEncoder()
+
     // MARK: - Properties
 
     private(set) var allAdhkar: [Dhikr] = []
@@ -79,14 +83,14 @@ final class AdhkarService {
     // MARK: - Private Methods
 
     private func saveProgress() {
-        if let encoded = try? JSONEncoder().encode(progress) {
+        if let encoded = try? Self.encoder.encode(progress) {
             UserDefaults.standard.set(encoded, forKey: progressKey)
         }
     }
 
     private static func loadProgress() -> AdhkarProgress {
         guard let data = UserDefaults.standard.data(forKey: "adhkar_progress"),
-              let progress = try? JSONDecoder().decode(AdhkarProgress.self, from: data) else {
+              let progress = try? decoder.decode(AdhkarProgress.self, from: data) else {
             return AdhkarProgress()
         }
         return progress

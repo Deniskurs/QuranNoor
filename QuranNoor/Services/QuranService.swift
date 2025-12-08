@@ -123,6 +123,10 @@ class QuranService: ObservableObject {
     // MARK: - Singleton
     static let shared = QuranService()
 
+    // MARK: - Cached Codecs (Performance: avoid repeated allocation)
+    private static let decoder = JSONDecoder()
+    private static let encoder = JSONEncoder()
+
     // MARK: - Published Properties
     @Published private(set) var readingProgress: ReadingProgress?
     @Published private(set) var bookmarks: [Bookmark] = []
@@ -143,13 +147,13 @@ class QuranService: ObservableObject {
     private var translationPreferences: TranslationPreferences {
         get {
             guard let data = userDefaults.data(forKey: translationPrefsKey),
-                  let prefs = try? JSONDecoder().decode(TranslationPreferences.self, from: data) else {
+                  let prefs = try? Self.decoder.decode(TranslationPreferences.self, from: data) else {
                 return TranslationPreferences() // Default to Sahih International
             }
             return prefs
         }
         set {
-            if let encoded = try? JSONEncoder().encode(newValue) {
+            if let encoded = try? Self.encoder.encode(newValue) {
                 userDefaults.set(encoded, forKey: translationPrefsKey)
                 print("✅ Translation preferences saved: \(newValue.primaryTranslation.displayName)")
             }

@@ -14,6 +14,10 @@ import UIKit
 
 @MainActor
 class QiblaViewModel: ObservableObject {
+    // MARK: - Cached Codecs (Performance: avoid repeated allocation)
+    private static let decoder = JSONDecoder()
+    private static let encoder = JSONEncoder()
+
     // MARK: - Published Properties
     @Published var qiblaDirection: Double = 0  // Direction to Qibla from North
     @Published var deviceHeading: Double = 0  // Current device compass heading
@@ -289,28 +293,28 @@ class QiblaViewModel: ObservableObject {
 
     private func loadSavedLocations() {
         guard let data = UserDefaults.standard.data(forKey: savedLocationsKey),
-              let locations = try? JSONDecoder().decode([SavedLocation].self, from: data) else {
+              let locations = try? Self.decoder.decode([SavedLocation].self, from: data) else {
             return
         }
         savedLocations = locations
     }
 
     private func saveSavedLocations(_ locations: [SavedLocation]) {
-        if let encoded = try? JSONEncoder().encode(locations) {
+        if let encoded = try? Self.encoder.encode(locations) {
             UserDefaults.standard.set(encoded, forKey: savedLocationsKey)
         }
     }
 
     private func loadManualLocation() -> SavedLocation? {
         guard let data = UserDefaults.standard.data(forKey: manualLocationKey),
-              let location = try? JSONDecoder().decode(SavedLocation.self, from: data) else {
+              let location = try? Self.decoder.decode(SavedLocation.self, from: data) else {
             return nil
         }
         return location
     }
 
     private func saveManualLocation(_ location: SavedLocation) {
-        if let encoded = try? JSONEncoder().encode(location) {
+        if let encoded = try? Self.encoder.encode(location) {
             UserDefaults.standard.set(encoded, forKey: manualLocationKey)
         }
     }

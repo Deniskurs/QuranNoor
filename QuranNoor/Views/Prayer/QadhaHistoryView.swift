@@ -8,6 +8,19 @@
 
 import SwiftUI
 
+// MARK: - Cached Formatters (Performance: avoid repeated allocation)
+private let qadhaDateFormatter: DateFormatter = {
+    let f = DateFormatter()
+    f.dateFormat = "MMMM d, yyyy"
+    return f
+}()
+
+private let qadhaTimeFormatter: DateFormatter = {
+    let f = DateFormatter()
+    f.timeStyle = .short
+    return f
+}()
+
 struct QadhaHistoryView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(ThemeManager.self) var themeManager: ThemeManager
@@ -171,9 +184,7 @@ struct QadhaHistoryView: View {
         } else if calendar.isDateInYesterday(date) {
             return "Yesterday"
         } else {
-            let formatter = DateFormatter()
-            formatter.dateFormat = "MMMM d, yyyy"
-            return formatter.string(from: date)
+            return qadhaDateFormatter.string(from: date)
         }
     }
 }
@@ -217,9 +228,7 @@ struct HistoryEntryRow: View {
     }
 
     private func formatTime(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
+        qadhaTimeFormatter.string(from: date)
     }
 }
 

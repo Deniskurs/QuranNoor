@@ -8,6 +8,13 @@
 
 import SwiftUI
 
+// MARK: - Cached Formatter (Performance: avoid repeated allocation)
+private let prayerTimesPreviewFormatter: DateFormatter = {
+    let f = DateFormatter()
+    f.dateFormat = "h:mm a"
+    return f
+}()
+
 struct PrayerTimesPreviewCard: View {
     // MARK: - Properties
     let theme: Theme
@@ -134,9 +141,7 @@ struct PrayerTimesPreviewCard: View {
     // MARK: - Computed Properties
 
     private var timeString: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "h:mm a"
-        return formatter.string(from: currentTime)
+        prayerTimesPreviewFormatter.string(from: currentTime)
     }
 }
 

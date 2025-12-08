@@ -17,6 +17,10 @@ typealias AppHijriDate = HijriDate
 @Observable
 @MainActor
 final class HomeViewModel {
+    // MARK: - Cached Codecs (Performance: avoid repeated allocation)
+    private static let decoder = JSONDecoder()
+    private static let encoder = JSONEncoder()
+
     // MARK: - Dependencies
 
     private let hijriService = HijriCalendarService()
@@ -125,7 +129,7 @@ final class HomeViewModel {
 
         // Load cached daily stats from UserDefaults
         if let data = UserDefaults.standard.data(forKey: cacheKey),
-           let cached = try? JSONDecoder().decode(CachedHomeData.self, from: data),
+           let cached = try? Self.decoder.decode(CachedHomeData.self, from: data),
            !cached.isExpired {
             dailyStats = cached.stats
 
@@ -227,7 +231,7 @@ final class HomeViewModel {
         guard let stats = dailyStats else { return }
 
         let cached = CachedHomeData(stats: stats, timestamp: Date())
-        if let data = try? JSONEncoder().encode(cached) {
+        if let data = try? Self.encoder.encode(cached) {
             UserDefaults.standard.set(data, forKey: cacheKey)
         }
 

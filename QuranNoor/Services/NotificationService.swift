@@ -27,6 +27,13 @@ enum NotificationError: LocalizedError {
 // MARK: - Notification Service
 @MainActor
 class NotificationService: ObservableObject {
+    // MARK: - Cached Formatters (Performance: avoid repeated allocation)
+    private static let timeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "HH:mm"
+        return f
+    }()
+
     // MARK: - Published Properties
     @Published var isAuthorized: Bool = false
     @Published var notificationsEnabled: Bool = false
@@ -191,9 +198,7 @@ class NotificationService: ObservableObject {
         let content = UNMutableNotificationContent()
 
         // Format time
-        let timeFormatter = DateFormatter()
-        timeFormatter.dateFormat = "HH:mm"
-        let timeString = timeFormatter.string(from: prayer.time)
+        let timeString = Self.timeFormatter.string(from: prayer.time)
 
         // DYNAMIC TITLE: Pick a random engaging phrase for this prayer
         let titles = prayerTitles[prayer.name] ?? ["🕌 \(prayer.name.displayName) at"]

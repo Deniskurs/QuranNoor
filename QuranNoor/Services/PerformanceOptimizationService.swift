@@ -18,6 +18,13 @@ final class PerformanceOptimizationService {
     // MARK: - Singleton
     static let shared = PerformanceOptimizationService()
 
+    // MARK: - Cached Formatter (Performance: avoid repeated allocation)
+    private static let cacheDateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "MM/dd/yyyy"
+        return f
+    }()
+
     // MARK: - Properties
     private(set) var timelineUpdateInterval: TimeInterval = 1.0
     private(set) var isLowPowerModeEnabled: Bool = false
@@ -61,12 +68,12 @@ final class PerformanceOptimizationService {
             return defaultUpdateInterval
 
         case .betweenPrayers(_, _, _):
-            // Less frequent updates between prayers
-            return 5.0
+            // Update every second for smooth countdown display
+            return defaultUpdateInterval
 
         case .beforeFajr(_), .afterIsha(_):
-            // Slowest updates during night
-            return 10.0
+            // Update every second for smooth countdown display
+            return defaultUpdateInterval
         }
     }
 
@@ -118,10 +125,7 @@ final class PerformanceOptimizationService {
         for key in allKeys where key.hasPrefix("cachedPrayerTimes") {
             // Extract date from key (format: cachedPrayerTimes_MM/DD/YYYY)
             if let dateString = key.split(separator: "_").last {
-                let formatter = DateFormatter()
-                formatter.dateFormat = "MM/dd/yyyy"
-
-                if let cacheDate = formatter.date(from: String(dateString)) {
+                if let cacheDate = Self.cacheDateFormatter.date(from: String(dateString)) {
                     let daysDifference = calendar.dateComponents([.day], from: cacheDate, to: today).day ?? 0
 
                     if daysDifference > 7 {

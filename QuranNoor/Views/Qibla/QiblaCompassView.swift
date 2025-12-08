@@ -357,10 +357,10 @@ struct QiblaCompassView: View {
                 .rotationEffect(.degrees(-viewModel.qiblaDirection - normalizedCompassRotation))
         }
         .offset(y: -135) // Position just outside the ring edge (120px radius + ~15px margin)
-        // Pulsing glow animation
+        // Glow effect when aligned (no continuous animation to save battery)
         .opacity(viewModel.isAlignedWithQibla ? 1.0 : 0.85)
         .scaleEffect(viewModel.isAlignedWithQibla ? 1.1 : 1.0)
-        .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: viewModel.isAlignedWithQibla)
+        .animation(.easeInOut(duration: 0.4), value: viewModel.isAlignedWithQibla)
     }
 
     /// Fixed center needle - always points up (represents device forward direction)

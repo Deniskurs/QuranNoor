@@ -98,6 +98,15 @@ final class PrayerTimeService {
     // MARK: - Singleton
     static let shared = PrayerTimeService()
 
+    // MARK: - Cached Formatters (Performance: avoid repeated allocation)
+    private static let decoder = JSONDecoder()
+    private static let timeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "HH:mm"
+        f.timeZone = TimeZone.current
+        return f
+    }()
+
     // MARK: - Published Properties
     private(set) var todayPrayerTimes: DailyPrayerTimes?
     private(set) var isCalculating: Bool = false
@@ -179,7 +188,7 @@ final class PrayerTimeService {
         // Try API first
         do {
             let (data, _) = try await URLSession.shared.data(from: url)
-            let response = try JSONDecoder().decode(AladhanResponse.self, from: data)
+            let response = try Self.decoder.decode(AladhanResponse.self, from: data)
 
             // Parse times for the specified date
             let prayerTimes = try parsePrayerTimes(from: response.data, forDate: date)
@@ -282,13 +291,6 @@ final class PrayerTimeService {
 
     private func parsePrayerTimes(from data: AladhanData, forDate date: Date) throws -> DailyPrayerTimes {
         let timings = data.timings
-
-        // Create date formatter for prayer times
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm"
-        formatter.timeZone = TimeZone.current
-
-        // Get calendar
         let calendar = Calendar.current
 
         // Helper to parse time string and combine with specified date
@@ -296,7 +298,7 @@ final class PrayerTimeService {
             // Remove timezone info (e.g., "(PKT)" at the end)
             let cleanTime = timeString.components(separatedBy: " ").first ?? timeString
 
-            guard let time = formatter.date(from: cleanTime) else {
+            guard let time = Self.timeFormatter.date(from: cleanTime) else {
                 return nil
             }
 

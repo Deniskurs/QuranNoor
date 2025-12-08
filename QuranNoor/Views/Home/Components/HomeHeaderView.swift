@@ -8,6 +8,13 @@
 
 import SwiftUI
 
+// MARK: - Cached Formatter (Performance: avoid repeated allocation)
+private let homeHeaderDateFormatter: DateFormatter = {
+    let f = DateFormatter()
+    f.dateFormat = "EEEE, MMMM d"
+    return f
+}()
+
 struct HomeHeaderView: View {
     @Environment(ThemeManager.self) var themeManager: ThemeManager
     let greeting: String
@@ -94,9 +101,7 @@ struct HomeHeaderView: View {
     // MARK: - Computed Properties
 
     private var todayGregorian: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "EEEE, MMMM d"
-        return formatter.string(from: Date())
+        homeHeaderDateFormatter.string(from: Date())
     }
 
     private var accessibilityText: String {

@@ -7,6 +7,13 @@
 
 import SwiftUI
 
+// MARK: - Cached Formatter (Performance: avoid repeated allocation)
+private let prayerTimeShortFormatter: DateFormatter = {
+    let f = DateFormatter()
+    f.timeStyle = .short
+    return f
+}()
+
 // MARK: - Prayer Time Card Status
 enum PrayerTimeStatus {
     case upcoming   // Future prayer
@@ -112,9 +119,7 @@ struct PrayerTimeCard: View {
 
     // MARK: - Formatted Time
     private var formattedTime: String {
-        let formatter = DateFormatter()
-        formatter.timeStyle = .short
-        return formatter.string(from: time)
+        prayerTimeShortFormatter.string(from: time)
     }
 
     // MARK: - Prayer Icons
@@ -187,9 +192,7 @@ struct CompactPrayerTimeCard: View {
     }
 
     private var formattedTime: String {
-        let formatter = DateFormatter()
-        formatter.timeStyle = .short
-        return formatter.string(from: time)
+        prayerTimeShortFormatter.string(from: time)
     }
 }
 

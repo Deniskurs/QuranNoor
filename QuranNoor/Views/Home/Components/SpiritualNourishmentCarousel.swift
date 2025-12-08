@@ -333,6 +333,7 @@ struct SpiritualContentCard: View {
 struct LoadingContentCard: View {
     @Environment(ThemeManager.self) var themeManager: ThemeManager
     @State private var animateGradient = false
+    @State private var isViewVisible = false
 
     var body: some View {
         LiquidGlassCardView(intensity: .moderate) {
@@ -380,9 +381,14 @@ struct LoadingContentCard: View {
         }
         .frame(width: 310, height: 380)
         .onAppear {
+            isViewVisible = true
             withAnimation(.linear(duration: 1.5).repeatForever(autoreverses: false)) {
                 animateGradient = true
             }
+        }
+        .onDisappear {
+            isViewVisible = false
+            animateGradient = false
         }
     }
 

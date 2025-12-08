@@ -10,6 +10,10 @@ import Observation
 
 @Observable
 final class FortressDuaService {
+    // MARK: - Cached Codecs (Performance: avoid repeated allocation)
+    private static let decoder = JSONDecoder()
+    private static let encoder = JSONEncoder()
+
     // MARK: - Properties
 
     private(set) var allDuas: [FortressDua] = []
@@ -90,14 +94,14 @@ final class FortressDuaService {
     // MARK: - Private Methods
 
     private func saveProgress() {
-        if let encoded = try? JSONEncoder().encode(progress) {
+        if let encoded = try? Self.encoder.encode(progress) {
             UserDefaults.standard.set(encoded, forKey: progressKey)
         }
     }
 
     private static func loadProgress() -> DuaProgress {
         guard let data = UserDefaults.standard.data(forKey: "fortress_dua_progress"),
-              let progress = try? JSONDecoder().decode(DuaProgress.self, from: data) else {
+              let progress = try? decoder.decode(DuaProgress.self, from: data) else {
             return DuaProgress()
         }
         return progress

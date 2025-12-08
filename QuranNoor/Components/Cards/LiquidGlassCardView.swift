@@ -86,6 +86,7 @@ struct LiquidGlassCardView<Content: View>: View {
                             lineWidth: 1.5
                         )
                 )
+                .compositingGroup() // Performance: Flatten layers before applying shadow
                 .shadow(color: glassShadowColor, radius: 16, x: 0, y: 8) // Softer, unified shadow
 
             // Optional Islamic pattern watermark
@@ -93,6 +94,7 @@ struct LiquidGlassCardView<Content: View>: View {
                 IslamicPatternView()
                     .opacity(0.04) // More subtle on glass
                     .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    .drawingGroup() // Performance: Render pattern to bitmap
             }
 
             // Content

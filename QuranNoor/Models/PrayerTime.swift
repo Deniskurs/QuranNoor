@@ -8,6 +8,13 @@
 import Foundation
 import Combine
 
+// MARK: - Cached Formatters (Performance: avoid repeated allocation)
+private let sharedTimeFormatter: DateFormatter = {
+    let f = DateFormatter()
+    f.timeStyle = .short
+    return f
+}()
+
 // MARK: - Prayer Name
 enum PrayerName: String, CaseIterable, Identifiable, Codable {
     case fajr = "Fajr"
@@ -40,9 +47,7 @@ struct PrayerTime: Identifiable {
     let time: Date
 
     var displayTime: String {
-        let formatter = DateFormatter()
-        formatter.timeStyle = .short
-        return formatter.string(from: time)
+        sharedTimeFormatter.string(from: time)
     }
 
     /// Returns true if the prayer time has started (time is now or in the past)
@@ -94,9 +99,7 @@ struct SpecialTime: Identifiable {
     let time: Date
 
     var displayTime: String {
-        let formatter = DateFormatter()
-        formatter.timeStyle = .short
-        return formatter.string(from: time)
+        sharedTimeFormatter.string(from: time)
     }
 }
 

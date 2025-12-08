@@ -27,6 +27,7 @@ struct LoadingView: View {
     let message: String?
 
     @State private var isRotating: Bool = false
+    @State private var isViewVisible: Bool = false
 
     // MARK: - Initializer
     init(
@@ -46,12 +47,18 @@ struct LoadingView: View {
                 .frame(width: size.dimension, height: size.dimension)
                 .rotationEffect(Angle(degrees: isRotating ? 360 : 0))
                 .animation(
-                    .linear(duration: 2.0)
-                        .repeatForever(autoreverses: false),
+                    isViewVisible ?
+                        .linear(duration: 2.0).repeatForever(autoreverses: false) :
+                        .default,
                     value: isRotating
                 )
                 .onAppear {
+                    isViewVisible = true
                     isRotating = true
+                }
+                .onDisappear {
+                    isViewVisible = false
+                    isRotating = false
                 }
 
             // Optional message

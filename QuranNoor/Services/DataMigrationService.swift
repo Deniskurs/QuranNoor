@@ -14,6 +14,9 @@ final class DataMigrationService {
     // MARK: - Singleton
     static let shared = DataMigrationService()
 
+    // MARK: - Cached Codecs (Performance: avoid repeated allocation)
+    private static let decoder = JSONDecoder()
+
     // MARK: - Migration Keys
     private let migrationCompleteKey = "swiftDataMigration_v1_complete"
     private let progressKey = "reading_progress"
@@ -79,7 +82,7 @@ final class DataMigrationService {
         }
 
         do {
-            let progress = try JSONDecoder().decode(ReadingProgress.self, from: data)
+            let progress = try Self.decoder.decode(ReadingProgress.self, from: data)
 
             // Create or update global stats record
             let statsRecord = ReadingStatsRecord(from: progress)
@@ -114,7 +117,7 @@ final class DataMigrationService {
         }
 
         do {
-            let bookmarks = try JSONDecoder().decode([Bookmark].self, from: data)
+            let bookmarks = try Self.decoder.decode([Bookmark].self, from: data)
 
             for bookmark in bookmarks {
                 let record = BookmarkRecord(from: bookmark)
@@ -151,12 +154,12 @@ final class DataMigrationService {
         var bookmarks = 0
 
         if let data = UserDefaults.standard.data(forKey: progressKey),
-           let progress = try? JSONDecoder().decode(ReadingProgress.self, from: data) {
+           let progress = try? Self.decoder.decode(ReadingProgress.self, from: data) {
             verses = progress.readVerses.count
         }
 
         if let data = UserDefaults.standard.data(forKey: bookmarksKey),
-           let bookmarkList = try? JSONDecoder().decode([Bookmark].self, from: data) {
+           let bookmarkList = try? Self.decoder.decode([Bookmark].self, from: data) {
             bookmarks = bookmarkList.count
         }
 

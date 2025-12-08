@@ -46,6 +46,10 @@ class LocationService: NSObject, ObservableObject {
     @Published var heading: Double = 0
     @Published var headingAccuracy: CLLocationDirection = -1
 
+    // MARK: - Cached Codecs (Performance: avoid repeated allocation)
+    private static let decoder = JSONDecoder()
+    private static let encoder = JSONEncoder()
+
     // MARK: - Private Properties
     private let locationManager = CLLocationManager()
     private let userDefaults = UserDefaults.standard
@@ -54,6 +58,12 @@ class LocationService: NSObject, ObservableObject {
     private let lastLocationKey = "lastKnownLocation"
     private let lastCityKey = "lastKnownCity"
     private let lastCountryKey = "lastKnownCountry"
+
+    // MARK: - Heading Throttle (Performance: reduce CPU usage from high-frequency updates)
+    private var lastHeadingUpdateTime: Date = .distantPast
+    private let headingUpdateInterval: TimeInterval = 0.1 // 10fps max, sufficient for smooth compass
+    private var lastReportedHeading: Double = 0
+    private let headingChangeThreshold: Double = 1.0 // Only update if changed by at least 1 degree
 
     // MARK: - Continuation
     private var locationContinuation: CheckedContinuation<CLLocation, Error>?
@@ -180,7 +190,7 @@ class LocationService: NSObject, ObservableObject {
     private func loadCachedLocation() {
         // Load cached location
         if let locationData = userDefaults.data(forKey: lastLocationKey),
-           let location = try? JSONDecoder().decode(LocationCoordinates.self, from: locationData) {
+           let location = try? Self.decoder.decode(LocationCoordinates.self, from: locationData) {
             currentLocation = location
         }
 
@@ -191,7 +201,7 @@ class LocationService: NSObject, ObservableObject {
 
     private func cacheLocation(_ coordinates: LocationCoordinates, city: String, country: String) {
         // Cache location
-        if let encoded = try? JSONEncoder().encode(coordinates) {
+        if let encoded = try? Self.encoder.encode(coordinates) {
             userDefaults.set(encoded, forKey: lastLocationKey)
         }
 
@@ -232,14 +242,26 @@ extension LocationService: CLLocationManagerDelegate {
 
     nonisolated func locationManager(_ manager: CLLocationManager, didUpdateHeading newHeading: CLHeading) {
         Task { @MainActor in
+            // Throttle updates for performance (max 10fps)
+            let now = Date()
+            let timeSinceLastUpdate = now.timeIntervalSince(lastHeadingUpdateTime)
+            guard timeSinceLastUpdate >= headingUpdateInterval else { return }
+
             // Use magnetic heading (trueHeading requires location permission and GPS)
-            // Magnetic heading is relative to magnetic north, which is what we want for compass
             let magneticHeading = newHeading.magneticHeading
 
-            // Only update if heading is valid (>= 0)
+            // Only update if heading is valid (>= 0) and changed significantly
             if magneticHeading >= 0 {
-                heading = magneticHeading
-                headingAccuracy = newHeading.headingAccuracy
+                let headingChange = abs(magneticHeading - lastReportedHeading)
+                // Account for wrap-around at 360 degrees
+                let normalizedChange = min(headingChange, 360 - headingChange)
+
+                if normalizedChange >= headingChangeThreshold {
+                    heading = magneticHeading
+                    headingAccuracy = newHeading.headingAccuracy
+                    lastReportedHeading = magneticHeading
+                    lastHeadingUpdateTime = now
+                }
             }
         }
     }

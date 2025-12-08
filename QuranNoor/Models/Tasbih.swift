@@ -7,6 +7,14 @@
 
 import Foundation
 
+// MARK: - Cached Formatter (Performance: avoid repeated allocation)
+private let tasbihHistoryFormatter: DateFormatter = {
+    let f = DateFormatter()
+    f.dateStyle = .medium
+    f.timeStyle = .short
+    return f
+}()
+
 // MARK: - Tasbih Preset
 
 /// Common dhikr phrases with recommended counts
@@ -321,9 +329,6 @@ struct TasbihHistoryEntry: Identifiable, Codable {
     }
 
     var formattedDate: String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
+        tasbihHistoryFormatter.string(from: date)
     }
 }

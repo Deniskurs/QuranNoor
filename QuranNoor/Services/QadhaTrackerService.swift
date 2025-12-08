@@ -17,6 +17,10 @@ final class QadhaTrackerService {
     // MARK: - Singleton
     static let shared = QadhaTrackerService()
 
+    // MARK: - Cached Codecs (Performance: avoid repeated allocation)
+    private static let decoder = JSONDecoder()
+    private static let encoder = JSONEncoder()
+
     // MARK: - Properties
 
     /// Current qadha counts for each prayer
@@ -212,8 +216,7 @@ final class QadhaTrackerService {
     }
 
     private func saveHistory() {
-        let encoder = JSONEncoder()
-        if let encoded = try? encoder.encode(history) {
+        if let encoded = try? Self.encoder.encode(history) {
             UserDefaults.standard.set(encoded, forKey: Keys.qadhaHistory)
         }
     }
@@ -224,8 +227,7 @@ final class QadhaTrackerService {
             return
         }
 
-        let decoder = JSONDecoder()
-        history = (try? decoder.decode([QadhaHistoryEntry].self, from: data)) ?? []
+        history = (try? Self.decoder.decode([QadhaHistoryEntry].self, from: data)) ?? []
     }
 }
 

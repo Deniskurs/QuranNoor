@@ -15,8 +15,7 @@ struct QiblaCompassDemo: View {
     @State private var compassRotation: Double = 0
     @State private var isCalibrating = false
     @State private var showAccuracyRing = true
-
-    private let timer = Timer.publish(every: 2, on: .main, in: .common).autoconnect()
+    @State private var isViewVisible = false
 
     // Sample data
     private let qiblaDirection: Double = 45 // degrees from North
@@ -229,11 +228,22 @@ struct QiblaCompassDemo: View {
         .background(themeManager.currentTheme.backgroundColor)
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .shadow(color: themeManager.currentTheme.textPrimary.opacity(0.1), radius: 8, y: 4)
-        .onReceive(timer) { _ in
-            // Simulate compass rotation for demo
-            if !isCalibrating {
-                withAnimation(.spring(response: 0.6)) {
-                    compassRotation = Double.random(in: -15...15)
+        .onAppear {
+            isViewVisible = true
+        }
+        .onDisappear {
+            isViewVisible = false
+            isCalibrating = false
+        }
+        .task {
+            // Modern async timer - automatically cancels when view disappears
+            while !Task.isCancelled && isViewVisible {
+                try? await Task.sleep(for: .seconds(2))
+                // Simulate compass rotation for demo
+                if !isCalibrating && isViewVisible {
+                    withAnimation(.spring(response: 0.6)) {
+                        compassRotation = Double.random(in: -15...15)
+                    }
                 }
             }
         }

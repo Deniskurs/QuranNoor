@@ -214,6 +214,7 @@ struct MeshGradientBackground: View {
 struct AnimatedGradientBackground: View {
     // MARK: - Properties
     @State private var animateGradient: Bool = false
+    @State private var isViewVisible: Bool = false
 
     let colors: [Color]
     let duration: Double
@@ -241,12 +242,18 @@ struct AnimatedGradientBackground: View {
         .opacity(0.3)
         .ignoresSafeArea()
         .onAppear {
+            isViewVisible = true
             withAnimation(
                 .linear(duration: duration)
                     .repeatForever(autoreverses: true)
             ) {
                 animateGradient.toggle()
             }
+        }
+        .onDisappear {
+            isViewVisible = false
+            // Reset animation state to stop
+            animateGradient = false
         }
     }
 }

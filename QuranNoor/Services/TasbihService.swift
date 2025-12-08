@@ -16,6 +16,10 @@ final class TasbihService {
 
     static let shared = TasbihService()
 
+    // MARK: - Cached Codecs (Performance: avoid repeated allocation)
+    private static let decoder = JSONDecoder()
+    private static let encoder = JSONEncoder()
+
     // MARK: - Properties
 
     private(set) var currentSession: TasbihSession?
@@ -231,28 +235,28 @@ final class TasbihService {
     // MARK: - Persistence
 
     private func saveStatistics() {
-        if let encoded = try? JSONEncoder().encode(statistics) {
+        if let encoded = try? Self.encoder.encode(statistics) {
             UserDefaults.standard.set(encoded, forKey: statisticsKey)
         }
     }
 
     private static func loadStatistics() -> TasbihStatistics {
         guard let data = UserDefaults.standard.data(forKey: "tasbih_statistics"),
-              let stats = try? JSONDecoder().decode(TasbihStatistics.self, from: data) else {
+              let stats = try? decoder.decode(TasbihStatistics.self, from: data) else {
             return TasbihStatistics()
         }
         return stats
     }
 
     private func saveHistory() {
-        if let encoded = try? JSONEncoder().encode(history) {
+        if let encoded = try? Self.encoder.encode(history) {
             UserDefaults.standard.set(encoded, forKey: historyKey)
         }
     }
 
     private static func loadHistory() -> [TasbihHistoryEntry] {
         guard let data = UserDefaults.standard.data(forKey: "tasbih_history"),
-              let history = try? JSONDecoder().decode([TasbihHistoryEntry].self, from: data) else {
+              let history = try? decoder.decode([TasbihHistoryEntry].self, from: data) else {
             return []
         }
         return history

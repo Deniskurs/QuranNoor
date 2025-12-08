@@ -18,6 +18,10 @@ final class PermissionManager: ObservableObject {
 
     static let shared = PermissionManager()
 
+    // MARK: - Cached Codecs (Performance: avoid repeated allocation)
+    private static let decoder = JSONDecoder()
+    private static let encoder = JSONEncoder()
+
     // MARK: - Published State
 
     @Published var locationStatus: PermissionStatus = .notDetermined
@@ -290,19 +294,19 @@ final class PermissionManager: ObservableObject {
     private func loadPersistedStatuses() {
         // Load location status
         if let locationData = userDefaults.data(forKey: locationStatusKey),
-           let status = try? JSONDecoder().decode(PermissionStatus.self, from: locationData) {
+           let status = try? Self.decoder.decode(PermissionStatus.self, from: locationData) {
             locationStatus = status
         }
 
         // Load notification status
         if let notificationData = userDefaults.data(forKey: notificationStatusKey),
-           let status = try? JSONDecoder().decode(PermissionStatus.self, from: notificationData) {
+           let status = try? Self.decoder.decode(PermissionStatus.self, from: notificationData) {
             notificationStatus = status
         }
     }
 
     private func persistLocationStatus(_ status: PermissionStatus) {
-        if let encoded = try? JSONEncoder().encode(status) {
+        if let encoded = try? Self.encoder.encode(status) {
             userDefaults.set(encoded, forKey: locationStatusKey)
             #if DEBUG
             print("💾 Location status persisted: \(status.description)")
@@ -311,7 +315,7 @@ final class PermissionManager: ObservableObject {
     }
 
     private func persistNotificationStatus(_ status: PermissionStatus) {
-        if let encoded = try? JSONEncoder().encode(status) {
+        if let encoded = try? Self.encoder.encode(status) {
             userDefaults.set(encoded, forKey: notificationStatusKey)
             #if DEBUG
             print("💾 Notification status persisted: \(status.description)")

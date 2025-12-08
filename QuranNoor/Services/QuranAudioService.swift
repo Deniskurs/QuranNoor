@@ -101,6 +101,10 @@ class QuranAudioService: NSObject {
     // MARK: - Singleton
     static let shared = QuranAudioService()
 
+    // MARK: - Cached Codecs (Performance: avoid repeated allocation)
+    private static let decoder = JSONDecoder()
+    private static let encoder = JSONEncoder()
+
     // MARK: - Observable Properties
     private(set) var playbackState: PlaybackState = .idle
     private(set) var currentVerse: Verse?
@@ -128,13 +132,13 @@ class QuranAudioService: NSObject {
     var selectedReciter: Reciter {
         get {
             if let data = UserDefaults.standard.data(forKey: "selected_reciter"),
-               let reciter = try? JSONDecoder().decode(Reciter.self, from: data) {
+               let reciter = try? Self.decoder.decode(Reciter.self, from: data) {
                 return reciter
             }
             return .misharyRashid // Default
         }
         set {
-            if let encoded = try? JSONEncoder().encode(newValue) {
+            if let encoded = try? Self.encoder.encode(newValue) {
                 UserDefaults.standard.set(encoded, forKey: "selected_reciter")
                 print("✅ Reciter saved: \(newValue.displayName)")
             }
@@ -495,8 +499,7 @@ class QuranAudioService: NSObject {
             }
         }
 
-        let decoder = JSONDecoder()
-        let audioResponse = try decoder.decode(AudioResponse.self, from: data)
+        let audioResponse = try Self.decoder.decode(AudioResponse.self, from: data)
 
         guard let audioURLString = audioResponse.data.audio,
               let audioURL = URL(string: audioURLString) else {

@@ -7,6 +7,13 @@
 
 import SwiftUI
 
+// MARK: - Cached Formatter (Performance: avoid repeated allocation)
+private let nightPortionTimeFormatter: DateFormatter = {
+    let f = DateFormatter()
+    f.timeStyle = .short
+    return f
+}()
+
 struct NightPortionCard: View {
     // MARK: - Properties
     @Environment(ThemeManager.self) var themeManager: ThemeManager
@@ -173,9 +180,7 @@ struct NightPortionCard: View {
     }
 
     private func formatTime(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
+        nightPortionTimeFormatter.string(from: date)
     }
 }
 
@@ -210,9 +215,7 @@ struct CompactNightPortionInfo: View {
     }
 
     private func formatTime(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
+        nightPortionTimeFormatter.string(from: date)
     }
 }
 

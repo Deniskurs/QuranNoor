@@ -10,6 +10,19 @@ import Combine
 
 @MainActor
 class ProgressManagementViewModel: ObservableObject {
+    // MARK: - Cached Codecs (Performance: avoid repeated allocation)
+    private static let decoder: JSONDecoder = {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return decoder
+    }()
+    private static let encoder: JSONEncoder = {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .prettyPrinted
+        encoder.dateEncodingStrategy = .iso8601
+        return encoder
+    }()
+
     // MARK: - Published Properties
     @Published var readingProgress: ReadingProgress?
     @Published var surahs: [Surah] = []
@@ -327,11 +340,7 @@ class ProgressManagementViewModel: ObservableObject {
         isExporting = true
 
         do {
-            let encoder = JSONEncoder()
-            encoder.outputFormatting = .prettyPrinted
-            encoder.dateEncodingStrategy = .iso8601
-
-            let jsonData = try encoder.encode(progress)
+            let jsonData = try Self.encoder.encode(progress)
 
             // Save to temporary file
             let tempDir = FileManager.default.temporaryDirectory
@@ -358,10 +367,8 @@ class ProgressManagementViewModel: ObservableObject {
 
         do {
             let jsonData = try Data(contentsOf: url)
-            let decoder = JSONDecoder()
-            decoder.dateDecodingStrategy = .iso8601
 
-            let importedProgress = try decoder.decode(ReadingProgress.self, from: jsonData)
+            let importedProgress = try Self.decoder.decode(ReadingProgress.self, from: jsonData)
 
             // Convert ViewModel strategy to QuranService strategy and delegate import
             let serviceStrategy: QuranService.ImportStrategy

@@ -16,6 +16,10 @@ final class SpiritualBookmarkService: ObservableObject {
 
     static let shared = SpiritualBookmarkService()
 
+    // MARK: - Cached Codecs (Performance: avoid repeated allocation)
+    private static let decoder = JSONDecoder()
+    private static let encoder = JSONEncoder()
+
     // MARK: - Published Properties
 
     @Published private(set) var bookmarks: [SpiritualBookmark] = []
@@ -41,8 +45,7 @@ final class SpiritualBookmarkService: ObservableObject {
         }
 
         do {
-            let decoder = JSONDecoder()
-            bookmarks = try decoder.decode([SpiritualBookmark].self, from: data)
+            bookmarks = try Self.decoder.decode([SpiritualBookmark].self, from: data)
             bookmarks.sort { $0.timestamp > $1.timestamp } // Most recent first
         } catch {
             print("Error loading spiritual bookmarks: \(error)")
@@ -53,8 +56,7 @@ final class SpiritualBookmarkService: ObservableObject {
     /// Save bookmarks to storage
     private func saveBookmarks() {
         do {
-            let encoder = JSONEncoder()
-            let data = try encoder.encode(bookmarks)
+            let data = try Self.encoder.encode(bookmarks)
 
             // Save to UserDefaults asynchronously
             Task.detached(priority: .background) { [data, userDefaults, bookmarksKey] in

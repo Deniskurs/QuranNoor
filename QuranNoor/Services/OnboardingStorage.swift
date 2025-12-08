@@ -12,6 +12,18 @@ final class OnboardingStorage: OnboardingStorageProtocol {
 
     static let `default` = OnboardingStorage()
 
+    // MARK: - Cached Codecs (Performance: avoid repeated allocation)
+    private static let decoder: JSONDecoder = {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return decoder
+    }()
+    private static let encoder: JSONEncoder = {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        return encoder
+    }()
+
     // MARK: - Constants
 
     private let userDefaults: UserDefaults
@@ -30,10 +42,7 @@ final class OnboardingStorage: OnboardingStorageProtocol {
     /// Save onboarding state to UserDefaults
     func save(_ state: OnboardingState) {
         do {
-            let encoder = JSONEncoder()
-            encoder.dateEncodingStrategy = .iso8601
-
-            let encoded = try encoder.encode(state)
+            let encoded = try Self.encoder.encode(state)
             userDefaults.set(encoded, forKey: stateKey)
 
             #if DEBUG
@@ -51,10 +60,7 @@ final class OnboardingStorage: OnboardingStorageProtocol {
         }
 
         do {
-            let decoder = JSONDecoder()
-            decoder.dateDecodingStrategy = .iso8601
-
-            let state = try decoder.decode(OnboardingState.self, from: data)
+            let state = try Self.decoder.decode(OnboardingState.self, from: data)
 
             // Check if state is stale (older than 7 days)
             if Date().timeIntervalSince(state.timestamp) > maxStateAge {

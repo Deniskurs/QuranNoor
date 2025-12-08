@@ -7,6 +7,19 @@
 
 import SwiftUI
 
+// MARK: - Cached Formatters (Performance: avoid repeated allocation)
+private let statisticsMediumFormatter: DateFormatter = {
+    let f = DateFormatter()
+    f.dateStyle = .medium
+    return f
+}()
+
+private let statisticsLongFormatter: DateFormatter = {
+    let f = DateFormatter()
+    f.dateStyle = .long
+    return f
+}()
+
 struct ReadingStatisticsView: View {
     @ObservedObject var viewModel: ProgressManagementViewModel
     @Environment(ThemeManager.self) var themeManager: ThemeManager
@@ -244,9 +257,7 @@ struct ReadingStatisticsView: View {
     }
 
     private func tooltipText(for date: Date, verses: Int) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        return "\(formatter.string(from: date)): \(verses) verse\(verses == 1 ? "" : "s")"
+        return "\(statisticsMediumFormatter.string(from: date)): \(verses) verse\(verses == 1 ? "" : "s")"
     }
 
     // MARK: - Reading Patterns
@@ -329,9 +340,7 @@ struct ReadingStatisticsView: View {
             return "No data"
         }
 
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        return formatter.string(from: date)
+        return statisticsMediumFormatter.string(from: date)
     }
 
     // MARK: - Projections
@@ -430,9 +439,7 @@ struct ReadingStatisticsView: View {
             value: viewModel.estimatedDaysToComplete,
             to: Date()
         ) {
-            let formatter = DateFormatter()
-            formatter.dateStyle = .long
-            return formatter.string(from: completionDate)
+            return statisticsLongFormatter.string(from: completionDate)
         }
 
         return "Unknown"

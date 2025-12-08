@@ -68,6 +68,15 @@ class HijriCalendarService {
     private let apiClient = APIClient.shared
     private let userDefaults = UserDefaults.standard
 
+    // MARK: - Cached Formatters (Performance: avoid repeated allocation)
+    private static let dateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "dd-MM-yyyy"
+        return f
+    }()
+
+    private static let decoder = JSONDecoder()
+
     // Cache keys
     private let currentHijriDateCacheKey = "current_hijri_date"
     private func hijriDateCacheKey(for date: String) -> String {
@@ -78,38 +87,31 @@ class HijriCalendarService {
 
     /// Get current Hijri date
     func getCurrentHijriDate() async throws -> HijriDate {
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "dd-MM-yyyy"
-        let todayString = dateFormatter.string(from: Date())
-
+        let todayString = Self.dateFormatter.string(from: Date())
         let apiDate = try await convertGregorianToHijriInternal(date: todayString)
         return convertToDomainModel(apiDate)
     }
 
     /// Get cached Hijri date (synchronous version using cached data only)
     func getCachedHijriDate() -> HijriDate? {
-        // Try to get from cache first
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "dd-MM-yyyy"
-        let todayString = dateFormatter.string(from: Date())
-
+        let todayString = Self.dateFormatter.string(from: Date())
         let cacheKey = "cache_\(hijriDateCacheKey(for: todayString))"
-        if let entryData = userDefaults.data(forKey: cacheKey) {
-            let decoder = JSONDecoder()
-            if let cachedEntry = try? decoder.decode(CachedEntry.self, from: entryData) {
-                // Check expiration
-                if Date() <= cachedEntry.expirationDate {
-                    if let cachedResponse = try? decoder.decode(HijriCalendarResponse.self, from: cachedEntry.data) {
-                        return convertToDomainModel(cachedResponse.hijri)
-                    }
-                } else {
-                    // Expired, remove it
-                    userDefaults.removeObject(forKey: cacheKey)
-                }
-            }
+
+        guard let entryData = userDefaults.data(forKey: cacheKey),
+              let cachedEntry = try? Self.decoder.decode(CachedEntry.self, from: entryData) else {
+            return nil
         }
 
-        return nil
+        guard Date() <= cachedEntry.expirationDate else {
+            userDefaults.removeObject(forKey: cacheKey)
+            return nil
+        }
+
+        guard let cachedResponse = try? Self.decoder.decode(HijriCalendarResponse.self, from: cachedEntry.data) else {
+            return nil
+        }
+
+        return convertToDomainModel(cachedResponse.hijri)
     }
 
     /// Convert Gregorian date to Hijri (internal - returns API model)
@@ -141,9 +143,7 @@ class HijriCalendarService {
 
     /// Check if today is an Islamic holiday
     func getTodayHolidays() async throws -> [String] {
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "dd-MM-yyyy"
-        let todayString = dateFormatter.string(from: Date())
+        let todayString = Self.dateFormatter.string(from: Date())
         let apiDate = try await convertGregorianToHijriInternal(date: todayString)
         return apiDate.holidays ?? []
     }

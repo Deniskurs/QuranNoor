@@ -8,6 +8,9 @@
 import SwiftUI
 import Observation
 
+// MARK: - Cached Formatter (Performance: avoid repeated allocation)
+private let onboardingISOFormatter = ISO8601DateFormatter()
+
 /// Centralized coordinator for onboarding flow using @Observable pattern
 @Observable
 final class OnboardingCoordinator {
@@ -342,7 +345,7 @@ final class OnboardingCoordinator {
 
     private func trackOnboardingStarted() {
         analyticsService.track(event: .onboardingStarted, properties: [
-            "timestamp": ISO8601DateFormatter().string(from: Date())
+            "timestamp": onboardingISOFormatter.string(from: Date())
         ])
     }
 

@@ -14,6 +14,14 @@ class ProgressHistoryManager: ObservableObject {
     // MARK: - Singleton
     static let shared = ProgressHistoryManager()
 
+    // MARK: - Cached Codecs (Performance: avoid repeated allocation)
+    private static let decoder = JSONDecoder()
+    private static let encoder: JSONEncoder = {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .prettyPrinted  // Make file readable for debugging
+        return encoder
+    }()
+
     // MARK: - Published Properties
     @Published private(set) var history: [ProgressSnapshot] = []
 
@@ -81,8 +89,7 @@ class ProgressHistoryManager: ObservableObject {
     private func loadHistory() {
         do {
             let data = try Data(contentsOf: fileURL)
-            let decoder = JSONDecoder()
-            history = try decoder.decode([ProgressSnapshot].self, from: data)
+            history = try Self.decoder.decode([ProgressSnapshot].self, from: data)
             print("✅ Loaded \(history.count) snapshots from disk (\(data.count) bytes)")
         } catch CocoaError.fileReadNoSuchFile {
             // File doesn't exist yet - normal for first launch
@@ -98,9 +105,7 @@ class ProgressHistoryManager: ObservableObject {
     /// Save history to FileManager
     private func saveHistory() {
         do {
-            let encoder = JSONEncoder()
-            encoder.outputFormatting = .prettyPrinted  // Make file readable for debugging
-            let data = try encoder.encode(history)
+            let data = try Self.encoder.encode(history)
 
             try data.write(to: fileURL, options: .atomic)
             print("💾 Saved \(history.count) snapshots to disk (\(data.count) bytes)")

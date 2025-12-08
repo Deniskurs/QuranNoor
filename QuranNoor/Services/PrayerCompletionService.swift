@@ -7,8 +7,11 @@
 //
 
 import Foundation
+import Observation
 
 /// Service for tracking daily prayer completion
+/// Uses @Observable to enable reactive UI updates when completion state changes
+@Observable
 @MainActor
 class PrayerCompletionService {
     // MARK: - Singleton
@@ -20,6 +23,10 @@ class PrayerCompletionService {
     private let userDefaults = UserDefaults.standard
     private let completionKey = "prayerCompletionData"
     private let lastResetDateKey = "lastResetDate"
+
+    /// Reactive trigger - increments on every completion state change
+    /// Views can observe this to trigger instant UI updates
+    private(set) var changeCounter: Int = 0
 
     // MARK: - Private Init
 
@@ -40,6 +47,9 @@ class PrayerCompletionService {
         var completions = loadTodayCompletions()
         completions[prayer.rawValue] = completed
         saveCompletions(completions)
+
+        // Increment change counter to trigger reactive UI updates
+        changeCounter += 1
 
         print(completed ? "✅ \(prayer.displayName) marked as completed" : "⭕ \(prayer.displayName) marked as incomplete")
     }
@@ -85,6 +95,10 @@ class PrayerCompletionService {
         let emptyCompletions: [String: Bool] = [:]
         saveCompletions(emptyCompletions)
         setLastResetDate(Date())
+
+        // Increment change counter to trigger reactive UI updates
+        changeCounter += 1
+
         print("🔄 Prayer completions reset")
     }
 

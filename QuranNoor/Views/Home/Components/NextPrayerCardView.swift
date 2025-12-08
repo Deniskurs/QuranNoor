@@ -18,19 +18,34 @@ struct NextPrayerCardView: View {
     /// Tracks the last state to detect when deadline is crossed
     @State private var lastStateDescription: String = ""
 
+    /// Dynamic update interval based on prayer state (Performance: reduce updates when not urgent)
+    @State private var updateInterval: TimeInterval = 1.0
+
+    /// Track view visibility to pause updates when not visible
+    @State private var isViewVisible: Bool = true
+
+    /// Completion service for tracking prayer completion (reactive observation)
+    @State private var completionService = PrayerCompletionService.shared
+
     // MARK: - Body
 
     var body: some View {
-        TimelineView(.periodic(from: .now, by: 1.0)) { context in
+        TimelineView(.periodic(from: .now, by: isViewVisible ? updateInterval : 60.0)) { context in
             LiquidGlassCardView(intensity: .prominent) {
                 VStack(spacing: Spacing.md) {
                     if let period = prayerVM.currentPrayerPeriod {
                         unifiedContent(for: period)
                             .onAppear {
                                 checkForDeadlineCrossing(period: period, date: context.date)
+                                // Update interval based on current state
+                                updateInterval = PerformanceOptimizationService.shared.getOptimalUpdateInterval(for: period.state)
                             }
                             .onChange(of: context.date) { _, newDate in
                                 checkForDeadlineCrossing(period: period, date: newDate)
+                            }
+                            .onChange(of: period.state) { _, newState in
+                                // Dynamically adjust update frequency based on urgency
+                                updateInterval = PerformanceOptimizationService.shared.getOptimalUpdateInterval(for: newState)
                             }
                     } else {
                         loadingContent
@@ -42,6 +57,12 @@ struct NextPrayerCardView: View {
         .onTapGesture {
             selectedTab = 2 // Navigate to Prayer tab
             AudioHapticCoordinator.shared.playToast()
+        }
+        .onAppear {
+            isViewVisible = true
+        }
+        .onDisappear {
+            isViewVisible = false
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityLabel)
@@ -137,9 +158,12 @@ struct NextPrayerCardView: View {
     // MARK: - Prayer Completion Row
 
     private func prayerCompletionRow(times: [PrayerTime], theme: ThemeMode) -> some View {
-        HStack(spacing: 16) {
+        // Read changeCounter to establish observation dependency for instant UI updates
+        let _ = completionService.changeCounter
+
+        return HStack(spacing: 16) {
             ForEach(Array(times.prefix(5)), id: \.name) { time in
-                let isCompleted = PrayerCompletionService.shared.isCompleted(time.name)
+                let isCompleted = completionService.isCompleted(time.name)
 
                 VStack(spacing: 4) {
                     Image(systemName: isCompleted ? "checkmark.circle.fill" : "circle")

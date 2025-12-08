@@ -10,6 +10,10 @@ import Observation
 
 @Observable
 final class NamesOfAllahService {
+    // MARK: - Cached Codecs (Performance: avoid repeated allocation)
+    private static let decoder = JSONDecoder()
+    private static let encoder = JSONEncoder()
+
     // MARK: - Properties
 
     private(set) var allNames: [NameOfAllah] = []
@@ -81,14 +85,14 @@ final class NamesOfAllahService {
     // MARK: - Private Methods
 
     private func saveProgress() {
-        if let encoded = try? JSONEncoder().encode(progress) {
+        if let encoded = try? Self.encoder.encode(progress) {
             UserDefaults.standard.set(encoded, forKey: progressKey)
         }
     }
 
     private static func loadProgress() -> NamesProgress {
         guard let data = UserDefaults.standard.data(forKey: "names_of_allah_progress"),
-              let progress = try? JSONDecoder().decode(NamesProgress.self, from: data) else {
+              let progress = try? decoder.decode(NamesProgress.self, from: data) else {
             return NamesProgress()
         }
         return progress
