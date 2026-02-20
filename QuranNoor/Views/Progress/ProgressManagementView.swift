@@ -18,6 +18,7 @@ struct ProgressManagementView: View {
     @State private var isStatsExpanded = false
     @State private var selectedSurah: Int?
     @State private var showingShareSheet = false
+    @State private var showingStatistics = false
     @State private var showingFileImporter = false
     @State private var showImportStrategySheet = false
     @State private var selectedImportStrategy: ProgressManagementViewModel.ImportStrategy = .replace
@@ -41,6 +42,12 @@ struct ProgressManagementView: View {
                                     isStatsExpanded ? "Collapse Stats" : "Expand Stats",
                                     systemImage: isStatsExpanded ? "chevron.up" : "chevron.down"
                                 )
+                            }
+
+                            Button {
+                                showingStatistics = true
+                            } label: {
+                                Label("Reading Statistics", systemImage: "chart.bar.fill")
                             }
 
                             Divider()
@@ -118,6 +125,9 @@ struct ProgressManagementView: View {
                     if let surah = viewModel.getSurah(forNumber: identifier.id) {
                         VerseProgressDetailView(surah: surah, viewModel: viewModel)
                     }
+                }
+                .sheet(isPresented: $showingStatistics) {
+                    ReadingStatisticsView(viewModel: viewModel)
                 }
                 .sheet(isPresented: $showingShareSheet) {
                     if let url = viewModel.exportURL {

@@ -2,7 +2,7 @@
 //  RamadanTrackerView.swift
 //  QuranNoor
 //
-//  Special tracker for Ramadan fasting and Qiyam
+//  Immersive Ramadan journey tracker — fasting, Qiyam, and spiritual goals
 //
 
 import SwiftUI
@@ -15,403 +15,491 @@ struct RamadanTrackerView: View {
 
     @State private var currentTracker: RamadanTracker
     private let currentYear: Int
+    private let currentDay: Int
 
     init(calendarService: IslamicCalendarService) {
         self.calendarService = calendarService
         let hijriDate = calendarService.convertToHijri()
         self.currentYear = hijriDate.year
+        self.currentDay = hijriDate.day
         self._currentTracker = State(initialValue: calendarService.getCurrentRamadanTracker())
     }
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 24) {
-                    // Header
-                    headerSection
+            ZStack {
+                // Themed background
+                themeManager.currentTheme.backgroundColor
+                    .ignoresSafeArea()
 
-                    // Statistics Card
-                    statisticsCard
+                GradientBackground(style: .home, opacity: 0.15)
 
-                    // Fasting Tracker
-                    fastingTrackerSection
+                ScrollView {
+                    VStack(spacing: Spacing.sectionSpacing) {
+                        // Hero header
+                        heroHeader
 
-                    // Last 10 Nights Qiyam Tracker
-                    qiyamTrackerSection
+                        // Journey progress
+                        journeyProgressCard
 
-                    // Quran & Zakah Checklist
-                    checklistSection
+                        // Fasting grid
+                        fastingSection
+
+                        // Last 10 Nights
+                        qiyamSection
+
+                        // Spiritual goals
+                        spiritualGoalsSection
+                    }
+                    .padding(.horizontal, Spacing.screenHorizontal)
+                    .padding(.vertical, Spacing.md)
                 }
-                .padding()
             }
-            .navigationTitle("Ramadan Tracker")
-            .navigationBarTitleDisplayMode(.large)
+            .navigationTitle("Ramadan")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Close") {
+                    Button {
                         dismiss()
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.title3)
+                            .foregroundStyle(themeManager.currentTheme.textTertiary)
                     }
                 }
             }
         }
+        .presentationBackground(themeManager.currentTheme.backgroundColor)
     }
 
-    // MARK: - Header Section
+    // MARK: - Hero Header
 
-    private var headerSection: some View {
-        VStack(spacing: 8) {
+    private var heroHeader: some View {
+        VStack(spacing: Spacing.xs) {
+            // Crescent icon
             Image(systemName: "moon.stars.fill")
-                .font(.system(size: 50))
+                .font(.system(size: FontSizes.xxxl))
                 .foregroundStyle(.linearGradient(
                     colors: [themeManager.currentTheme.accentMuted, themeManager.currentTheme.accent],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 ))
+                .shadow(color: themeManager.currentTheme.accent.opacity(0.3), radius: 12)
+
+            Text("رَمَضَان مُبَارَك")
+                .font(.custom("KFGQPCHAFSUthmanicScript-Regular", size: 28, relativeTo: .title))
+                .foregroundStyle(themeManager.currentTheme.textPrimary)
 
             Text("Ramadan \(currentYear) AH")
-                .font(.title2)
-                .fontWeight(.semibold)
+                .font(.system(size: FontSizes.lg, weight: .semibold, design: .rounded))
+                .foregroundStyle(themeManager.currentTheme.textPrimary)
 
-            Text("Track your blessed month journey")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
+            Text("Day \(currentDay) of 30")
+                .font(.system(size: FontSizes.sm, weight: .medium))
+                .foregroundStyle(themeManager.currentTheme.textSecondary)
         }
-        .padding(.vertical)
+        .padding(.vertical, Spacing.sm)
     }
 
-    // MARK: - Statistics Card
+    // MARK: - Journey Progress Card
 
-    private var statisticsCard: some View {
-        VStack(spacing: 16) {
-            HStack(spacing: 12) {
-                StatBox(
-                    title: "Fasts",
-                    value: "\(currentTracker.totalFastingDays)/30",
-                    icon: "sun.max.fill",
-                    color: .orange,
-                    percentage: currentTracker.completionPercentage
-                )
-
-                StatBox(
-                    title: "Qiyam",
-                    value: "\(currentTracker.lastTenNightsCount)/10",
-                    icon: "moon.stars.fill",
-                    color: .purple,
-                    percentage: Double(currentTracker.lastTenNightsCount) / 10.0 * 100.0
-                )
-            }
-
-            // Progress Bar
-            VStack(spacing: 8) {
-                HStack {
-                    Text("Overall Progress")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                    Text("\(Int(currentTracker.completionPercentage))%")
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                }
-
-                ProgressView(value: currentTracker.completionPercentage, total: 100)
-                    .tint(.purple)
-            }
-        }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(.ultraThinMaterial)
-        )
-    }
-
-    // MARK: - Fasting Tracker Section
-
-    private var fastingTrackerSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Image(systemName: "sun.max.fill")
-                    .foregroundStyle(.orange)
-                Text("Daily Fasting (1-30)")
-                    .font(.headline)
-                Spacer()
-            }
-
-            // Grid of days 1-30
-            let columns = Array(repeating: GridItem(.flexible()), count: 7)
-
-            LazyVGrid(columns: columns, spacing: 12) {
-                ForEach(1...30, id: \.self) { day in
-                    DayButton(
-                        day: day,
-                        isCompleted: currentTracker.isFastingCompleted(day: day),
-                        color: .orange
-                    ) {
-                        currentTracker.toggleFasting(day: day)
-                        calendarService.updateRamadanTracker(currentTracker)
-                    }
-                }
-            }
-
-            Text("Tap on each day when you complete your fast")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(.orange.opacity(0.1))
-        )
-    }
-
-    // MARK: - Qiyam Tracker Section
-
-    private var qiyamTrackerSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Image(systemName: "moon.stars.fill")
-                    .foregroundStyle(.purple)
-                Text("Last 10 Nights Qiyam (21-30)")
-                    .font(.headline)
-                Spacer()
-            }
-
-            Text("Track your night prayers during the last 10 blessed nights of Ramadan, when Laylat al-Qadr is most likely to occur.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-            // Grid of nights 21-30
-            let columns = Array(repeating: GridItem(.flexible()), count: 5)
-
-            LazyVGrid(columns: columns, spacing: 12) {
-                ForEach(21...30, id: \.self) { night in
-                    NightButton(
-                        night: night,
-                        isCompleted: currentTracker.isQiyamCompleted(night: night),
-                        isOdd: night % 2 != 0,
-                        color: .purple
-                    ) {
-                        currentTracker.toggleQiyam(night: night)
-                        calendarService.updateRamadanTracker(currentTracker)
-                    }
-                }
-            }
-
-            HStack {
-                Image(systemName: "star.fill")
-                    .foregroundStyle(.yellow)
-                    .font(.caption)
-                Text("Odd nights (21, 23, 25, 27, 29) are especially blessed")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(.purple.opacity(0.1))
-        )
-    }
-
-    // MARK: - Checklist Section
-
-    private var checklistSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Image(systemName: "checklist")
-                    .foregroundStyle(.green)
-                Text("Ramadan Checklist")
-                    .font(.headline)
-                Spacer()
-            }
-
-            // Quran Completion
-            Button {
-                currentTracker.quranCompleted.toggle()
-                calendarService.updateRamadanTracker(currentTracker)
-            } label: {
-                HStack(spacing: 12) {
-                    Image(systemName: currentTracker.quranCompleted ? "checkmark.circle.fill" : "circle")
-                        .foregroundStyle(currentTracker.quranCompleted ? .green : .secondary)
-                        .font(.title3)
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Complete Quran Recitation")
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                            .foregroundStyle(.primary)
-
-                        Text("Aim to recite the entire Quran during Ramadan")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-
-                    Spacer()
-                }
-                .padding()
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(currentTracker.quranCompleted ? Color.green.opacity(0.1) : Color.gray.opacity(0.1))
-                )
-            }
-            .buttonStyle(.plain)
-
-            // Zakah Payment
-            Button {
-                currentTracker.zakahPaid.toggle()
-                calendarService.updateRamadanTracker(currentTracker)
-            } label: {
-                HStack(spacing: 12) {
-                    Image(systemName: currentTracker.zakahPaid ? "checkmark.circle.fill" : "circle")
-                        .foregroundStyle(currentTracker.zakahPaid ? .green : .secondary)
-                        .font(.title3)
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Pay Zakat al-Fitr")
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                            .foregroundStyle(.primary)
-
-                        Text("Obligatory charity before Eid prayer")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-
-                    Spacer()
-                }
-                .padding()
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(currentTracker.zakahPaid ? Color.green.opacity(0.1) : Color.gray.opacity(0.1))
-                )
-            }
-            .buttonStyle(.plain)
-        }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(.green.opacity(0.1))
-        )
-    }
-}
-
-// MARK: - Supporting Views
-
-struct StatBox: View {
-    let title: String
-    let value: String
-    let icon: String
-    let color: Color
-    let percentage: Double
-
-    var body: some View {
-        VStack(spacing: 8) {
-            Image(systemName: icon)
-                .font(.title2)
-                .foregroundStyle(color)
-
-            Text(value)
-                .font(.title3)
-                .fontWeight(.bold)
-
-            Text(title)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-            ProgressView(value: percentage, total: 100)
-                .tint(color)
-                .frame(width: 60)
-        }
-        .frame(maxWidth: .infinity)
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(color.opacity(0.1))
-        )
-    }
-}
-
-struct DayButton: View {
-    let day: Int
-    let isCompleted: Bool
-    let color: Color
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            ZStack {
-                Circle()
-                    .fill(isCompleted ? color : Color.gray.opacity(0.1))
-                    .frame(width: 44, height: 44)
-
-                if isCompleted {
-                    Image(systemName: "checkmark")
-                        .foregroundStyle(.white)
-                        .font(.caption)
-                        .fontWeight(.bold)
-                } else {
-                    Text("\(day)")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .foregroundStyle(.primary)
-                }
-            }
-        }
-        .buttonStyle(.plain)
-    }
-}
-
-struct NightButton: View {
-    let night: Int
-    let isCompleted: Bool
-    let isOdd: Bool
-    let color: Color
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            ZStack {
-                Circle()
-                    .fill(isCompleted ? color : Color.gray.opacity(0.1))
-                    .frame(width: 50, height: 50)
-                    .overlay(
-                        Circle()
-                            .stroke(isOdd ? .yellow : .clear, lineWidth: 2)
+    private var journeyProgressCard: some View {
+        CardView(intensity: .prominent) {
+            VStack(spacing: Spacing.sm) {
+                // Stats row
+                HStack(spacing: Spacing.sm) {
+                    progressStat(
+                        value: currentTracker.totalFastingDays,
+                        total: 30,
+                        label: "Fasts",
+                        icon: "sun.max.fill"
                     )
 
-                VStack(spacing: 2) {
-                    if isCompleted {
-                        Image(systemName: "checkmark")
-                            .foregroundStyle(.white)
-                            .font(.caption)
-                            .fontWeight(.bold)
-                    }
+                    // Divider
+                    Rectangle()
+                        .fill(themeManager.currentTheme.textTertiary.opacity(0.3))
+                        .frame(width: 1, height: 48)
 
-                    Text("\(night)")
-                        .font(.caption)
-                        .fontWeight(.medium)
-                        .foregroundStyle(isCompleted ? .white : .primary)
+                    progressStat(
+                        value: currentTracker.lastTenNightsCount,
+                        total: 10,
+                        label: "Qiyam",
+                        icon: "moon.stars.fill"
+                    )
+
+                    // Divider
+                    Rectangle()
+                        .fill(themeManager.currentTheme.textTertiary.opacity(0.3))
+                        .frame(width: 1, height: 48)
+
+                    progressStat(
+                        value: checklistCompleteCount,
+                        total: 2,
+                        label: "Goals",
+                        icon: "checkmark.seal.fill"
+                    )
                 }
 
-                // Star indicator for odd nights
-                if isOdd && !isCompleted {
-                    VStack {
+                // Overall progress bar
+                VStack(spacing: Spacing.xxxs) {
+                    ProgressView(value: overallProgress, total: 1.0)
+                        .tint(themeManager.currentTheme.accent)
+
+                    HStack {
+                        Text("Overall Journey")
+                            .font(.system(size: FontSizes.xs, weight: .medium))
+                            .foregroundStyle(themeManager.currentTheme.textTertiary)
+
                         Spacer()
-                        HStack {
-                            Spacer()
+
+                        Text("\(Int(overallProgress * 100))%")
+                            .font(.system(size: FontSizes.xs, weight: .bold, design: .rounded))
+                            .foregroundStyle(themeManager.currentTheme.accent)
+                    }
+                }
+            }
+        }
+    }
+
+    private func progressStat(value: Int, total: Int, label: String, icon: String) -> some View {
+        VStack(spacing: Spacing.xxxs) {
+            Image(systemName: icon)
+                .font(.system(size: FontSizes.lg))
+                .foregroundStyle(themeManager.currentTheme.accentMuted)
+
+            Text("\(value)/\(total)")
+                .font(.system(size: FontSizes.lg, weight: .bold, design: .rounded))
+                .foregroundStyle(themeManager.currentTheme.textPrimary)
+
+            Text(label)
+                .font(.system(size: FontSizes.xs, weight: .medium))
+                .foregroundStyle(themeManager.currentTheme.textTertiary)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    // MARK: - Fasting Section
+
+    private var fastingSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            // Section header
+            HStack(spacing: Spacing.xxs) {
+                Image(systemName: "sun.max.fill")
+                    .foregroundStyle(themeManager.currentTheme.accent)
+                Text("Daily Fasting")
+                    .font(.system(size: FontSizes.lg, weight: .semibold))
+                    .foregroundStyle(themeManager.currentTheme.textPrimary)
+                Spacer()
+                Text("\(currentTracker.totalFastingDays)/30")
+                    .font(.system(size: FontSizes.sm, weight: .bold, design: .rounded))
+                    .foregroundStyle(themeManager.currentTheme.accent)
+            }
+
+            CardView(intensity: .subtle) {
+                VStack(spacing: Spacing.xs) {
+                    let columns = Array(repeating: GridItem(.flexible(), spacing: Spacing.xxs), count: 7)
+
+                    // Day labels
+                    LazyVGrid(columns: columns, spacing: Spacing.xxs) {
+                        ForEach(1...30, id: \.self) { day in
+                            fastingDayCell(day: day)
+                        }
+                    }
+
+                    // Hint
+                    Text("Tap each day to mark your fast")
+                        .font(.system(size: FontSizes.xs))
+                        .foregroundStyle(themeManager.currentTheme.textTertiary)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                }
+            }
+        }
+    }
+
+    private func fastingDayCell(day: Int) -> some View {
+        let isCompleted = currentTracker.isFastingCompleted(day: day)
+        let isToday = day == currentDay
+        let isPast = day < currentDay
+
+        return Button {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                currentTracker.toggleFasting(day: day)
+                calendarService.updateRamadanTracker(currentTracker)
+            }
+            HapticManager.shared.trigger(isCompleted ? .light : .medium)
+        } label: {
+            ZStack {
+                // Background
+                RoundedRectangle(cornerRadius: BorderRadius.md, style: .continuous)
+                    .fill(dayBackground(isCompleted: isCompleted, isToday: isToday, isPast: isPast))
+                    .frame(width: 40, height: 40)
+
+                // Today ring
+                if isToday {
+                    RoundedRectangle(cornerRadius: BorderRadius.md, style: .continuous)
+                        .strokeBorder(themeManager.currentTheme.accent, lineWidth: 2)
+                        .frame(width: 40, height: 40)
+                }
+
+                // Content
+                if isCompleted {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: FontSizes.xs, weight: .bold))
+                        .foregroundStyle(.white)
+                } else {
+                    Text("\(day)")
+                        .font(.system(size: FontSizes.sm, weight: isToday ? .bold : .medium, design: .rounded))
+                        .foregroundStyle(isToday ? themeManager.currentTheme.accent : themeManager.currentTheme.textSecondary)
+                }
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Day \(day)\(isCompleted ? ", fasted" : "")\(isToday ? ", today" : "")")
+    }
+
+    private func dayBackground(isCompleted: Bool, isToday: Bool, isPast: Bool) -> Color {
+        if isCompleted {
+            return themeManager.currentTheme.accent
+        } else if isPast {
+            return themeManager.currentTheme.textTertiary.opacity(0.08)
+        } else {
+            return .clear
+        }
+    }
+
+    // MARK: - Qiyam Section (Last 10 Nights)
+
+    private var qiyamSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            // Section header
+            HStack(spacing: Spacing.xxs) {
+                Image(systemName: "moon.stars.fill")
+                    .foregroundStyle(themeManager.currentTheme.accentMuted)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Last 10 Nights")
+                        .font(.system(size: FontSizes.lg, weight: .semibold))
+                        .foregroundStyle(themeManager.currentTheme.textPrimary)
+                    Text("Seek Laylat al-Qadr")
+                        .font(.system(size: FontSizes.xs))
+                        .foregroundStyle(themeManager.currentTheme.textTertiary)
+                }
+                Spacer()
+                Text("\(currentTracker.lastTenNightsCount)/10")
+                    .font(.system(size: FontSizes.sm, weight: .bold, design: .rounded))
+                    .foregroundStyle(themeManager.currentTheme.accentMuted)
+            }
+
+            CardView(showPattern: true, intensity: .moderate) {
+                VStack(spacing: Spacing.sm) {
+                    // Nights grid (2 rows of 5)
+                    let columns = Array(repeating: GridItem(.flexible(), spacing: Spacing.xs), count: 5)
+
+                    LazyVGrid(columns: columns, spacing: Spacing.xs) {
+                        ForEach(21...30, id: \.self) { night in
+                            qiyamNightCell(night: night)
+                        }
+                    }
+
+                    // Legend
+                    HStack(spacing: Spacing.sm) {
+                        HStack(spacing: Spacing.xxxs) {
                             Image(systemName: "star.fill")
                                 .font(.system(size: 8))
-                                .foregroundStyle(.yellow)
-                                .offset(x: -4, y: -4)
+                                .foregroundStyle(themeManager.currentTheme.accent)
+                            Text("Odd nights — most blessed")
+                                .font(.system(size: FontSizes.xs))
+                                .foregroundStyle(themeManager.currentTheme.textTertiary)
                         }
+                        Spacer()
+                    }
+                }
+            }
+        }
+    }
+
+    private func qiyamNightCell(night: Int) -> some View {
+        let isCompleted = currentTracker.isQiyamCompleted(night: night)
+        let isOdd = night % 2 != 0
+
+        return Button {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                currentTracker.toggleQiyam(night: night)
+                calendarService.updateRamadanTracker(currentTracker)
+            }
+            HapticManager.shared.trigger(isCompleted ? .light : .medium)
+        } label: {
+            VStack(spacing: Spacing.xxxs) {
+                ZStack {
+                    // Background circle
+                    Circle()
+                        .fill(isCompleted ? themeManager.currentTheme.accent : themeManager.currentTheme.accentTint)
+                        .frame(width: 50, height: 50)
+
+                    // Odd night indicator ring
+                    if isOdd && !isCompleted {
+                        Circle()
+                            .strokeBorder(
+                                themeManager.currentTheme.accent.opacity(0.4),
+                                lineWidth: 1.5
+                            )
+                            .frame(width: 50, height: 50)
+                    }
+
+                    // Content
+                    VStack(spacing: 1) {
+                        if isCompleted {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: FontSizes.sm, weight: .bold))
+                                .foregroundStyle(.white)
+                        }
+
+                        Text("\(night)")
+                            .font(.system(size: isCompleted ? FontSizes.xs : FontSizes.sm, weight: .semibold, design: .rounded))
+                            .foregroundStyle(isCompleted ? .white : themeManager.currentTheme.textPrimary)
+                    }
+
+                    // Star for odd nights
+                    if isOdd && !isCompleted {
+                        VStack {
+                            HStack {
+                                Spacer()
+                                Image(systemName: "star.fill")
+                                    .font(.system(size: 8))
+                                    .foregroundStyle(themeManager.currentTheme.accent)
+                                    .offset(x: -2, y: 2)
+                            }
+                            Spacer()
+                        }
+                        .frame(width: 50, height: 50)
                     }
                 }
             }
         }
         .buttonStyle(.plain)
+        .accessibilityLabel("Night \(night)\(isCompleted ? ", Qiyam completed" : "")\(isOdd ? ", blessed odd night" : "")")
+    }
+
+    // MARK: - Spiritual Goals Section
+
+    private var spiritualGoalsSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            HStack(spacing: Spacing.xxs) {
+                Image(systemName: "checkmark.seal.fill")
+                    .foregroundStyle(themeManager.currentTheme.accent)
+                Text("Spiritual Goals")
+                    .font(.system(size: FontSizes.lg, weight: .semibold))
+                    .foregroundStyle(themeManager.currentTheme.textPrimary)
+                Spacer()
+            }
+
+            // Quran completion
+            goalRow(
+                icon: "book.fill",
+                title: "Complete Quran Recitation",
+                subtitle: "Read the entire Quran during this blessed month",
+                isCompleted: currentTracker.quranCompleted
+            ) {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    currentTracker.quranCompleted.toggle()
+                    calendarService.updateRamadanTracker(currentTracker)
+                }
+                HapticManager.shared.trigger(currentTracker.quranCompleted ? .success : .light)
+            }
+
+            // Zakat al-Fitr
+            goalRow(
+                icon: "heart.fill",
+                title: "Pay Zakat al-Fitr",
+                subtitle: "Obligatory charity before Eid prayer",
+                isCompleted: currentTracker.zakahPaid
+            ) {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    currentTracker.zakahPaid.toggle()
+                    calendarService.updateRamadanTracker(currentTracker)
+                }
+                HapticManager.shared.trigger(currentTracker.zakahPaid ? .success : .light)
+            }
+        }
+    }
+
+    private func goalRow(
+        icon: String,
+        title: String,
+        subtitle: String,
+        isCompleted: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            CardView(intensity: .subtle) {
+                HStack(spacing: Spacing.sm) {
+                    // Checkbox
+                    ZStack {
+                        Circle()
+                            .fill(isCompleted ? themeManager.currentTheme.accent : .clear)
+                            .frame(width: 28, height: 28)
+
+                        Circle()
+                            .strokeBorder(
+                                isCompleted ? themeManager.currentTheme.accent : themeManager.currentTheme.textTertiary,
+                                lineWidth: 2
+                            )
+                            .frame(width: 28, height: 28)
+
+                        if isCompleted {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: FontSizes.xs, weight: .bold))
+                                .foregroundStyle(.white)
+                        }
+                    }
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(title)
+                            .font(.system(size: FontSizes.base, weight: .semibold))
+                            .foregroundStyle(themeManager.currentTheme.textPrimary)
+                            .strikethrough(isCompleted, color: themeManager.currentTheme.textTertiary)
+
+                        Text(subtitle)
+                            .font(.system(size: FontSizes.xs))
+                            .foregroundStyle(themeManager.currentTheme.textTertiary)
+                    }
+
+                    Spacer()
+
+                    Image(systemName: icon)
+                        .font(.system(size: FontSizes.lg))
+                        .foregroundStyle(isCompleted ? themeManager.currentTheme.accent : themeManager.currentTheme.textTertiary)
+                }
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(title), \(isCompleted ? "completed" : "not completed")")
+    }
+
+    // MARK: - Computed Properties
+
+    private var checklistCompleteCount: Int {
+        var count = 0
+        if currentTracker.quranCompleted { count += 1 }
+        if currentTracker.zakahPaid { count += 1 }
+        return count
+    }
+
+    private var overallProgress: Double {
+        let fastingWeight = 0.6
+        let qiyamWeight = 0.25
+        let goalsWeight = 0.15
+
+        let fastingProgress = Double(currentTracker.totalFastingDays) / 30.0
+        let qiyamProgress = Double(currentTracker.lastTenNightsCount) / 10.0
+        let goalsProgress = Double(checklistCompleteCount) / 2.0
+
+        return (fastingProgress * fastingWeight) + (qiyamProgress * qiyamWeight) + (goalsProgress * goalsWeight)
     }
 }
+
+// MARK: - Preview
 
 #Preview {
     RamadanTrackerView(calendarService: IslamicCalendarService())
+        .environment(ThemeManager())
 }

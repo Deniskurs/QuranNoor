@@ -61,6 +61,19 @@ struct MoreView: View {
                                 )
                             }
                             .buttonStyle(PlainButtonStyle())
+
+                            Divider().padding(.horizontal, Spacing.sm)
+
+                            NavigationLink {
+                                FortressDuasView()
+                            } label: {
+                                MoreMenuItem(
+                                    icon: "shield.fill",
+                                    title: "Fortress of the Muslim",
+                                    subtitle: "Authentic daily supplications"
+                                )
+                            }
+                            .buttonStyle(PlainButtonStyle())
                         }
 
                         // MARK: Daily Tools
