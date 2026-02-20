@@ -148,6 +148,9 @@ struct HomeView: View {
                 // Next prayer card (HERO SECTION — shows loading state internally)
                 NextPrayerCardView(prayerVM: prayerVM, selectedTab: $selectedTab)
 
+                // Ramadan tracker card (shown only during Ramadan)
+                RamadanHomeCard()
+
                 // Spiritual nourishment carousel
                 SpiritualNourishmentCarousel(
                     verseOfDay: homeVM.verseOfDay,

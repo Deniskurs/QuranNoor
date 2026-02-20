@@ -79,6 +79,19 @@ struct MoreView: View {
                             Divider().padding(.horizontal, Spacing.sm)
 
                             NavigationLink {
+                                IslamicCalendarView()
+                            } label: {
+                                MoreMenuItem(
+                                    icon: "calendar.badge.clock",
+                                    title: "Islamic Calendar",
+                                    subtitle: "Hijri dates & events"
+                                )
+                            }
+                            .buttonStyle(PlainButtonStyle())
+
+                            Divider().padding(.horizontal, Spacing.sm)
+
+                            NavigationLink {
                                 BookmarksView()
                             } label: {
                                 MoreMenuItem(
