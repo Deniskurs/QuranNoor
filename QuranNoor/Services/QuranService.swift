@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import Combine
+import Observation
 import SwiftData
 
 // MARK: - API Response Models
@@ -119,7 +119,9 @@ struct QuranEditionResponse: Codable {
 }
 
 // MARK: - Quran Service
-class QuranService: ObservableObject {
+@Observable
+@MainActor
+class QuranService {
     // MARK: - Singleton
     static let shared = QuranService()
 
@@ -127,9 +129,9 @@ class QuranService: ObservableObject {
     private static let decoder = JSONDecoder()
     private static let encoder = JSONEncoder()
 
-    // MARK: - Published Properties
-    @Published private(set) var readingProgress: ReadingProgress?
-    @Published private(set) var bookmarks: [Bookmark] = []
+    // MARK: - Observable Properties
+    private(set) var readingProgress: ReadingProgress?
+    private(set) var bookmarks: [Bookmark] = []
 
     // MARK: - SwiftData Context
     private var modelContext: ModelContext?
@@ -155,10 +157,13 @@ class QuranService: ObservableObject {
         set {
             if let encoded = try? Self.encoder.encode(newValue) {
                 userDefaults.set(encoded, forKey: translationPrefsKey)
-                print("✅ Translation preferences saved: \(newValue.primaryTranslation.displayName)")
+                // Translation preferences saved
             }
         }
     }
+
+    // Preload guard — prevents redundant network calls
+    private var hasPreloaded = false
 
     // Cache keys
     private let surahListCacheKey = "surah_list"
@@ -173,20 +178,15 @@ class QuranService: ObservableObject {
 
     private init() {
         // Initial data will be loaded when SwiftData context is set via setupWithContext()
-        print("✅ QuranService.shared initialized (awaiting SwiftData context)")
+        // Initialization happens when SwiftData context is set via setupWithContext()
     }
 
     /// Setup QuranService with SwiftData ModelContext
     /// Call this from QuranNoorApp after ModelContainer is initialized
     @MainActor
     func setupWithContext(_ context: ModelContext) {
-        guard modelContext == nil else {
-            print("ℹ️ QuranService already configured with SwiftData context")
-            return
-        }
-
+        guard modelContext == nil else { return }
         self.modelContext = context
-        print("✅ QuranService configured with SwiftData context")
 
         // Load initial data from SwiftData
         loadProgressFromSwiftData()
@@ -196,10 +196,7 @@ class QuranService: ObservableObject {
     /// Load reading progress from SwiftData
     @MainActor
     private func loadProgressFromSwiftData() {
-        guard let context = modelContext else {
-            print("⚠️ No SwiftData context - cannot load progress")
-            return
-        }
+        guard let context = modelContext else { return }
 
         do {
             // Fetch global stats
@@ -231,9 +228,11 @@ class QuranService: ObservableObject {
                 lastReadDate: stats?.lastReadDate ?? Date.distantPast
             )
 
-            print("✅ Loaded progress from SwiftData: \(readVerses.count) verses, streak: \(stats?.streakDays ?? 0) days")
+            // Progress loaded successfully
         } catch {
+            #if DEBUG
             print("❌ Failed to load progress from SwiftData: \(error)")
+            #endif
             self.readingProgress = nil
         }
     }
@@ -241,10 +240,7 @@ class QuranService: ObservableObject {
     /// Load bookmarks from SwiftData
     @MainActor
     private func loadBookmarksFromSwiftData() {
-        guard let context = modelContext else {
-            print("⚠️ No SwiftData context - cannot load bookmarks")
-            return
-        }
+        guard let context = modelContext else { return }
 
         do {
             let descriptor = FetchDescriptor<BookmarkRecord>(
@@ -253,18 +249,74 @@ class QuranService: ObservableObject {
             let records = try context.fetch(descriptor)
 
             self.bookmarks = records.map { $0.toBookmark() }
-            print("✅ Loaded \(bookmarks.count) bookmarks from SwiftData")
         } catch {
+            #if DEBUG
             print("❌ Failed to load bookmarks from SwiftData: \(error)")
+            #endif
             self.bookmarks = []
+        }
+    }
+
+    // MARK: - Bundled Data
+
+    /// Cached bundled surahs — loaded once from quran_metadata.json and reused
+    private var cachedBundledSurahs: [Surah]?
+
+    /// Load all 114 surahs from the bundled quran_metadata.json file.
+    /// This is the PRIMARY source of surah metadata — instant, no network needed.
+    /// Returns all 114 surahs on success, or an empty array if the bundle is missing.
+    func loadBundledSurahs() -> [Surah] {
+        // Return cached result if already loaded
+        if let cached = cachedBundledSurahs {
+            return cached
+        }
+
+        guard let url = Bundle.main.url(forResource: "quran_metadata", withExtension: "json") else {
+            #if DEBUG
+            print("WARNING: quran_metadata.json not found in bundle")
+            #endif
+            return []
+        }
+
+        do {
+            let data = try Data(contentsOf: url)
+            let items = try Self.decoder.decode([QuranSurahListResponse].self, from: data)
+
+            let surahs = items.map { item in
+                Surah(
+                    id: item.number,
+                    name: item.name,
+                    englishName: item.englishName,
+                    englishNameTranslation: item.englishNameTranslation,
+                    numberOfVerses: item.numberOfAyahs,
+                    revelationType: item.revelationType.lowercased() == "meccan" ? .meccan : .medinan
+                )
+            }
+
+            cachedBundledSurahs = surahs
+            return surahs
+        } catch {
+            #if DEBUG
+            print("Failed to decode quran_metadata.json: \(error)")
+            #endif
+            return []
         }
     }
 
     // MARK: - Surah Methods
 
-    /// Get list of all 114 surahs from API
+    /// Get list of all 114 surahs.
+    /// Uses bundled data as the primary source (instant, offline).
+    /// Falls back to API fetch which can update the cache for enrichment.
     func getSurahs() async throws -> [Surah] {
-        // Try to fetch from API with caching
+        // Primary source: bundled data (always available, all 114 surahs)
+        // The surah list is static — no need to refresh from API.
+        let bundled = loadBundledSurahs()
+        if !bundled.isEmpty {
+            return bundled
+        }
+
+        // Fallback: fetch from API if bundled data is somehow missing
         do {
             let response: [QuranSurahListResponse] = try await apiClient.fetchDirect(
                 url: "https://api.alquran.cloud/v1/surah",
@@ -282,9 +334,8 @@ class QuranService: ObservableObject {
                 )
             }
         } catch {
-            print("Failed to fetch surahs from API: \(error)")
-            // Return fallback sample data if API fails
-            return getSampleSurahs()
+            // Return empty if both bundled and API fail
+            return []
         }
     }
 
@@ -306,7 +357,6 @@ class QuranService: ObservableObject {
                 )
             }
         } catch {
-            print("Failed to fetch verses from API: \(error)")
             // Return fallback sample data if API fails
             return getSampleVerses(forSurah: surahNumber)
         }
@@ -330,7 +380,6 @@ class QuranService: ObservableObject {
                 author: selectedEdition.author
             )
         } catch {
-            print("Failed to fetch translation from API: \(error)")
             // Return fallback translation if API fails
             return getSampleTranslation(forVerse: verse)
         }
@@ -345,7 +394,7 @@ class QuranService: ObservableObject {
                 let translation = try await getTranslation(forVerse: verse, edition: edition)
                 translations.append(translation)
             } catch {
-                print("Failed to fetch \(edition.displayName) translation: \(error)")
+                // Skip failed translation
             }
         }
 
@@ -397,7 +446,6 @@ class QuranService: ObservableObject {
             )
             return response.audio
         } catch {
-            print("Failed to fetch audio URL: \(error)")
             return nil
         }
     }
@@ -411,70 +459,32 @@ class QuranService: ObservableObject {
             )
             return response
         } catch {
-            print("Failed to fetch translation editions: \(error)")
             return []
         }
     }
 
     /// Clear all cached Quran data (useful for debugging or forcing fresh data)
     func clearAllCache() {
-        print("🗑️  Clearing all Quran cache...")
-
-        // Clear surah list cache
-        userDefaults.removeObject(forKey: "cache_\(surahListCacheKey)")
-
-        // Clear all surah caches (1-114)
-        for surahNumber in 1...114 {
-            userDefaults.removeObject(forKey: "cache_\(surahCacheKey(surahNumber))")
-        }
-
-        // Clear translation caches - this is trickier since we don't know all combinations
-        // So we'll use the APIClient's clearCache method for those
+        // APIClient now uses file-based cache — clear it all at once
         apiClient.clearCache()
-
-        print("✅ Cache cleared successfully")
     }
 
-    /// Preload entire Quran data (call this on first app launch)
+    /// Preload commonly-read Quran data (last 4 surahs only — most frequently read).
+    /// Guarded to run only once per app session — subsequent calls are no-ops.
+    /// Fetches are serialized with a short delay between each to avoid API rate limits.
     func preloadQuranData() async {
-        print("📖 Starting Quran data preload...")
+        guard !hasPreloaded else { return }
+        hasPreloaded = true
 
-        // Load all surahs first
-        do {
-            let surahs = try await getSurahs()
-            print("✅ Loaded \(surahs.count) surahs list")
-        } catch {
-            print("❌ Failed to load surahs list: \(error)")
-        }
-
-        // Load first 10 surahs and last 4 surahs (most commonly read)
-        let prioritySurahs = Array(1...10) + [111, 112, 113, 114]
-        var successCount = 0
-        var failedSurahs: [Int] = []
+        // Preload only the last 4 surahs (most commonly read, small payload)
+        // Serialized to avoid flooding the API and triggering 429 rate limits
+        let prioritySurahs = [112, 113, 114, 111]
 
         for surahNumber in prioritySurahs {
-            do {
-                let verses = try await getVerses(forSurah: surahNumber)
-                // Check if we got real data or fallback error message
-                if verses.count == 1 && verses[0].text.contains("Failed to load") {
-                    print("❌ Surah \(surahNumber): Got fallback error message")
-                    failedSurahs.append(surahNumber)
-                } else {
-                    print("✅ Surah \(surahNumber): Loaded \(verses.count) verses")
-                    // Note: Translations are loaded on-demand to avoid API rate limiting
-                    successCount += 1
-                }
-            } catch {
-                print("❌ Surah \(surahNumber): \(error)")
-                failedSurahs.append(surahNumber)
-            }
+            _ = try? await getVerses(forSurah: surahNumber)
+            // Stagger requests to stay under API rate limits
+            try? await Task.sleep(for: .milliseconds(300))
         }
-
-        print("📊 Preload Summary: \(successCount)/\(prioritySurahs.count) surahs loaded successfully")
-        if !failedSurahs.isEmpty {
-            print("⚠️  Failed surahs: \(failedSurahs)")
-        }
-        print("✅ Preload process completed")
     }
 
     // MARK: - Bookmarks
@@ -484,16 +494,40 @@ class QuranService: ObservableObject {
         return bookmarks
     }
 
+    /// Get bookmarks filtered by category
+    /// - Parameter category: The category to filter by. Pass `BookmarkCategory.allBookmarks` or `nil` to return all.
+    func getBookmarks(filteredBy category: String?) -> [Bookmark] {
+        guard let category = category, category != BookmarkCategory.allBookmarks else {
+            return bookmarks
+        }
+        return bookmarks.filter { $0.category == category }
+    }
+
+    /// Get all unique bookmark categories currently in use
+    func getBookmarkCategories() -> [String] {
+        var categories: [String] = [BookmarkCategory.allBookmarks]
+        let uniqueUsed = Set(bookmarks.map { $0.category }).sorted()
+        for cat in uniqueUsed {
+            if cat != BookmarkCategory.allBookmarks && !categories.contains(cat) {
+                categories.append(cat)
+            }
+        }
+        // Ensure predefined categories appear even if unused
+        for cat in BookmarkCategory.predefined {
+            if !categories.contains(cat) {
+                categories.append(cat)
+            }
+        }
+        return categories
+    }
+
     /// Add a bookmark
     @MainActor
-    func addBookmark(surahNumber: Int, verseNumber: Int, note: String? = nil) {
-        guard let context = modelContext else {
-            print("⚠️ No SwiftData context - cannot add bookmark")
-            return
-        }
+    func addBookmark(surahNumber: Int, verseNumber: Int, note: String? = nil, category: String = "All Bookmarks") {
+        guard let context = modelContext else { return }
 
         // Create new bookmark record
-        let record = BookmarkRecord(surahNumber: surahNumber, verseNumber: verseNumber, note: note)
+        let record = BookmarkRecord(surahNumber: surahNumber, verseNumber: verseNumber, note: note, category: category)
         context.insert(record)
 
         // Save context
@@ -501,19 +535,18 @@ class QuranService: ObservableObject {
             try context.save()
             // Update published property
             loadBookmarksFromSwiftData()
-            print("✅ Bookmark added: \(surahNumber):\(verseNumber)")
+            // Bookmark saved
         } catch {
+            #if DEBUG
             print("❌ Failed to save bookmark: \(error)")
+            #endif
         }
     }
 
     /// Remove a bookmark
     @MainActor
     func removeBookmark(id: UUID) {
-        guard let context = modelContext else {
-            print("⚠️ No SwiftData context - cannot remove bookmark")
-            return
-        }
+        guard let context = modelContext else { return }
 
         do {
             let descriptor = FetchDescriptor<BookmarkRecord>(
@@ -528,15 +561,33 @@ class QuranService: ObservableObject {
             try context.save()
             // Update published property
             loadBookmarksFromSwiftData()
-            print("✅ Bookmark removed: \(id)")
+            // Bookmark removed
         } catch {
+            #if DEBUG
             print("❌ Failed to remove bookmark: \(error)")
+            #endif
         }
     }
 
     /// Check if verse is bookmarked
     func isBookmarked(surahNumber: Int, verseNumber: Int) -> Bool {
         return bookmarks.contains { $0.surahNumber == surahNumber && $0.verseNumber == verseNumber }
+    }
+
+    /// Delete all bookmarks and reading progress (GDPR compliance)
+    func deleteAllData() {
+        guard let context = modelContext else { return }
+        do {
+            try context.delete(model: BookmarkRecord.self)
+            try context.delete(model: ReadingProgressRecord.self)
+            try context.save()
+            bookmarks = []
+            readingProgress = nil
+        } catch {
+            #if DEBUG
+            print("Failed to delete all data: \(error)")
+            #endif
+        }
     }
 
     // MARK: - Reading Progress
@@ -560,10 +611,7 @@ class QuranService: ObservableObject {
     /// Update reading progress (called by auto-tracking system)
     @MainActor
     func updateReadingProgress(surahNumber: Int, verseNumber: Int) {
-        guard let context = modelContext else {
-            print("⚠️ No SwiftData context - cannot update progress")
-            return
-        }
+        guard let context = modelContext else { return }
 
         let verseId = "\(surahNumber):\(verseNumber)"
 
@@ -574,6 +622,7 @@ class QuranService: ObservableObject {
             )
             let existingRecords = try context.fetch(descriptor)
 
+            let now = Date()
             if let existingRecord = existingRecords.first {
                 // Update existing record
                 existingRecord.markAsRead()
@@ -592,12 +641,27 @@ class QuranService: ObservableObject {
 
             try context.save()
 
-            // Refresh published property
-            loadProgressFromSwiftData()
+            // Incrementally update in-memory progress instead of refetching all records
+            if var progress = readingProgress {
+                let existing = progress.readVerses[verseId]
+                progress.readVerses[verseId] = VerseReadData(
+                    timestamp: now,
+                    readCount: (existing?.readCount ?? 0) + 1,
+                    source: existing?.source ?? .autoTracked
+                )
+                progress.lastReadSurah = surahNumber
+                progress.lastReadVerse = verseNumber
+                progress.lastReadDate = now
+                self.readingProgress = progress
+            } else {
+                // No existing progress — do a full load (first time only)
+                loadProgressFromSwiftData()
+            }
 
-            print("✅ Auto-tracked: \(verseId)")
         } catch {
+            #if DEBUG
             print("❌ Failed to update progress: \(error)")
+            #endif
         }
     }
 
@@ -639,7 +703,9 @@ class QuranService: ObservableObject {
                 stats.lastReadDate = today
             }
         } catch {
+            #if DEBUG
             print("❌ Failed to update global stats: \(error)")
+            #endif
         }
     }
 
@@ -648,10 +714,7 @@ class QuranService: ObservableObject {
     /// Manually mark a verse as read
     @MainActor
     func markVerseAsRead(surahNumber: Int, verseNumber: Int, manual: Bool = true) {
-        guard let context = modelContext else {
-            print("⚠️ No SwiftData context - cannot mark verse as read")
-            return
-        }
+        guard let context = modelContext else { return }
 
         let verseId = "\(surahNumber):\(verseNumber)"
 
@@ -673,35 +736,51 @@ class QuranService: ObservableObject {
             )
             let existingRecords = try context.fetch(descriptor)
 
+            let now = Date()
+            let source: String = manual ? "manualMark" : "autoTracked"
             if let existingRecord = existingRecords.first {
                 existingRecord.markAsRead()
                 if manual {
-                    existingRecord.source = "manualMark"
+                    existingRecord.source = source
                 }
             } else {
                 let newRecord = ReadingProgressRecord(
                     surahNumber: surahNumber,
                     verseNumber: verseNumber,
-                    source: manual ? "manualMark" : "autoTracked"
+                    source: source
                 )
                 context.insert(newRecord)
             }
 
             try context.save()
-            loadProgressFromSwiftData()
-            print("✅ Manually marked \(verseId) as read")
+
+            // Incrementally update in-memory progress instead of refetching all records
+            if var progress = readingProgress {
+                let existing = progress.readVerses[verseId]
+                progress.readVerses[verseId] = VerseReadData(
+                    timestamp: now,
+                    readCount: (existing?.readCount ?? 0) + 1,
+                    source: VerseReadData.ReadSource(rawValue: source) ?? existing?.source ?? .autoTracked
+                )
+                progress.lastReadSurah = surahNumber
+                progress.lastReadVerse = verseNumber
+                progress.lastReadDate = now
+                self.readingProgress = progress
+            } else {
+                loadProgressFromSwiftData()
+            }
+
         } catch {
+            #if DEBUG
             print("❌ Failed to mark verse as read: \(error)")
+            #endif
         }
     }
 
     /// Manually mark a verse as unread
     @MainActor
     func markVerseAsUnread(surahNumber: Int, verseNumber: Int) {
-        guard let context = modelContext else {
-            print("⚠️ No SwiftData context - cannot mark verse as unread")
-            return
-        }
+        guard let context = modelContext else { return }
 
         let verseId = "\(surahNumber):\(verseNumber)"
 
@@ -726,10 +805,19 @@ class QuranService: ObservableObject {
             }
 
             try context.save()
-            loadProgressFromSwiftData()
-            print("❌ Marked \(verseId) as unread")
+
+            // Incrementally update in-memory progress instead of refetching all records
+            if var progress = readingProgress {
+                progress.readVerses.removeValue(forKey: verseId)
+                self.readingProgress = progress
+            } else {
+                loadProgressFromSwiftData()
+            }
+
         } catch {
+            #if DEBUG
             print("❌ Failed to mark verse as unread: \(error)")
+            #endif
         }
     }
 
@@ -749,10 +837,7 @@ class QuranService: ObservableObject {
     /// Reset all reading progress
     @MainActor
     func resetAllProgress() {
-        guard let context = modelContext else {
-            print("⚠️ No SwiftData context - cannot reset progress")
-            return
-        }
+        guard let context = modelContext else { return }
 
         do {
             // Delete all progress records
@@ -776,19 +861,17 @@ class QuranService: ObservableObject {
             try context.save()
             loadProgressFromSwiftData()
             ProgressHistoryManager.shared.clearHistory()
-            print("🔄 All reading progress reset")
         } catch {
+            #if DEBUG
             print("❌ Failed to reset progress: \(error)")
+            #endif
         }
     }
 
     /// Reset progress for a specific surah
     @MainActor
     func resetSurahProgress(surahNumber: Int) {
-        guard let context = modelContext else {
-            print("⚠️ No SwiftData context - cannot reset surah progress")
-            return
-        }
+        guard let context = modelContext else { return }
 
         // Create snapshot
         let progress = getReadingProgress()
@@ -812,19 +895,17 @@ class QuranService: ObservableObject {
 
             try context.save()
             loadProgressFromSwiftData()
-            print("🔄 Reset progress for Surah \(surahNumber)")
         } catch {
+            #if DEBUG
             print("❌ Failed to reset surah progress: \(error)")
+            #endif
         }
     }
 
     /// Reset progress for specific verse range
     @MainActor
     func resetVerseRange(surahNumber: Int, fromVerse: Int, toVerse: Int) {
-        guard let context = modelContext else {
-            print("⚠️ No SwiftData context - cannot reset verse range")
-            return
-        }
+        guard let context = modelContext else { return }
 
         // Create snapshot
         let progress = getReadingProgress()
@@ -850,9 +931,10 @@ class QuranService: ObservableObject {
 
             try context.save()
             loadProgressFromSwiftData()
-            print("🔄 Reset verses \(fromVerse)-\(toVerse) in Surah \(surahNumber)")
         } catch {
+            #if DEBUG
             print("❌ Failed to reset verse range: \(error)")
+            #endif
         }
     }
 
@@ -860,13 +942,9 @@ class QuranService: ObservableObject {
     @MainActor
     @discardableResult
     func undoLastAction() -> Bool {
-        guard let context = modelContext else {
-            print("⚠️ No SwiftData context - cannot undo")
-            return false
-        }
+        guard let context = modelContext else { return false }
 
         guard let lastSnapshot = ProgressHistoryManager.shared.getLastSnapshot() else {
-            print("⚠️ No actions to undo")
             return false
         }
 
@@ -898,10 +976,11 @@ class QuranService: ObservableObject {
             try context.save()
             loadProgressFromSwiftData()
             ProgressHistoryManager.shared.removeLastSnapshot()
-            print("⏪ Undone action: \(lastSnapshot.actionType.rawValue)")
             return true
         } catch {
+            #if DEBUG
             print("❌ Failed to undo: \(error)")
+            #endif
             return false
         }
     }
@@ -919,7 +998,6 @@ class QuranService: ObservableObject {
     /// Clear undo history (to save space)
     func clearUndoHistory() {
         ProgressHistoryManager.shared.clearHistory()
-        print("🗑️ Cleared undo history")
     }
 
     /// Check if a verse is marked as read
@@ -948,10 +1026,7 @@ class QuranService: ObservableObject {
     ///   - strategy: How to handle conflicts (replace, merge, addOnly)
     @MainActor
     func importProgress(_ importedProgress: ReadingProgress, strategy: ImportStrategy = .replace) {
-        guard let context = modelContext else {
-            print("⚠️ No SwiftData context - cannot import progress")
-            return
-        }
+        guard let context = modelContext else { return }
 
         do {
             switch strategy {
@@ -1021,9 +1096,10 @@ class QuranService: ObservableObject {
 
             try context.save()
             loadProgressFromSwiftData()
-            print("✅ Imported progress with strategy: \(strategy)")
         } catch {
+            #if DEBUG
             print("❌ Failed to import progress: \(error)")
+            #endif
         }
     }
 
@@ -1031,10 +1107,7 @@ class QuranService: ObservableObject {
     /// - Parameter snapshot: Dictionary of verseId to VerseReadData
     @MainActor
     func restoreVersesFromSnapshot(_ snapshot: [String: VerseReadData]) {
-        guard let context = modelContext else {
-            print("⚠️ No SwiftData context - cannot restore snapshot")
-            return
-        }
+        guard let context = modelContext else { return }
 
         do {
             // Add or update verses from snapshot
@@ -1057,9 +1130,10 @@ class QuranService: ObservableObject {
 
             try context.save()
             loadProgressFromSwiftData()
-            print("✅ Restored \(snapshot.count) verses from snapshot")
         } catch {
+            #if DEBUG
             print("❌ Failed to restore snapshot: \(error)")
+            #endif
         }
     }
 
@@ -1072,24 +1146,10 @@ class QuranService: ObservableObject {
 
     // MARK: - Fallback Sample Data
 
-    /// Get sample surahs for fallback when API/cache fails
+    /// Get sample surahs for fallback when API/cache fails.
+    /// Now loads all 114 surahs from the bundled quran_metadata.json.
     func getSampleSurahs() -> [Surah] {
-        return [
-            Surah(id: 1, name: "الفاتحة", englishName: "Al-Fatihah", englishNameTranslation: "The Opening", numberOfVerses: 7, revelationType: .meccan),
-            Surah(id: 2, name: "البقرة", englishName: "Al-Baqarah", englishNameTranslation: "The Cow", numberOfVerses: 286, revelationType: .medinan),
-            Surah(id: 3, name: "آل عمران", englishName: "Ali 'Imran", englishNameTranslation: "Family of Imran", numberOfVerses: 200, revelationType: .medinan),
-            Surah(id: 4, name: "النساء", englishName: "An-Nisa", englishNameTranslation: "The Women", numberOfVerses: 176, revelationType: .medinan),
-            Surah(id: 5, name: "المائدة", englishName: "Al-Ma'idah", englishNameTranslation: "The Table Spread", numberOfVerses: 120, revelationType: .medinan),
-            Surah(id: 6, name: "الأنعام", englishName: "Al-An'am", englishNameTranslation: "The Cattle", numberOfVerses: 165, revelationType: .meccan),
-            Surah(id: 7, name: "الأعراف", englishName: "Al-A'raf", englishNameTranslation: "The Heights", numberOfVerses: 206, revelationType: .meccan),
-            Surah(id: 8, name: "الأنفال", englishName: "Al-Anfal", englishNameTranslation: "The Spoils of War", numberOfVerses: 75, revelationType: .medinan),
-            Surah(id: 9, name: "التوبة", englishName: "At-Tawbah", englishNameTranslation: "The Repentance", numberOfVerses: 129, revelationType: .medinan),
-            Surah(id: 10, name: "يونس", englishName: "Yunus", englishNameTranslation: "Jonah", numberOfVerses: 109, revelationType: .meccan),
-            Surah(id: 111, name: "المسد", englishName: "Al-Masad", englishNameTranslation: "The Palm Fiber", numberOfVerses: 5, revelationType: .meccan),
-            Surah(id: 112, name: "الإخلاص", englishName: "Al-Ikhlas", englishNameTranslation: "The Sincerity", numberOfVerses: 4, revelationType: .meccan),
-            Surah(id: 113, name: "الفلق", englishName: "Al-Falaq", englishNameTranslation: "The Daybreak", numberOfVerses: 5, revelationType: .meccan),
-            Surah(id: 114, name: "الناس", englishName: "An-Nas", englishNameTranslation: "Mankind", numberOfVerses: 6, revelationType: .meccan)
-        ]
+        return loadBundledSurahs()
     }
 
     /// Get sample verses for fallback when API/cache fails
@@ -1167,7 +1227,6 @@ class QuranService: ObservableObject {
                 threshold: 0.3
             )
         } catch {
-            print("❌ Search error: \(error)")
             return []
         }
     }
@@ -1220,7 +1279,6 @@ class QuranService: ObservableObject {
             // Return limited results
             return Array(results.prefix(limit))
         } catch {
-            print("❌ Search error: \(error)")
             return []
         }
     }
@@ -1266,7 +1324,6 @@ class QuranService: ObservableObject {
 
             return Array(results.prefix(limit))
         } catch {
-            print("❌ Search error: \(error)")
             return []
         }
     }

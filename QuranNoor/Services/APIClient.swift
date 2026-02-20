@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import Combine
+
 
 // MARK: - API Error
 enum APIError: LocalizedError {
@@ -111,8 +111,6 @@ class APIClient {
 
     // MARK: - Properties
     private let session: URLSession
-    private let cache = URLCache.shared
-    private let userDefaults = UserDefaults.standard
 
     // Cache duration: 24 hours for most data
     private let cacheExpirationInterval: TimeInterval = 86400
@@ -120,46 +118,43 @@ class APIClient {
     // MARK: - Request Deduplication (Performance: prevent duplicate in-flight requests)
     private let requestDeduplicator = RequestDeduplicator()
 
-    // MARK: - LRU Cache Management (Performance: prevent unbounded cache growth)
+    // MARK: - Concurrency Throttle (prevents API rate limiting)
+    private let concurrencyThrottle = ConcurrencyThrottle(maxConcurrent: 2)
+
+    // MARK: - File-Based Cache (replaces UserDefaults — proper for large data)
+    private let cacheDirectory: URL
     private let maxCacheSize: Int = 50 * 1024 * 1024 // 50MB max cache
-    private let cacheMetadataKey = "api_cache_metadata"
-    private var cacheMetadata: CacheMetadata {
-        get {
-            guard let data = userDefaults.data(forKey: cacheMetadataKey),
-                  let metadata = try? Self.decoder.decode(CacheMetadata.self, from: data) else {
-                return CacheMetadata(entries: [:], totalSize: 0)
-            }
-            return metadata
-        }
-        set {
-            if let data = try? Self.encoder.encode(newValue) {
-                userDefaults.set(data, forKey: cacheMetadataKey)
-            }
-        }
-    }
 
     // MARK: - Initialization
     private init() {
         let configuration = URLSessionConfiguration.default
 
         // Performance: Set reasonable timeout limits
-        configuration.timeoutIntervalForRequest = 30 // 30 seconds per request
-        configuration.timeoutIntervalForResource = 60 // 60 seconds total for resource
+        configuration.timeoutIntervalForRequest = 15 // 15 seconds per request (was 30)
+        configuration.timeoutIntervalForResource = 30 // 30 seconds total (was 60)
 
         // Performance: Configure URL cache with size limits
         let memoryCapacity = 10 * 1024 * 1024 // 10MB memory cache
         let diskCapacity = 50 * 1024 * 1024 // 50MB disk cache
         configuration.urlCache = URLCache(memoryCapacity: memoryCapacity, diskCapacity: diskCapacity)
-        configuration.requestCachePolicy = .returnCacheDataElseLoad
+        configuration.requestCachePolicy = .useProtocolCachePolicy
+
+        // User-Agent header for API identification
+        configuration.httpAdditionalHeaders = ["User-Agent": "QuranNoor/1.0.0 (iOS; com.qurannoor.app)"]
 
         // Performance: Limit concurrent connections
         configuration.httpMaximumConnectionsPerHost = 4
 
         self.session = URLSession(configuration: configuration)
 
-        // Clean up expired cache entries on init
+        // Setup file-based cache directory
+        let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first!
+        self.cacheDirectory = caches.appendingPathComponent("APICache", isDirectory: true)
+        try? FileManager.default.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
+
+        // Clean up expired cache entries in background
         Task.detached(priority: .background) { [weak self] in
-            await self?.evictExpiredEntries()
+            self?.evictExpiredEntries()
         }
     }
 
@@ -269,7 +264,9 @@ class APIClient {
 
     // MARK: - Request Deduplication
 
-    /// Fetch data with deduplication - reuses in-flight requests for the same URL
+    /// Fetch data with deduplication and concurrency throttling.
+    /// Reuses in-flight requests for the same URL.
+    /// Limits concurrent API requests to prevent 429 rate limiting.
     private func fetchDataDeduplicated(url: URL, requestKey: String) async throws -> Data {
         // Check if there's already an in-flight request for this URL
         if let existingTask = await requestDeduplicator.getExistingTask(for: requestKey) {
@@ -279,19 +276,74 @@ class APIClient {
             return try await existingTask.value
         }
 
-        // Create new task for this request
-        let task = Task<Data, Error> { [session] in
-            let (data, response) = try await session.data(from: url)
+        // Create new task for this request with throttling + retry logic
+        let task = Task<Data, Error> { [session, concurrencyThrottle] in
+            // Wait for a concurrency slot before making the request
+            await concurrencyThrottle.acquire()
+            defer { Task { await concurrencyThrottle.release() } }
 
-            guard let httpResponse = response as? HTTPURLResponse else {
-                throw APIError.invalidResponse
+            var retryCount = 0
+            let maxRetries = 3
+            var lastError: Error?
+
+            while retryCount < maxRetries {
+                do {
+                    let (data, response) = try await session.data(from: url)
+
+                    guard let httpResponse = response as? HTTPURLResponse else {
+                        throw APIError.invalidResponse
+                    }
+
+                    // Handle 429 Too Many Requests with exponential backoff
+                    if httpResponse.statusCode == 429 {
+                        retryCount += 1
+
+                        if retryCount >= maxRetries {
+                            throw APIError.serverError(429)
+                        }
+
+                        // Try to extract Retry-After header (in seconds)
+                        let retryAfter: TimeInterval
+                        if let retryAfterHeader = httpResponse.value(forHTTPHeaderField: "Retry-After"),
+                           let retrySeconds = TimeInterval(retryAfterHeader) {
+                            retryAfter = retrySeconds
+                        } else {
+                            // Exponential backoff: 2^retryCount seconds
+                            retryAfter = pow(2.0, Double(retryCount))
+                        }
+
+                        #if DEBUG
+                        print("⏱️ Rate limited (429). Retry \(retryCount)/\(maxRetries) after \(retryAfter)s")
+                        #endif
+
+                        try await Task.sleep(for: .seconds(retryAfter))
+                        continue
+                    }
+
+                    guard (200...299).contains(httpResponse.statusCode) else {
+                        throw APIError.serverError(httpResponse.statusCode)
+                    }
+
+                    return data
+                } catch {
+                    lastError = error
+
+                    // Only retry on network errors, not on decoding or other errors
+                    if (error as? URLError) != nil && retryCount < maxRetries - 1 {
+                        retryCount += 1
+                        let backoffDelay = pow(2.0, Double(retryCount))
+                        #if DEBUG
+                        print("🔄 Network error. Retry \(retryCount)/\(maxRetries) after \(backoffDelay)s")
+                        #endif
+                        try await Task.sleep(for: .seconds(backoffDelay))
+                        continue
+                    }
+
+                    throw error
+                }
             }
 
-            guard (200...299).contains(httpResponse.statusCode) else {
-                throw APIError.serverError(httpResponse.statusCode)
-            }
-
-            return data
+            throw lastError ?? APIError.invalidResponse
         }
 
         await requestDeduplicator.setTask(task, for: requestKey)
@@ -306,35 +358,37 @@ class APIClient {
         }
     }
 
-    // MARK: - Cache Management
+    // MARK: - File-Based Cache Management
 
-    /// Cache data to UserDefaults with expiration and LRU eviction
+    /// Convert cache key to a safe filename
+    private func cacheFileURL(forKey key: String) -> URL {
+        // SHA256-like hash using simple deterministic approach for safe filenames
+        let safeKey = key.data(using: .utf8)!.base64EncodedString()
+            .replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: "+", with: "-")
+            .prefix(128)
+        return cacheDirectory.appendingPathComponent(String(safeKey) + ".cache")
+    }
+
+    /// Cache data to filesystem with expiration
     private func cacheData<T: Codable>(_ data: T, forKey key: String) {
         do {
             let encoded = try Self.encoder.encode(data)
-            let entrySize = encoded.count
-
-            // Evict old entries if needed to make room
-            evictIfNeeded(forNewEntrySize: entrySize)
-
             let cacheEntry = CacheEntry(data: encoded, expirationDate: Date().addingTimeInterval(cacheExpirationInterval))
             let entryData = try Self.encoder.encode(cacheEntry)
-
-            userDefaults.set(entryData, forKey: "cache_\(key)")
-
-            // Update metadata
-            var metadata = cacheMetadata
-            metadata.entries[key] = CacheEntryMetadata(size: entryData.count, lastAccessed: Date())
-            metadata.totalSize = metadata.entries.values.reduce(0) { $0 + $1.size }
-            cacheMetadata = metadata
+            try entryData.write(to: cacheFileURL(forKey: key), options: .atomic)
         } catch {
-            print("Failed to cache data: \(error)")
+            #if DEBUG
+            print("❌ Failed to cache data: \(error)")
+            #endif
         }
     }
 
-    /// Retrieve cached data from UserDefaults with LRU tracking
+    /// Retrieve cached data from filesystem
     func getCachedData<T: Codable>(forKey key: String) -> T? {
-        guard let entryData = userDefaults.data(forKey: "cache_\(key)") else {
+        let fileURL = cacheFileURL(forKey: key)
+
+        guard let entryData = try? Data(contentsOf: fileURL) else {
             return nil
         }
 
@@ -343,127 +397,86 @@ class APIClient {
 
             // Check if cache is expired
             if Date() > cacheEntry.expirationDate {
-                // Cache expired, remove it
-                removeCacheEntry(forKey: key)
+                try? FileManager.default.removeItem(at: fileURL)
                 return nil
             }
 
-            // Update last accessed time for LRU
-            var metadata = cacheMetadata
-            if metadata.entries[key] != nil {
-                metadata.entries[key]?.lastAccessed = Date()
-                cacheMetadata = metadata
-            }
-
-            // Decode and return data
-            let result = try Self.decoder.decode(T.self, from: cacheEntry.data)
-            return result
+            return try Self.decoder.decode(T.self, from: cacheEntry.data)
         } catch {
-            print("Failed to retrieve cached data: \(error)")
+            try? FileManager.default.removeItem(at: fileURL)
             return nil
         }
     }
 
-    /// Evict least recently used entries if cache exceeds size limit
-    private func evictIfNeeded(forNewEntrySize newSize: Int) {
-        var metadata = cacheMetadata
+    /// Evict expired cache files (called on init in background)
+    private nonisolated func evictExpiredEntries() {
+        guard let files = try? FileManager.default.contentsOfDirectory(
+            at: cacheDirectory,
+            includingPropertiesForKeys: [.contentModificationDateKey, .fileSizeKey]
+        ) else { return }
 
-        // If adding this entry would exceed max size, evict LRU entries
-        while metadata.totalSize + newSize > maxCacheSize && !metadata.entries.isEmpty {
-            // Find least recently used entry
-            guard let lruEntry = metadata.entries.min(by: { $0.value.lastAccessed < $1.value.lastAccessed }) else {
-                break
-            }
+        var totalSize = 0
+        var fileInfos: [(url: URL, date: Date, size: Int)] = []
 
-            // Remove LRU entry
-            userDefaults.removeObject(forKey: "cache_\(lruEntry.key)")
-            metadata.entries.removeValue(forKey: lruEntry.key)
-            metadata.totalSize = metadata.entries.values.reduce(0) { $0 + $1.size }
-
-            #if DEBUG
-            print("🗑️ LRU evicted cache entry: \(lruEntry.key)")
-            #endif
-        }
-
-        cacheMetadata = metadata
-    }
-
-    /// Evict all expired entries (called periodically)
-    private func evictExpiredEntries() async {
-        var metadata = cacheMetadata
-        var keysToRemove: [String] = []
-
-        for (key, _) in metadata.entries {
-            guard let entryData = userDefaults.data(forKey: "cache_\(key)") else {
-                keysToRemove.append(key)
+        for file in files where file.pathExtension == "cache" {
+            guard let entryData = try? Data(contentsOf: file),
+                  let cacheEntry = try? JSONDecoder().decode(CacheEntry.self, from: entryData) else {
+                // Corrupt file — remove it
+                try? FileManager.default.removeItem(at: file)
                 continue
             }
 
-            if let cacheEntry = try? Self.decoder.decode(CacheEntry.self, from: entryData),
-               Date() > cacheEntry.expirationDate {
-                keysToRemove.append(key)
+            if Date() > cacheEntry.expirationDate {
+                try? FileManager.default.removeItem(at: file)
+            } else {
+                let size = entryData.count
+                totalSize += size
+                let attrs = try? file.resourceValues(forKeys: [.contentModificationDateKey])
+                let date = attrs?.contentModificationDate ?? Date.distantPast
+                fileInfos.append((file, date, size))
             }
         }
 
-        for key in keysToRemove {
-            userDefaults.removeObject(forKey: "cache_\(key)")
-            metadata.entries.removeValue(forKey: key)
+        // LRU eviction if over size limit
+        if totalSize > maxCacheSize {
+            let sorted = fileInfos.sorted { $0.date < $1.date } // oldest first
+            for info in sorted {
+                guard totalSize > maxCacheSize else { break }
+                try? FileManager.default.removeItem(at: info.url)
+                totalSize -= info.size
+            }
         }
-
-        metadata.totalSize = metadata.entries.values.reduce(0) { $0 + $1.size }
-        cacheMetadata = metadata
-
-        #if DEBUG
-        if !keysToRemove.isEmpty {
-            print("🗑️ Evicted \(keysToRemove.count) expired cache entries")
-        }
-        #endif
-    }
-
-    /// Remove a specific cache entry and update metadata
-    private func removeCacheEntry(forKey key: String) {
-        userDefaults.removeObject(forKey: "cache_\(key)")
-        var metadata = cacheMetadata
-        metadata.entries.removeValue(forKey: key)
-        metadata.totalSize = metadata.entries.values.reduce(0) { $0 + $1.size }
-        cacheMetadata = metadata
     }
 
     /// Clear all cached data
     func clearCache() {
-        let keys = userDefaults.dictionaryRepresentation().keys
-        keys.filter { $0.hasPrefix("cache_") }.forEach { key in
-            userDefaults.removeObject(forKey: key)
-        }
-        cacheMetadata = CacheMetadata(entries: [:], totalSize: 0)
+        try? FileManager.default.removeItem(at: cacheDirectory)
+        try? FileManager.default.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
     }
 
     /// Clear specific cache entry
     func clearCache(forKey key: String) {
-        removeCacheEntry(forKey: key)
+        try? FileManager.default.removeItem(at: cacheFileURL(forKey: key))
     }
 
     /// Get current cache size in bytes
     var currentCacheSize: Int {
-        cacheMetadata.totalSize
+        guard let files = try? FileManager.default.contentsOfDirectory(
+            at: cacheDirectory,
+            includingPropertiesForKeys: [.fileSizeKey]
+        ) else { return 0 }
+
+        return files.reduce(0) { total, url in
+            let size = (try? url.resourceValues(forKeys: [.fileSizeKey]))?.fileSize ?? 0
+            return total + size
+        }
     }
 }
 
 // MARK: - Cache Entry
-private struct CacheEntry: Codable {
+private nonisolated struct CacheEntry: Codable, Sendable {
     let data: Data
     let expirationDate: Date
-}
-
-// MARK: - Cache Metadata for LRU Eviction
-private struct CacheMetadata: Codable {
-    var entries: [String: CacheEntryMetadata]
-    var totalSize: Int
-}
-
-private struct CacheEntryMetadata: Codable {
-    var size: Int
-    var lastAccessed: Date
 }
 
 // MARK: - Request Deduplication Actor (Swift 6 async-safe)
@@ -480,5 +493,37 @@ private actor RequestDeduplicator {
 
     func removeTask(for key: String) {
         inFlightRequests.removeValue(forKey: key)
+    }
+}
+
+// MARK: - Concurrency Throttle (async semaphore to limit concurrent API requests)
+private actor ConcurrencyThrottle {
+    private let maxConcurrent: Int
+    private var currentCount: Int = 0
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+
+    init(maxConcurrent: Int) {
+        self.maxConcurrent = maxConcurrent
+    }
+
+    func acquire() async {
+        if currentCount < maxConcurrent {
+            currentCount += 1
+            return
+        }
+        // No slot available — suspend until one is released
+        await withCheckedContinuation { continuation in
+            waiters.append(continuation)
+        }
+    }
+
+    func release() {
+        if let next = waiters.first {
+            waiters.removeFirst()
+            // Hand the slot directly to the next waiter (no count change)
+            next.resume()
+        } else {
+            currentCount -= 1
+        }
     }
 }

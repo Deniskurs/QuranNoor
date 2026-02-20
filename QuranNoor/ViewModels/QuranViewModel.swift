@@ -6,88 +6,97 @@
 //
 
 import Foundation
-import Combine
+import Observation
 
+@Observable
 @MainActor
-class QuranViewModel: ObservableObject {
-    // MARK: - Published Properties
-    @Published var surahs: [Surah] = []
-    @Published var selectedSurah: Surah?
-    @Published var searchQuery: String = ""
-    @Published var filteredSurahs: [Surah] = []
-    @Published var readingProgress: ReadingProgress?
-    @Published var bookmarks: [Bookmark] = []
+class QuranViewModel {
+    // MARK: - Observable Properties
+    var surahs: [Surah] = []
+    var selectedSurah: Surah?
+    var searchQuery: String = ""
+    var filteredSurahs: [Surah] = []
+
+    /// Verse search results from full-text translation search
+    var verseSearchResults: [VerseSearchResult] = []
+
+    /// Whether a verse search is currently in progress
+    var isSearchingVerses: Bool = false
+
+    /// Error message for user-facing data loading failures
+    var errorMessage: String?
+
+    /// Reading progress — reads directly from QuranService (single source of truth)
+    var readingProgress: ReadingProgress? {
+        quranService.readingProgress
+    }
+
+    /// Bookmarks — reads directly from QuranService (single source of truth)
+    var bookmarks: [Bookmark] {
+        quranService.bookmarks
+    }
 
     // MARK: - Private Properties
     private let quranService = QuranService.shared
-    private var cancellables = Set<AnyCancellable>()
 
-    // Performance optimization: Cache surah progress to avoid repeated UserDefaults reads
+    // Performance optimization: Cache surah progress to avoid repeated computation
     private var surahProgressCache: [Int: Double] = [:] // surahNumber -> completion percentage
+    private var lastProgressVersion: Int = 0 // Track when cache needs rebuild
 
     // MARK: - Initialization
     init() {
-        let instanceId = UUID().uuidString.prefix(8)
-        print("🆕 QuranViewModel INIT [\(instanceId)] - using shared service")
-
-        loadSurahs()
-        loadProgress()
-        loadBookmarks()
-
-        // Setup observers for automatic updates
-        setupObservers()
-
-        print("   Initial progress: \(readingProgress?.totalVersesRead ?? 0) verses, streak: \(readingProgress?.streakDays ?? 0)")
-
-        // Fetch data from API in background
-        Task {
-            await fetchSurahsFromAPI()
-            await preloadCommonSurahs()
+        // Load all 114 surahs from the bundled quran_metadata.json — instant,
+        // no network calls needed. This guarantees the full Quran is always
+        // available on launch, even completely offline.
+        let bundled = quranService.loadBundledSurahs()
+        if !bundled.isEmpty {
+            surahs = bundled
+            filteredSurahs = bundled
         }
-    }
-
-    // MARK: - Combine Observers
-
-    private func setupObservers() {
-        // Observe reading progress changes from QuranService
-        quranService.$readingProgress
-            .receive(on: DispatchQueue.main)
-            .debounce(for: .milliseconds(300), scheduler: DispatchQueue.main) // Debounce to prevent cascade
-            .sink { [weak self] newProgress in
-                guard let self = self else { return }
-                self.readingProgress = newProgress
-                // Cache updates happen lazily via getSurahProgress() - no need to precompute all 114 surahs
-                print("🔄 QuranViewModel: Progress updated from service - \(newProgress?.totalVersesRead ?? 0) verses")
-            }
-            .store(in: &cancellables)
-
-        // Observe bookmark changes
-        quranService.$bookmarks
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] newBookmarks in
-                guard let self = self else { return }
-                self.bookmarks = newBookmarks
-                print("🔄 QuranViewModel: Bookmarks updated from service - \(newBookmarks.count) bookmarks")
-            }
-            .store(in: &cancellables)
     }
 
     // MARK: - Public Methods
 
-    /// Load surahs from sample data (fallback until API loads)
+    /// Load surahs: uses bundled data immediately (all 114 surahs), then refreshes from API
     func loadSurahs() {
-        surahs = quranService.getSampleSurahs()
-        filteredSurahs = surahs
+        // Ensure bundled data is loaded (instant, synchronous, all 114 surahs)
+        if surahs.isEmpty {
+            let bundled = quranService.loadBundledSurahs()
+            if !bundled.isEmpty {
+                surahs = bundled
+                filteredSurahs = surahs
+            }
+        }
+
+        rebuildSurahProgressCache()
+
+        // Defer preloading to avoid flooding the API at launch.
+        // Wait 3 seconds so critical UI data (prayer times, hijri date) loads first.
+        Task {
+            try? await Task.sleep(for: .seconds(3))
+            await preloadCommonSurahs()
+        }
     }
 
-    /// Fetch surahs from API (async)
+    /// Fetch surahs from API (async, background refresh for enrichment)
+    /// Note: With bundled quran_metadata.json providing all 114 surahs,
+    /// this is only needed if bundled data was somehow missing.
     func fetchSurahsFromAPI() async {
+        // Skip if bundled data already loaded (always the case)
+        guard surahs.isEmpty else { return }
+
         do {
             let fetchedSurahs = try await quranService.getSurahs()
-            surahs = fetchedSurahs
-            filteredSurahs = fetchedSurahs
+            if !fetchedSurahs.isEmpty {
+                surahs = fetchedSurahs
+                filteredSurahs = fetchedSurahs
+                rebuildSurahProgressCache()
+            }
+            errorMessage = nil
         } catch {
-            print("Failed to fetch surahs from API: \(error)")
+            #if DEBUG
+            print("API refresh skipped (offline). Bundled data is active with \(surahs.count) surahs.")
+            #endif
         }
     }
 
@@ -111,94 +120,121 @@ class QuranViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Verse Search with Cancellation Support
+
+    /// Active search task for cancellation when new search is initiated
+    private var currentSearchTask: Task<Void, Never>?
+
+    /// Search verses by translation text across multiple surahs
+    /// Uses QuranService.searchTranslationsMultipleSurahs for broad coverage
+    /// Now searches all 114 surahs with Task cancellation for performance
+    func searchVerses(_ query: String) async {
+        // Cancel previous search if user is typing rapidly
+        currentSearchTask?.cancel()
+
+        guard !query.isEmpty else {
+            verseSearchResults = []
+            isSearchingVerses = false
+            return
+        }
+
+        isSearchingVerses = true
+
+        // Create a new search task with cancellation support
+        currentSearchTask = Task {
+            // Search across all 114 surahs for comprehensive results
+            let surahsToSearch = Array(1...114)
+
+            let results = await quranService.searchTranslationsMultipleSurahs(
+                query: query,
+                edition: quranService.getTranslationPreferences().primaryTranslation,
+                inSurahs: surahsToSearch,
+                limit: 30
+            )
+
+            // Check if task was cancelled before updating UI
+            guard !Task.isCancelled else {
+                await MainActor.run {
+                    isSearchingVerses = false
+                }
+                return
+            }
+
+            // Map SearchResult<Translation> to VerseSearchResult with surah info
+            var mappedResults: [VerseSearchResult] = []
+            for result in results {
+                let translation = result.item
+                // translation.verseNumber is the absolute verse number;
+                // we need to find the surah it belongs to
+                let surahInfo = findSurahForAbsoluteVerse(translation.verseNumber)
+                mappedResults.append(VerseSearchResult(
+                    surahNumber: surahInfo.surahNumber,
+                    verseNumber: surahInfo.verseInSurah,
+                    surahName: surahInfo.surahName,
+                    matchedText: translation.text,
+                    score: result.score
+                ))
+            }
+
+            await MainActor.run {
+                verseSearchResults = mappedResults
+                isSearchingVerses = false
+            }
+        }
+
+        await currentSearchTask?.value
+    }
+
+    /// Find which surah an absolute verse number belongs to
+    private func findSurahForAbsoluteVerse(_ absoluteNumber: Int) -> (surahNumber: Int, verseInSurah: Int, surahName: String) {
+        var cumulativeVerses = 0
+        for surah in surahs {
+            if absoluteNumber <= cumulativeVerses + surah.numberOfVerses {
+                let verseInSurah = absoluteNumber - cumulativeVerses
+                return (surah.id, verseInSurah, surah.englishName)
+            }
+            cumulativeVerses += surah.numberOfVerses
+        }
+        // Fallback: return the number as-is
+        return (1, absoluteNumber, "Unknown")
+    }
+
     /// Select a surah
     func selectSurah(_ surah: Surah) {
         selectedSurah = surah
     }
 
-    /// Load reading progress
+    /// Refresh surah progress cache from current reading progress
     func loadProgress() {
-        readingProgress = quranService.getReadingProgress()
-        precomputeSurahProgress()
+        rebuildSurahProgressCache()
     }
 
-    /// Precompute progress for all surahs to avoid repeated calculations (synchronous version for initial load)
-    private func precomputeSurahProgress() {
-        surahProgressCache.removeAll()
-
-        // Pre-compute progress for all 114 surahs
-        for surah in surahs {
-            let stats = quranService.getSurahStatistics(
-                surahNumber: surah.id,
-                totalVerses: surah.numberOfVerses
-            )
-            surahProgressCache[surah.id] = stats.completionPercentage
+    /// Rebuild the surah progress cache using a single-pass index.
+    /// O(n) where n = total read verses, instead of O(n * 114) with the old approach.
+    private func rebuildSurahProgressCache() {
+        guard let progress = readingProgress else {
+            surahProgressCache.removeAll()
+            return
         }
 
-        print("✅ Precomputed progress for \(surahProgressCache.count) surahs")
-    }
+        // Single pass over all read verses to group by surah
+        let index = progress.buildSurahIndex()
 
-    /// Async version of precomputeSurahProgress - computes in background to avoid blocking UI
-    @MainActor
-    private func precomputeSurahProgressAsync() async {
-        // Capture progress before entering detached task (Swift 6 concurrency requirement)
-        let currentProgress = readingProgress ?? quranService.getReadingProgress()
+        // Build cache from index — O(1) per surah
+        var newCache: [Int: Double] = [:]
+        newCache.reserveCapacity(surahs.count)
 
-        // Compute progress cache on background thread
-        let cache = await Task.detached(priority: .userInitiated) { [surahs] in
-            var progressCache: [Int: Double] = [:]
+        for surah in surahs {
+            let count = index[surah.id]?.count ?? 0
+            newCache[surah.id] = Double(count) / Double(surah.numberOfVerses) * 100
+        }
 
-            for surah in surahs {
-                // Inline computation to avoid actor isolation issues
-                let surahVerses = currentProgress.readVerses.filter { $0.key.starts(with: "\(surah.id):") }
-                let completionPercentage = Double(surahVerses.count) / Double(surah.numberOfVerses) * 100
-                progressCache[surah.id] = completionPercentage
-            }
-
-            return progressCache
-        }.value
-
-        // Update cache on main thread
-        self.surahProgressCache = cache
-        print("✅ Async precomputed progress for \(cache.count) surahs (background)")
-    }
-
-    /// Incrementally update progress for a single surah (performance optimization)
-    /// Use this when you know exactly which surah changed to avoid recomputing all 114
-    @MainActor
-    func updateSurahProgressIncremental(surahNumber: Int) async {
-        // Find the surah
-        guard let surah = surahs.first(where: { $0.id == surahNumber }) else { return }
-
-        // Capture progress before entering detached task (Swift 6 concurrency requirement)
-        let currentProgress = readingProgress ?? quranService.getReadingProgress()
-
-        // Compute just this one surah's progress in background
-        let progress = await Task.detached(priority: .userInitiated) {
-            // Inline computation to avoid actor isolation issues
-            let surahVerses = currentProgress.readVerses.filter { $0.key.starts(with: "\(surahNumber):") }
-            return Double(surahVerses.count) / Double(surah.numberOfVerses) * 100
-        }.value
-
-        // Update just this surah in cache
-        self.surahProgressCache[surahNumber] = progress
-        print("✅ Incrementally updated progress for Surah \(surahNumber): \(progress)%")
+        surahProgressCache = newCache
     }
 
     /// Update reading progress (observers will handle UI update automatically)
     func updateProgress(surahNumber: Int, verseNumber: Int) {
-        print("📝 QuranViewModel.updateProgress called: \(surahNumber):\(verseNumber)")
-        print("   Before: \(readingProgress?.totalVersesRead ?? 0) verses")
-
         quranService.updateReadingProgress(surahNumber: surahNumber, verseNumber: verseNumber)
-
-        // Note: No need to call loadProgress() - observers will update automatically
-        print("   After: \(readingProgress?.totalVersesRead ?? 0) verses (will update via observer)")
-    }
-
-    /// Load bookmarks
-    func loadBookmarks() {
-        bookmarks = quranService.getBookmarks()
     }
 
     /// Get recent bookmarks (last 3)
@@ -293,4 +329,16 @@ class QuranViewModel: ObservableObject {
         surahProgressCache[surahNumber] = stats.completionPercentage
         return stats.completionPercentage
     }
+}
+
+// MARK: - Verse Search Result
+
+/// Represents a single verse search result with surah context
+struct VerseSearchResult: Identifiable {
+    let id = UUID()
+    let surahNumber: Int
+    let verseNumber: Int
+    let surahName: String
+    let matchedText: String
+    let score: Double
 }
