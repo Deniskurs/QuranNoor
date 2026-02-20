@@ -339,4 +339,10 @@ struct RamadanTracker: Codable {
     func isQiyamCompleted(night: Int) -> Bool {
         lastTenNightsQiyam.contains(night)
     }
+
+    /// Remove any fasting/qiyam entries for days beyond the given current day.
+    mutating func clearFutureEntries(currentDay: Int) {
+        fastingDays = fastingDays.filter { $0 <= currentDay }
+        lastTenNightsQiyam = lastTenNightsQiyam.filter { $0 <= currentDay }
+    }
 }

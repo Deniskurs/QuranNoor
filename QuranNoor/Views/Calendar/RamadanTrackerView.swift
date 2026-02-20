@@ -131,6 +131,7 @@ struct RamadanTrackerView: View {
                     Button {
                         guard calendarService.hijriDayOffset > -3 else { return }
                         calendarService.setHijriDayOffset(calendarService.hijriDayOffset - 1)
+                        currentTracker = calendarService.getCurrentRamadanTracker()
                         HapticManager.shared.trigger(.light)
                     } label: {
                         Image(systemName: "minus.circle.fill")
@@ -161,6 +162,7 @@ struct RamadanTrackerView: View {
                     Button {
                         guard calendarService.hijriDayOffset < 3 else { return }
                         calendarService.setHijriDayOffset(calendarService.hijriDayOffset + 1)
+                        currentTracker = calendarService.getCurrentRamadanTracker()
                         HapticManager.shared.trigger(.light)
                     } label: {
                         Image(systemName: "plus.circle.fill")

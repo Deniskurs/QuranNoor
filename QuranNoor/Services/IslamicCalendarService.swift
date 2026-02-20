@@ -40,11 +40,21 @@ final class IslamicCalendarService {
         self.allEvents = Self.createEventsDatabase()
     }
 
-    /// Update the moon sighting offset (range: -3 to +3 days)
+    /// Update the moon sighting offset (range: -3 to +3 days).
+    /// Automatically clears any fasting/qiyam entries that become "future" under the new offset.
     func setHijriDayOffset(_ offset: Int) {
         let clamped = max(-3, min(3, offset))
         hijriDayOffset = clamped
         UserDefaults.standard.set(clamped, forKey: Self.hijriOffsetKey)
+
+        // Strip entries that are now in the future under the new offset
+        let newCurrentDay = convertToHijri().day
+        let currentYear = convertToHijri().year
+        if var tracker = ramadanTrackers[currentYear] {
+            tracker.clearFutureEntries(currentDay: newCurrentDay)
+            ramadanTrackers[currentYear] = tracker
+            saveRamadanTrackers()
+        }
     }
 
     // MARK: - Date Conversion
