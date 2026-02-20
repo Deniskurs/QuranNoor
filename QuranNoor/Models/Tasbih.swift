@@ -12,6 +12,7 @@ private let tasbihHistoryFormatter: DateFormatter = {
     let f = DateFormatter()
     f.dateStyle = .medium
     f.timeStyle = .short
+    f.locale = Locale.autoupdatingCurrent
     return f
 }()
 
@@ -294,7 +295,8 @@ struct TasbihStatistics: Codable {
         if calendar.isDateInToday(lastDate) {
             // Already counted today
             return
-        } else if calendar.isDate(lastDate, inSameDayAs: Date().addingTimeInterval(-86400)) {
+        } else if let yesterday = calendar.date(byAdding: .day, value: -1, to: Date()),
+                  calendar.isDate(lastDate, inSameDayAs: yesterday) {
             // Was yesterday, increment streak
             currentStreak += 1
             longestStreak = max(longestStreak, currentStreak)

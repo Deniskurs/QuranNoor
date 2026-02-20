@@ -19,7 +19,7 @@ struct CalculationMethodPickerView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                themeManager.backgroundColor
+                themeManager.currentTheme.backgroundColor
                     .ignoresSafeArea()
 
                 ScrollView {
@@ -58,12 +58,12 @@ struct CalculationMethodPickerView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(method.rawValue)
                     .font(.body)
-                    .foregroundStyle(themeManager.primaryTextColor)
+                    .foregroundStyle(themeManager.currentTheme.textPrimary)
 
                 if let description = methodDescription(for: method) {
                     Text(description)
                         .font(.caption)
-                        .foregroundStyle(themeManager.secondaryTextColor)
+                        .foregroundStyle(themeManager.currentTheme.textSecondary)
                 }
             }
 
@@ -71,7 +71,7 @@ struct CalculationMethodPickerView: View {
 
             if method == selectedMethod {
                 Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(themeManager.accentColor)
+                    .foregroundStyle(themeManager.currentTheme.accent)
             }
         }
         .padding()
@@ -79,8 +79,8 @@ struct CalculationMethodPickerView: View {
             RoundedRectangle(cornerRadius: 12)
                 .fill(
                     method == selectedMethod
-                        ? themeManager.accentColor.opacity(0.15)
-                        : themeManager.cardBackground
+                        ? themeManager.currentTheme.accent.opacity(0.15)
+                        : themeManager.currentTheme.cardColor
                 )
         )
     }
@@ -115,7 +115,9 @@ struct CalculationMethodPickerView: View {
     CalculationMethodPickerView(
         selectedMethod: $selectedMethod,
         onMethodChanged: { newMethod in
+            #if DEBUG
             print("Method changed to: \(newMethod)")
+            #endif
         }
     )
     .environment(ThemeManager())

@@ -11,7 +11,7 @@ struct LocationPickerView: View {
     // MARK: - Properties
     @Environment(\.dismiss) var dismiss
     @Environment(ThemeManager.self) var themeManager: ThemeManager
-    @ObservedObject var viewModel: QiblaViewModel
+    var viewModel: QiblaViewModel
 
     @State private var locationName = ""
     @State private var latitude = ""
@@ -74,10 +74,10 @@ struct LocationPickerView: View {
         VStack(spacing: 8) {
             Image(systemName: "map.fill")
                 .font(.system(size: 40))
-                .foregroundColor(themeManager.currentTheme.accentPrimary)
+                .foregroundColor(themeManager.currentTheme.accent)
 
             ThemedText("Choose Location", style: .heading)
-                .foregroundColor(themeManager.currentTheme.accentPrimary)
+                .foregroundColor(themeManager.currentTheme.accent)
 
             ThemedText.caption("Enter coordinates or select from saved locations")
                 .multilineTextAlignment(.center)
@@ -87,11 +87,11 @@ struct LocationPickerView: View {
     }
 
     private var coordinatesEntrySection: some View {
-        LiquidGlassCardView(showPattern: true, intensity: .moderate) {
+        CardView(showPattern: true, intensity: .moderate) {
             VStack(alignment: .leading, spacing: 16) {
                 HStack {
                     Image(systemName: "location.circle.fill")
-                        .foregroundColor(themeManager.currentTheme.accentPrimary)
+                        .foregroundColor(themeManager.currentTheme.accent)
                     ThemedText("Manual Coordinates", style: .heading)
                 }
 
@@ -125,7 +125,7 @@ struct LocationPickerView: View {
                                 .stroke(themeManager.currentTheme.borderColor, lineWidth: 1)
                         )
                     ThemedText.caption("Range: -90 to 90")
-                        .foregroundColor(themeManager.currentTheme.accentSecondary)
+                        .foregroundColor(themeManager.currentTheme.accentMuted)
                         .opacity(0.6)
                 }
 
@@ -143,7 +143,7 @@ struct LocationPickerView: View {
                                 .stroke(themeManager.currentTheme.borderColor, lineWidth: 1)
                         )
                     ThemedText.caption("Range: -180 to 180")
-                        .foregroundColor(themeManager.currentTheme.accentSecondary)
+                        .foregroundColor(themeManager.currentTheme.accentMuted)
                         .opacity(0.6)
                 }
             }
@@ -155,7 +155,7 @@ struct LocationPickerView: View {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
                     Image(systemName: "star.fill")
-                        .foregroundColor(themeManager.currentTheme.accentInteractive)
+                        .foregroundColor(themeManager.currentTheme.accent)
                     ThemedText("Saved Locations", style: .heading)
                 }
 
@@ -172,7 +172,7 @@ struct LocationPickerView: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 ThemedText.body(location.name)
                                 ThemedText.caption("Lat: \(String(format: "%.4f", location.coordinates.latitude)), Lon: \(String(format: "%.4f", location.coordinates.longitude))")
-                                    .foregroundColor(themeManager.currentTheme.accentSecondary)
+                                    .foregroundColor(themeManager.currentTheme.accentMuted)
                                     .opacity(0.7)
                             }
 
@@ -205,7 +205,7 @@ struct LocationPickerView: View {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
                     Image(systemName: "building.2.fill")
-                        .foregroundColor(themeManager.currentTheme.accentSecondary)
+                        .foregroundColor(themeManager.currentTheme.accentMuted)
                     ThemedText("Popular Locations", style: .heading)
                 }
 
@@ -225,7 +225,7 @@ struct LocationPickerView: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 ThemedText.body(location.name)
                                 ThemedText.caption(location.country)
-                                    .foregroundColor(themeManager.currentTheme.accentSecondary)
+                                    .foregroundColor(themeManager.currentTheme.accentMuted)
                                     .opacity(0.7)
                             }
 

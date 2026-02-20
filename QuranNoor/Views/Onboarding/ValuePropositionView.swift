@@ -12,7 +12,7 @@ struct ValuePropositionView: View {
     // MARK: - Properties
     @Environment(ThemeManager.self) var themeManager: ThemeManager
     @Environment(\.dynamicTypeSize) var dynamicTypeSize
-    @ObservedObject private var accessibilityHelper = AccessibilityHelper.shared
+    var accessibilityHelper = AccessibilityHelper.shared
 
     let coordinator: OnboardingCoordinator
 
@@ -52,9 +52,9 @@ struct ValuePropositionView: View {
 
         func color(for theme: ThemeMode) -> Color {
             switch self {
-            case .quran: return theme.accentSecondary
-            case .prayer: return theme.accentPrimary
-            case .qibla: return theme.accentInteractive
+            case .quran: return theme.accentMuted
+            case .prayer: return theme.accent
+            case .qibla: return theme.accent
             }
         }
     }
@@ -80,7 +80,7 @@ struct ValuePropositionView: View {
 
                     // Title
                     ThemedText(selectedDemo.title, style: .title)
-                        .foregroundColor(themeManager.currentTheme.accentPrimary)
+                        .foregroundColor(themeManager.currentTheme.accent)
                         .multilineTextAlignment(.center)
                         .id(selectedDemo)
                         .transition(AccessibleTransition.slideAndFade)
@@ -157,8 +157,8 @@ struct ValuePropositionView: View {
                         .fill(
                             LinearGradient(
                                 colors: [
-                                    themeManager.currentTheme.accentPrimary,
-                                    themeManager.currentTheme.accentSecondary
+                                    themeManager.currentTheme.accent,
+                                    themeManager.currentTheme.accentMuted
                                 ],
                                 startPoint: .leading,
                                 endPoint: .trailing
@@ -195,19 +195,19 @@ struct ValuePropositionView: View {
                     featureHighlight(
                         icon: "checkmark.seal.fill",
                         text: "100% Free - No ads, no subscriptions",
-                        color: themeManager.currentTheme.accentPrimary
+                        color: themeManager.currentTheme.accent
                     )
 
                     featureHighlight(
                         icon: "icloud.fill",
                         text: "Works offline - Download surahs for offline access",
-                        color: themeManager.currentTheme.accentSecondary
+                        color: themeManager.currentTheme.accentMuted
                     )
 
                     featureHighlight(
                         icon: "moon.stars.fill",
                         text: "Beautiful themes - Light, dark, night, and sepia modes",
-                        color: themeManager.currentTheme.accentInteractive
+                        color: themeManager.currentTheme.accent
                     )
                 }
                 .padding(.horizontal, 32)
@@ -227,10 +227,10 @@ struct ValuePropositionView: View {
 
                     HStack(spacing: 8) {
                         Image(systemName: "arrow.right.circle.fill")
-                            .foregroundColor(themeManager.currentTheme.accentPrimary)
+                            .foregroundColor(themeManager.currentTheme.accent)
                         Text("Swipe or tap Continue")
                             .font(.caption.weight(.semibold))
-                            .foregroundColor(themeManager.currentTheme.accentPrimary)
+                            .foregroundColor(themeManager.currentTheme.accent)
                     }
                 }
                 .padding(.bottom, 20)

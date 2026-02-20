@@ -17,7 +17,7 @@ struct DailyStatsRow: View {
             // Streak stat
             HomeStatCard(
                 icon: "flame.fill",
-                iconColor: stats.hasStreak ? .orange : themeManager.currentTheme.textTertiary,
+                iconColor: stats.hasStreak ? themeManager.currentTheme.accentMuted : themeManager.currentTheme.textTertiary,
                 value: "\(stats.streakDays)",
                 label: "Day Streak",
                 showAnimation: stats.hasStreak
@@ -26,7 +26,7 @@ struct DailyStatsRow: View {
             // Verses read stat
             HomeStatCard(
                 icon: "book.fill",
-                iconColor: themeManager.currentTheme.featureAccent,
+                iconColor: themeManager.currentTheme.accent,
                 value: "\(stats.versesReadToday)",
                 label: "Verses Today",
                 showAnimation: stats.hasReadToday
@@ -35,7 +35,7 @@ struct DailyStatsRow: View {
             // Prayers completed stat
             HomeStatCard(
                 icon: "checkmark.circle.fill",
-                iconColor: stats.hasCompletedAllPrayers ? AppColors.primary.green : themeManager.currentTheme.textTertiary,
+                iconColor: stats.hasCompletedAllPrayers ? themeManager.currentTheme.accent : themeManager.currentTheme.textTertiary,
                 value: stats.prayersCompletedText,
                 label: "Prayers",
                 showAnimation: stats.hasCompletedAllPrayers
@@ -44,7 +44,7 @@ struct DailyStatsRow: View {
             // Juz progress stat
             HomeStatCard(
                 icon: "chart.bar.fill",
-                iconColor: AppColors.primary.gold,
+                iconColor: themeManager.currentTheme.accentMuted,
                 value: "\(Int(stats.juzProgress * 100))%",
                 label: "Juz \(stats.currentJuz)",
                 showAnimation: stats.juzProgress > 0
@@ -75,24 +75,24 @@ struct HomeStatCard: View {
     @State private var scale: CGFloat = 1.0
 
     var body: some View {
-        LiquidGlassCardView(intensity: .subtle) {
+        CardView(intensity: .subtle) {
             VStack(spacing: Spacing.sm) { // Enhanced from 12 to 16
                 // Icon - keep size, add subtle enhancement
                 Image(systemName: icon)
-                    .font(.system(size: 36)) // Enhanced from 32 for better visual weight
+                    .font(.system(size: FontSizes.xxl + 4))
                     .foregroundColor(iconColor)
                     .scaleEffect(scale)
                     .animation(.spring(response: 0.6, dampingFraction: 0.7), value: scale)
 
-                // Value - PROMINENT enhancement
+                // Value
                 Text(value)
-                    .font(.system(size: 32, weight: .bold, design: .rounded)) // Enhanced from 24
+                    .font(.system(size: FontSizes.xxl, weight: .bold, design: .rounded))
                     .foregroundColor(themeManager.currentTheme.textPrimary)
                     .contentTransition(.numericText())
 
-                // Label - refined sizing
+                // Label
                 Text(label)
-                    .font(.system(size: 11, weight: .medium)) // Enhanced from caption
+                    .font(.system(size: FontSizes.xs - 1, weight: .medium))
                     .foregroundColor(themeManager.currentTheme.textSecondary)
                     .multilineTextAlignment(.center)
                     .lineLimit(2)

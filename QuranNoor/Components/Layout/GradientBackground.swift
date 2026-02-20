@@ -54,7 +54,7 @@ struct GradientBackground: View {
     // MARK: - Computed Gradient Colors (Theme-Reactive)
     private func gradientForStyle(_ style: BackgroundGradientStyle, theme: ThemeMode) -> Gradient {
         // For sepia theme, no gradients (reading comfort)
-        if !theme.supportsGradients {
+        if theme == .sepia {
             return Gradient(colors: [theme.backgroundColor, theme.backgroundColor])
         }
 
@@ -65,24 +65,26 @@ struct GradientBackground: View {
 
         // Use theme-appropriate gradient colors with safe opacity limits
         let isLight = theme == .light || theme == .sepia
+        let accentOpacity: Double = isLight ? 0.06 : 0.15
+        let mutedOpacity: Double = isLight ? 0.08 : 0.20
 
         switch style {
         case .prayer:
             return Gradient(colors: [
-                AppColors.primary.green.opacity(theme.gradientOpacity(for: AppColors.primary.green)),
-                theme == .dark ? AppColors.primary.midnight.opacity(0.6) : theme.backgroundColor
+                theme.accent.opacity(accentOpacity),
+                theme == .dark ? Color(hex: "#1A2332").opacity(0.6) : theme.backgroundColor
             ])
 
         case .quran:
             return Gradient(colors: [
-                AppColors.primary.gold.opacity(theme.gradientOpacity(for: AppColors.primary.gold)),
-                theme == .dark ? AppColors.primary.midnight.opacity(0.7) : theme.backgroundColor
+                theme.accentMuted.opacity(mutedOpacity),
+                theme == .dark ? Color(hex: "#1A2332").opacity(0.7) : theme.backgroundColor
             ])
 
         case .home:
             return Gradient(colors: [
-                theme.featureAccent.opacity(theme.gradientOpacity(for: theme.featureAccent)),
-                theme.featureAccentSecondary.opacity(theme.gradientOpacity(for: theme.featureAccentSecondary))
+                theme.accent.opacity(accentOpacity),
+                theme.accentMuted.opacity(mutedOpacity)
             ])
 
         case .serenity:
@@ -94,21 +96,21 @@ struct GradientBackground: View {
                 ])
             } else {
                 return Gradient(colors: [
-                    AppColors.neutral.cream.opacity(0.15),
+                    Color(hex: "#F8F4EA").opacity(0.15),
                     Color.gray.opacity(0.10)
                 ])
             }
 
         case .night:
             return Gradient(colors: [
-                AppColors.primary.midnight.opacity(0.3),
+                (theme == .dark ? Color(hex: "#1A2332") : theme.backgroundColor).opacity(0.3),
                 Color.black
             ])
 
         case .settings:
             return Gradient(colors: [
-                AppColors.primary.green.opacity(isLight ? 0.06 : 0.18),
-                theme == .dark ? AppColors.primary.midnight.opacity(0.7) : theme.backgroundColor
+                theme.accent.opacity(isLight ? 0.06 : 0.18),
+                theme == .dark ? Color(hex: "#1A2332").opacity(0.7) : theme.backgroundColor
             ])
         }
     }
@@ -168,8 +170,8 @@ struct RadialGradientBackground: View {
 
     // MARK: - Initializer
     init(
-        centerColor: Color = AppColors.primary.green,
-        edgeColor: Color = AppColors.primary.midnight,
+        centerColor: Color = ThemeMode.light.accent,
+        edgeColor: Color = ThemeMode.dark.backgroundColor,
         opacity: Double = 0.2
     ) {
         self.centerColor = centerColor
@@ -199,9 +201,9 @@ struct MeshGradientBackground: View {
         // MeshGradient requires iOS 18+, will be added when available
         LinearGradient(
             gradient: Gradient(colors: [
-                AppColors.primary.green.opacity(0.2),
-                ThemeMode.light.featureAccent.opacity(0.3),
-                AppColors.primary.midnight.opacity(0.4)
+                ThemeMode.light.accent.opacity(0.2),
+                ThemeMode.light.accent.opacity(0.3),
+                ThemeMode.dark.backgroundColor.opacity(0.4)
             ]),
             startPoint: .topLeading,
             endPoint: .bottomTrailing
@@ -222,9 +224,9 @@ struct AnimatedGradientBackground: View {
     // MARK: - Initializer
     init(
         colors: [Color] = [
-            AppColors.primary.green,
-            ThemeMode.light.featureAccent,
-            AppColors.primary.midnight
+            ThemeMode.light.accent,
+            ThemeMode.light.accent,
+            ThemeMode.dark.backgroundColor
         ],
         duration: Double = 8.0
     ) {
@@ -343,8 +345,8 @@ struct ThemeAwareBackground: View {
             // Radial gradient
             ZStack {
                 RadialGradientBackground(
-                    centerColor: ThemeMode.light.featureAccent,
-                    edgeColor: AppColors.primary.midnight,
+                    centerColor: ThemeMode.light.accent,
+                    edgeColor: ThemeMode.dark.backgroundColor,
                     opacity: 0.3
                 )
 

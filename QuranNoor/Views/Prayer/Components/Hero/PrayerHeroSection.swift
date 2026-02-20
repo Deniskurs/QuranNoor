@@ -13,7 +13,6 @@ struct PrayerHeroSection: View {
     // MARK: - Properties
 
     let period: PrayerPeriod
-    let currentTime: Date  // Live time from TimelineView for real-time countdown
     let location: String
     let isLoadingLocation: Bool
 
@@ -23,6 +22,9 @@ struct PrayerHeroSection: View {
     // Fixed hero height (responsive via verticalSizeClass if needed)
     @Environment(\.verticalSizeClass) var verticalSizeClass
 
+    /// Track view visibility to pause countdown updates when off-screen
+    @State private var isViewVisible = true
+
     // MARK: - Body
 
     var body: some View {
@@ -31,22 +33,35 @@ struct PrayerHeroSection: View {
             TimeOfDaySkyView()
 
             // Content overlay
-            VStack(spacing: 16) {
+            VStack(spacing: Spacing.sm) {
                 // Location header
                 locationHeader
-                    .padding(.top, 24)  // Increased from 8 to prevent clipping at top
+                    .padding(.top, Spacing.md)
 
                 Spacer()
 
                 // Current prayer name (large, centered)
                 currentPrayerDisplay
 
-                // Countdown timer - uses live currentTime for real-time updates
-                HeroCountdownDisplay(
-                    countdownString: liveCountdownString,
-                    isUrgent: liveIsUrgent,
-                    urgencyLevel: liveUrgencyLevel
-                )
+                // Countdown timer - narrow TimelineView so only this text rebuilds per-second
+                TimelineView(.periodic(from: .now, by: isViewVisible ? 1.0 : 60.0)) { context in
+                    let deadline = period.state.nextEventTime
+                    let remaining = max(deadline.timeIntervalSince(context.date), 0)
+                    let hours = Int(remaining) / 3600
+                    let minutes = (Int(remaining) % 3600) / 60
+                    let seconds = Int(remaining) % 60
+                    let countdown = hours > 0
+                        ? String(format: "%02d:%02d:%02d", hours, minutes, seconds)
+                        : String(format: "%02d:%02d", minutes, seconds)
+                    let isUrgent = remaining > 0 && remaining <= 30 * 60
+                    let urgency = UrgencyLevel.from(secondsRemaining: remaining)
+
+                    HeroCountdownDisplay(
+                        countdownString: countdown,
+                        isUrgent: isUrgent,
+                        urgencyLevel: urgency
+                    )
+                }
 
                 // Status pill
                 PrayerStatusPill(
@@ -54,16 +69,18 @@ struct PrayerHeroSection: View {
                     prayerTime: currentPrayerTime,
                     isUrgent: period.isUrgent
                 )
-                .padding(.top, 8)
+                .padding(.top, Spacing.xxs)
 
                 Spacer()
-                    .frame(height: 16)
+                    .frame(height: Spacing.sm)
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, Spacing.screenPadding)
         }
         .frame(height: heroHeight)
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: BorderRadius.xxl + 4, style: .continuous))
         .shadow(color: heroShadowColor, radius: 20, x: 0, y: 10)
+        .onAppear { isViewVisible = true }
+        .onDisappear { isViewVisible = false }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityLabel)
     }
@@ -74,14 +91,14 @@ struct PrayerHeroSection: View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
                 Text(location.uppercased())
-                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .font(.system(size: FontSizes.xs - 1, weight: .bold, design: .rounded))
                     .foregroundColor(headerTextColor.opacity(0.7))
                     .tracking(1.5)
                     .lineLimit(1)
                     .truncationMode(.tail)
 
                 Text(formattedDate)
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.system(size: FontSizes.sm - 1, weight: .medium))
                     .foregroundColor(headerTextColor.opacity(0.9))
             }
 
@@ -98,16 +115,16 @@ struct PrayerHeroSection: View {
     // MARK: - Current Prayer Display
 
     private var currentPrayerDisplay: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: Spacing.xxxs + 2) {
             // Prayer icon
             Image(systemName: currentPrayerIcon)
-                .font(.system(size: 28, weight: .medium))
+                .font(.system(size: FontSizes.xl + 4, weight: .medium))
                 .foregroundColor(prayerAccentColor)
                 .shadow(color: prayerAccentColor.opacity(0.5), radius: 8)
 
             // Prayer name
             Text(currentPrayerName)
-                .font(.system(size: 32, weight: .bold))
+                .font(.system(size: FontSizes.xxl, weight: .bold))
                 .foregroundColor(heroTextColor)
 
             // Arabic name
@@ -124,49 +141,6 @@ struct PrayerHeroSection: View {
     private var heroHeight: CGFloat {
         // Dynamic height based on vertical size class (iOS 26 compatible)
         verticalSizeClass == .regular ? 380 : 320
-    }
-
-    // MARK: - Live Countdown (Real-time Updates)
-
-    /// Compute countdown using live currentTime from TimelineView
-    private var liveCountdownString: String {
-        let deadline = period.state.nextEventTime
-        let interval = max(deadline.timeIntervalSince(currentTime), 0)
-
-        let hours = Int(interval) / 3600
-        let minutes = (Int(interval) % 3600) / 60
-        let seconds = Int(interval) % 60
-
-        if hours > 0 {
-            return String(format: "%02d:%02d:%02d", hours, minutes, seconds)
-        } else {
-            return String(format: "%02d:%02d", minutes, seconds)
-        }
-    }
-
-    /// Live urgency check based on currentTime
-    private var liveIsUrgent: Bool {
-        let deadline = period.state.nextEventTime
-        let remaining = deadline.timeIntervalSince(currentTime)
-        return remaining > 0 && remaining <= 30 * 60  // 30 minutes
-    }
-
-    /// Live urgency level based on currentTime
-    private var liveUrgencyLevel: UrgencyLevel {
-        let deadline = period.state.nextEventTime
-        let remaining = deadline.timeIntervalSince(currentTime)
-
-        if remaining <= 0 {
-            return .normal
-        } else if remaining <= 5 * 60 {
-            return .critical  // < 5 minutes
-        } else if remaining <= 10 * 60 {
-            return .urgent    // 5-10 minutes
-        } else if remaining <= 30 * 60 {
-            return .elevated  // 10-30 minutes
-        } else {
-            return .normal
-        }
     }
 
     private var heroTextColor: Color {
@@ -188,19 +162,19 @@ struct PrayerHeroSection: View {
 
     private var prayerAccentColor: Color {
         if period.isUrgent {
-            return .orange
+            return themeManager.currentTheme.accentMuted
         }
 
         switch themeManager.currentTheme {
         case .light:
             let hour = Calendar.current.component(.hour, from: Date())
-            return (hour >= 6 && hour < 18) ? themeManager.currentTheme.accentPrimary : AppColors.primary.gold
+            return (hour >= 6 && hour < 18) ? themeManager.currentTheme.accent : themeManager.currentTheme.accentMuted
         case .dark:
-            return themeManager.currentTheme.accentSecondary
+            return themeManager.currentTheme.accentMuted
         case .night:
-            return AppColors.primary.gold
+            return themeManager.currentTheme.accentMuted
         case .sepia:
-            return themeManager.currentTheme.featureAccent
+            return themeManager.currentTheme.accent
         }
     }
 
@@ -334,7 +308,6 @@ private extension PrayerName {
 
     PrayerHeroSection(
         period: period,
-        currentTime: Date(),
         location: "San Francisco",
         isLoadingLocation: false
     )
@@ -371,7 +344,6 @@ private extension PrayerName {
 
     PrayerHeroSection(
         period: period,
-        currentTime: Date(),
         location: "San Francisco",
         isLoadingLocation: false
     )
@@ -410,7 +382,6 @@ private extension PrayerName {
 
     PrayerHeroSection(
         period: period,
-        currentTime: Date(),
         location: "San Francisco",
         isLoadingLocation: false
     )

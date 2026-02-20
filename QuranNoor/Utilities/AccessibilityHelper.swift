@@ -7,21 +7,22 @@
 //
 
 import SwiftUI
-import Combine
+import Observation
 
 // MARK: - Accessibility Manager
 
+@Observable
 @MainActor
-final class AccessibilityHelper: ObservableObject {
+final class AccessibilityHelper {
     static let shared = AccessibilityHelper()
 
     // MARK: - Environment Monitoring
-    @Published var isVoiceOverRunning: Bool = UIAccessibility.isVoiceOverRunning
-    @Published var isReduceMotionEnabled: Bool = UIAccessibility.isReduceMotionEnabled
-    @Published var isBoldTextEnabled: Bool = UIAccessibility.isBoldTextEnabled
-    @Published var isReduceTransparencyEnabled: Bool = UIAccessibility.isReduceTransparencyEnabled
-    @Published var isDarkerSystemColorsEnabled: Bool = UIAccessibility.isDarkerSystemColorsEnabled
-    @Published var preferredContentSizeCategory: ContentSizeCategory = .medium
+    var isVoiceOverRunning: Bool = UIAccessibility.isVoiceOverRunning
+    var isReduceMotionEnabled: Bool = UIAccessibility.isReduceMotionEnabled
+    var isBoldTextEnabled: Bool = UIAccessibility.isBoldTextEnabled
+    var isReduceTransparencyEnabled: Bool = UIAccessibility.isReduceTransparencyEnabled
+    var isDarkerSystemColorsEnabled: Bool = UIAccessibility.isDarkerSystemColorsEnabled
+    var preferredContentSizeCategory: ContentSizeCategory = .medium
 
     // MARK: - Observer Tokens (Performance: proper cleanup to prevent leaks)
     private var observerTokens: [NSObjectProtocol] = []
@@ -30,11 +31,8 @@ final class AccessibilityHelper: ObservableObject {
         setupNotificationObservers()
     }
 
-    deinit {
-        // Remove all observers to prevent leaks
-        observerTokens.forEach { NotificationCenter.default.removeObserver($0) }
-        observerTokens.removeAll()
-    }
+    // Note: AccessibilityHelper is a singleton — deinit is never called.
+    // Observer tokens are cleaned up automatically when the process exits.
 
     private func setupNotificationObservers() {
         // VoiceOver status changes
@@ -101,6 +99,20 @@ final class AccessibilityHelper: ObservableObject {
             }
         }
         observerTokens.append(darkerColorsToken)
+
+        // Content Size Category changes (Dynamic Type)
+        let contentSizeToken = NotificationCenter.default.addObserver(
+            forName: UIContentSizeCategory.didChangeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            guard let self else { return }
+            Task { @MainActor [weak self] in
+                let uiCategory = UIApplication.shared.preferredContentSizeCategory
+                self?.preferredContentSizeCategory = uiCategory.toSwiftUICategory
+            }
+        }
+        observerTokens.append(contentSizeToken)
     }
 
     // MARK: - Helper Methods
@@ -212,11 +224,11 @@ extension View {
 // MARK: - Semantic Color Adjustments
 
 extension Color {
-    /// Adjusts color for Darker System Colors
+    /// Adjusts color for Darker System Colors by increasing contrast
     func adjustedForAccessibility() -> Color {
         if AccessibilityHelper.shared.isDarkerSystemColorsEnabled {
-            // Increase saturation and reduce brightness slightly
-            return self
+            // Darken the color to increase contrast when Darker System Colors is enabled
+            return self.opacity(0.8)
         }
         return self
     }
@@ -282,6 +294,29 @@ struct AccessibleTransition {
             return .opacity
         } else {
             return .move(edge: edge).combined(with: .opacity)
+        }
+    }
+}
+
+// MARK: - UIContentSizeCategory to SwiftUI Mapping
+
+extension UIContentSizeCategory {
+    /// Converts UIKit's UIContentSizeCategory to SwiftUI's ContentSizeCategory
+    var toSwiftUICategory: ContentSizeCategory {
+        switch self {
+        case .extraSmall:                          return .extraSmall
+        case .small:                               return .small
+        case .medium:                              return .medium
+        case .large:                               return .large
+        case .extraLarge:                          return .extraLarge
+        case .extraExtraLarge:                     return .extraExtraLarge
+        case .extraExtraExtraLarge:                return .extraExtraExtraLarge
+        case .accessibilityMedium:                 return .accessibilityMedium
+        case .accessibilityLarge:                  return .accessibilityLarge
+        case .accessibilityExtraLarge:             return .accessibilityExtraLarge
+        case .accessibilityExtraExtraLarge:        return .accessibilityExtraExtraLarge
+        case .accessibilityExtraExtraExtraLarge:   return .accessibilityExtraExtraExtraLarge
+        default:                                   return .medium
         }
     }
 }

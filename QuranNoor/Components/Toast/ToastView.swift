@@ -25,13 +25,13 @@ enum ToastStyle {
         }
     }
 
-    var color: Color {
+    func color(for theme: ThemeMode) -> Color {
         switch self {
-        case .success: return AppColors.primary.green
-        case .info: return AppColors.primary.green  // Use emerald (softer than teal)
+        case .success: return theme.accent
+        case .info: return theme.accent
         case .warning: return Color.orange
         case .error: return Color.red
-        case .spiritual: return AppColors.primary.gold
+        case .spiritual: return theme.accentMuted
         }
     }
 }
@@ -51,6 +51,7 @@ struct ToastView: View {
     // Animation state
     @State private var offset: CGFloat = -100
     @State private var opacity: Double = 0
+    @State private var dismissTask: Task<Void, Never>?
 
     // MARK: - Initializer
     init(
@@ -73,13 +74,14 @@ struct ToastView: View {
             HStack(spacing: 12) {
                 // Icon
                 Image(systemName: style.icon)
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundColor(style.color)
+                    .font(.title3.weight(.semibold))
+                    .foregroundColor(style.color(for: themeManager.currentTheme))
 
                 // Message
                 ThemedText.body(message)
                     .multilineTextAlignment(.leading)
-                    .lineLimit(2)
+                    .lineLimit(4)
+                    .minimumScaleFactor(0.8)
 
                 Spacer()
 
@@ -93,7 +95,7 @@ struct ToastView: View {
                         }
                     } label: {
                         ThemedText.body("Undo")
-                            .foregroundColor(themeManager.currentTheme.featureAccent)
+                            .foregroundColor(themeManager.currentTheme.accent)
                             .fontWeight(.semibold)
                     }
                 }
@@ -112,7 +114,7 @@ struct ToastView: View {
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke(style.color.opacity(0.3), lineWidth: 1)
+                    .stroke(style.color(for: themeManager.currentTheme).opacity(0.3), lineWidth: 1)
             )
             .padding(.horizontal, 20)
             .offset(y: offset)
@@ -128,17 +130,16 @@ struct ToastView: View {
                     opacity = 1
                 }
 
-                // Auto-dismiss after delay (if no undo button)
-                if !showUndo {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
-                        dismissToast()
-                    }
-                } else {
-                    // Longer delay if undo is available
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 3.5) {
-                        dismissToast()
-                    }
+                // Auto-dismiss after delay using structured concurrency
+                let delay: TimeInterval = showUndo ? 3.5 : 2.5
+                dismissTask = Task { @MainActor in
+                    try? await Task.sleep(for: .seconds(delay))
+                    guard !Task.isCancelled else { return }
+                    dismissToast()
                 }
+            }
+            .onDisappear {
+                dismissTask?.cancel()
             }
             .gesture(
                 // Swipe up to dismiss early
@@ -158,7 +159,9 @@ struct ToastView: View {
             offset = -100
             opacity = 0
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(0.3))
+            guard !Task.isCancelled else { return }
             isPresented = false
         }
     }
@@ -259,9 +262,10 @@ struct EncouragingMessages {
         // Try to get prayer-specific messages first
         let messages = prayerSpecificMessages[prayerName.lowercased()] ?? genericMessages
 
-        // Use stable selection based on day and prayer name hash
+        // Use stable selection based on day-of-year (deterministic)
         let dayOfYear = Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 1
-        let prayerHash = abs(prayerName.hashValue)
+        // Create deterministic hash from prayer name characters
+        let prayerHash = prayerName.unicodeScalars.reduce(0) { $0 + Int($1.value) }
         let index = (dayOfYear + prayerHash) % messages.count
         return messages[index]
     }

@@ -53,18 +53,18 @@ struct PrayerTimeCard: View {
     // MARK: - Body
     var body: some View {
         Button(action: { onTap?() }) {
-            LiquidGlassCardView(showPattern: status == .current, intensity: status == .current ? .prominent : .subtle) {
+            CardView(showPattern: status == .current, intensity: status == .current ? .prominent : .subtle) {
                 HStack(spacing: 16) {
                     // Left: Prayer info
                     VStack(alignment: .leading, spacing: 8) {
                         // Status badge
                         if status == .current {
                             Text("NEXT")
-                                .font(.system(size: 11, weight: .bold))
+                                .font(.caption2.weight(.bold))
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 4)
-                                .background(AppColors.primary.green)
+                                .background(themeManager.currentTheme.accent)
                                 .cornerRadius(6)
                         }
 
@@ -72,23 +72,23 @@ struct PrayerTimeCard: View {
                         ThemedText(
                             prayerName,
                             style: .heading,
-                            color: status == .current ? AppColors.primary.green : nil
+                            color: status == .current ? themeManager.currentTheme.accent : nil
                         )
 
                         // Time
                         Text(formattedTime)
-                            .font(.system(size: 32, weight: .ultraLight))
-                            .foregroundColor(themeManager.currentTheme.textColor)
+                            .font(.title.weight(.ultraLight))
+                            .foregroundColor(themeManager.currentTheme.textPrimary)
 
                         // Countdown (if current)
                         if let countdown = countdown, status == .current {
                             HStack(spacing: 4) {
                                 Image(systemName: "clock.fill")
-                                    .font(.system(size: 12))
+                                    .font(.caption)
                                 Text(countdown)
-                                    .font(.system(size: 14, weight: .medium))
+                                    .font(.subheadline.weight(.medium))
                             }
-                            .foregroundColor(themeManager.currentTheme.featureAccent)
+                            .foregroundColor(themeManager.currentTheme.accent)
                         }
                     }
 
@@ -101,12 +101,12 @@ struct PrayerTimeCard: View {
                             lineWidth: 6,
                             size: 80,
                             showPercentage: false,
-                            color: AppColors.primary.green
+                            color: themeManager.currentTheme.accent
                         )
                     } else {
                         // Prayer icon
                         Image(systemName: prayerIcon)
-                            .font(.system(size: 40))
+                            .font(.largeTitle)
                             .foregroundColor(iconColor)
                             .opacity(status == .passed ? 0.3 : 1.0)
                     }
@@ -143,11 +143,11 @@ struct PrayerTimeCard: View {
     private var iconColor: Color {
         switch status {
         case .current:
-            return AppColors.primary.green
+            return themeManager.currentTheme.accent
         case .upcoming:
-            return AppColors.primary.gold.opacity(0.6)
+            return themeManager.currentTheme.accentMuted.opacity(0.6)
         case .passed:
-            return themeManager.currentTheme.textColor
+            return themeManager.currentTheme.textPrimary
         }
     }
 }
@@ -155,6 +155,7 @@ struct PrayerTimeCard: View {
 // MARK: - Compact Prayer Time Card
 struct CompactPrayerTimeCard: View {
     // MARK: - Properties
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
     let prayerName: String
     let time: Date
     let isNext: Bool
@@ -166,28 +167,28 @@ struct CompactPrayerTimeCard: View {
             ThemedText(
                 prayerName,
                 style: .body,
-                color: isNext ? AppColors.primary.green : nil
+                color: isNext ? themeManager.currentTheme.accent : nil
             )
 
             Spacer()
 
             // Time
             Text(formattedTime)
-                .font(.system(size: 16, weight: isNext ? .semibold : .regular))
-                .foregroundColor(isNext ? AppColors.primary.green : .secondary)
+                .font(.body.weight(isNext ? .semibold : .regular))
+                .foregroundColor(isNext ? themeManager.currentTheme.accent : themeManager.currentTheme.textSecondary)
 
             // Next indicator
             if isNext {
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(AppColors.primary.green)
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(themeManager.currentTheme.accent)
             }
         }
         .padding(.vertical, 12)
         .padding(.horizontal, 16)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(isNext ? AppColors.primary.green.opacity(0.1) : Color.clear)
+                .fill(isNext ? themeManager.currentTheme.accent.opacity(0.1) : Color.clear)
         )
     }
 

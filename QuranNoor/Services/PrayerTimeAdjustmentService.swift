@@ -77,7 +77,9 @@ final class PrayerTimeAdjustmentService {
         // Log change
         if clampedMinutes != oldValue {
             let change = clampedMinutes - oldValue
+            #if DEBUG
             print("⚙️ Adjusted \(prayer.displayName): \(formatAdjustment(clampedMinutes)) (\(change > 0 ? "+" : "")\(change) min)")
+            #endif
 
             // Post notification to refresh prayer times
             NotificationCenter.default.post(name: .prayerAdjustmentsChanged, object: nil)
@@ -89,7 +91,9 @@ final class PrayerTimeAdjustmentService {
     func resetAdjustment(for prayer: PrayerName) {
         adjustments[prayer] = 0
         saveAdjustments()
+        #if DEBUG
         print("↩️ Reset \(prayer.displayName) adjustment to 0")
+        #endif
 
         // Post notification to refresh prayer times
         NotificationCenter.default.post(name: .prayerAdjustmentsChanged, object: nil)
@@ -99,7 +103,9 @@ final class PrayerTimeAdjustmentService {
     func resetAllAdjustments() {
         adjustments = Dictionary(uniqueKeysWithValues: PrayerName.allCases.map { ($0, 0) })
         saveAdjustments()
+        #if DEBUG
         print("↩️ Reset all prayer time adjustments")
+        #endif
 
         // Post notification to refresh prayer times
         NotificationCenter.default.post(name: .prayerAdjustmentsChanged, object: nil)
@@ -216,6 +222,7 @@ final class PrayerTimeAdjustmentService {
         }
 
         // Log loaded adjustments
+        #if DEBUG
         let activeAdjustments = adjustments.filter { $0.value != 0 }
         if !activeAdjustments.isEmpty {
             print("⚙️ Loaded prayer time adjustments:")
@@ -223,6 +230,7 @@ final class PrayerTimeAdjustmentService {
                 print("   \(prayer.displayName): \(formatAdjustment(minutes))")
             }
         }
+        #endif
     }
 }
 

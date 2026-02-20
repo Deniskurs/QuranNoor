@@ -7,7 +7,7 @@
 
 import Foundation
 import UserNotifications
-import Combine
+import Observation
 
 // MARK: - Notification Error
 enum NotificationError: LocalizedError {
@@ -25,8 +25,12 @@ enum NotificationError: LocalizedError {
 }
 
 // MARK: - Notification Service
+@Observable
 @MainActor
-class NotificationService: ObservableObject {
+class NotificationService {
+    // MARK: - Singleton
+    static let shared = NotificationService()
+
     // MARK: - Cached Formatters (Performance: avoid repeated allocation)
     private static let timeFormatter: DateFormatter = {
         let f = DateFormatter()
@@ -34,9 +38,9 @@ class NotificationService: ObservableObject {
         return f
     }()
 
-    // MARK: - Published Properties
-    @Published var isAuthorized: Bool = false
-    @Published var notificationsEnabled: Bool = false
+    // MARK: - Observable Properties
+    var isAuthorized: Bool = false
+    var notificationsEnabled: Bool = false
 
     // MARK: - Private Properties
     private let center = UNUserNotificationCenter.current()
@@ -111,7 +115,9 @@ class NotificationService: ObservableObject {
     // MARK: - Initializer
     init() {
         loadNotificationSettings()
-        checkAuthorizationStatus()
+        Task {
+            await checkAuthorizationStatus()
+        }
     }
 
     // MARK: - Public Methods
@@ -134,11 +140,9 @@ class NotificationService: ObservableObject {
     }
 
     /// Check current authorization status
-    func checkAuthorizationStatus() {
-        Task {
-            let settings = await center.notificationSettings()
-            isAuthorized = settings.authorizationStatus == .authorized
-        }
+    func checkAuthorizationStatus() async {
+        let settings = await center.notificationSettings()
+        isAuthorized = settings.authorizationStatus == .authorized
     }
 
     /// Schedule notifications for all prayers
@@ -164,10 +168,7 @@ class NotificationService: ObservableObject {
         // Schedule for each prayer (respecting per-prayer preferences)
         for prayer in prayerTimes.prayerTimes {
             // Check if this prayer has notifications enabled
-            guard prefs.isNotificationEnabled(for: prayer.name) else {
-                print("⏭️ Skipping \(prayer.name.displayName) notification (disabled in preferences)")
-                continue
-            }
+            guard prefs.isNotificationEnabled(for: prayer.name) else { continue }
 
             // Schedule main notification
             try await scheduleNotification(
@@ -180,7 +181,6 @@ class NotificationService: ObservableObject {
             let reminderMinutes = prefs.getReminderMinutes(for: prayer.name)
             if reminderMinutes > 0 {
                 try await scheduleReminderNotification(for: prayer, minutesBefore: reminderMinutes)
-                print("⏰ Scheduled \(reminderMinutes)min reminder for \(prayer.name.displayName)")
             }
         }
     }
@@ -241,7 +241,6 @@ class NotificationService: ObservableObject {
 
         do {
             try await center.add(request)
-            print("✅ Scheduled rich notification: \(content.title)")
         } catch {
             throw NotificationError.schedulingFailed
         }
@@ -317,7 +316,7 @@ class NotificationService: ObservableObject {
 
         // DYNAMIC BODY: 6 rotating motivational messages
         content.body = urgentMessages.randomElement() ?? urgentMessages[0]
-        content.sound = .defaultCritical // More attention-grabbing sound
+        content.sound = .default
         content.categoryIdentifier = "PRAYER_URGENT"
         content.interruptionLevel = .timeSensitive // iOS 15+ priority
         content.relevanceScore = 1.0 // Highest priority for urgent deadline alerts
@@ -477,9 +476,13 @@ extension NotificationService {
 
         do {
             try await center.add(request)
+            #if DEBUG
             print("✅ Test notification scheduled for 5 seconds from now")
+            #endif
         } catch {
+            #if DEBUG
             print("❌ Failed to schedule test notification: \(error)")
+            #endif
         }
     }
 

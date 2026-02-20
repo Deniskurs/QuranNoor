@@ -11,6 +11,7 @@ import UIKit
 import AudioToolbox
 
 @Observable
+@MainActor
 final class TasbihService {
     // MARK: - Singleton
 
@@ -123,7 +124,8 @@ final class TasbihService {
 
         if vibrateOnTarget {
             // Pattern: short-short-long
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(0.1))
                 AudioServicesPlaySystemSound(kSystemSoundID_Vibrate)
             }
         }

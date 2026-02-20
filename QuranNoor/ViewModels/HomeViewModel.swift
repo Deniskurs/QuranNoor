@@ -83,6 +83,9 @@ final class HomeViewModel {
     }
 
     /// Calculate daily statistics from existing services
+    // FIXME: Architecture violation - ViewModel depends on other ViewModels.
+    // Should depend on Services (QuranService, PrayerTimeService, etc.) directly instead.
+    // Refactor in future to inject services rather than other ViewModels.
     func calculateDailyStats(from quranVM: QuranViewModel, prayerVM: PrayerViewModel) -> DailyStats {
         guard let progress = quranVM.readingProgress else {
             return DailyStats()
@@ -108,14 +111,6 @@ final class HomeViewModel {
             overallCompletion: progress.completionPercentage
         )
 
-        #if DEBUG
-        print("📊 [HomeViewModel] calculateDailyStats:")
-        print("   - ReadingProgress.totalVersesRead: \(progress.totalVersesRead)")
-        print("   - ReadingProgress.completionPercentage: \(progress.completionPercentage)")
-        print("   - DailyStats.overallCompletion: \(stats.overallCompletion)")
-        print("   - DailyStats.progressPercentage: \(stats.progressPercentage)")
-        #endif
-
         return stats
     }
 
@@ -132,26 +127,12 @@ final class HomeViewModel {
            let cached = try? Self.decoder.decode(CachedHomeData.self, from: data),
            !cached.isExpired {
             dailyStats = cached.stats
-
-            #if DEBUG
-            print("📦 [HomeViewModel] Loaded cached stats:")
-            print("   - Cached completion: \(cached.stats.overallCompletion)")
-            print("   - Cached verses: \(cached.stats.totalVersesRead)")
-            print("   - Cache age: \(Date().timeIntervalSince(cached.timestamp))s")
-            #endif
-        } else {
-            #if DEBUG
-            print("📦 [HomeViewModel] No valid cached stats found or cache expired")
-            #endif
         }
     }
 
     /// Clear cached data (useful when data seems incorrect)
     func clearCachedData() {
         UserDefaults.standard.removeObject(forKey: cacheKey)
-        #if DEBUG
-        print("🗑️ [HomeViewModel] Cleared cached data")
-        #endif
     }
 
     private func loadFreshData() async {
@@ -176,7 +157,9 @@ final class HomeViewModel {
         do {
             return try await hijriService.getCurrentHijriDate()
         } catch {
+            #if DEBUG
             print("Failed to load Hijri date: \(error)")
+            #endif
             return hijriService.getCachedHijriDate()
         }
     }
@@ -217,7 +200,9 @@ final class HomeViewModel {
                 relatedPrayer: verseRef.relatedPrayer
             )
         } catch {
+            #if DEBUG
             print("Failed to load verse of the day: \(error)")
+            #endif
             return nil
         }
     }
@@ -234,16 +219,14 @@ final class HomeViewModel {
         if let data = try? Self.encoder.encode(cached) {
             UserDefaults.standard.set(data, forKey: cacheKey)
         }
-
-        #if DEBUG
-        print("💾 [HomeViewModel] Cached stats: \(stats.progressPercentage), \(stats.totalVersesRead) verses")
-        #endif
     }
 
     private func handleError(_ error: Error) {
         errorMessage = error.localizedDescription
         showError = true
+        #if DEBUG
         print("HomeViewModel error: \(error)")
+        #endif
     }
 
     // MARK: - Helper Methods
@@ -266,18 +249,38 @@ final class HomeViewModel {
         return progress.totalVersesRead > 0 ? min(progress.totalVersesRead, 120) : 0
     }
 
+    /// Cumulative verse counts marking the end of each juz (1-based index into array gives juz number)
+    private static let juzVerseEnds: [Int] = [
+        148, 259, 385, 516, 640, 751, 899, 1041, 1200, 1327,
+        1478, 1648, 1802, 1901, 2029, 2214, 2483, 2673, 2875, 3051,
+        3214, 3385, 3563, 3674, 3875, 4009, 4264, 4510, 4698, 6236
+    ]
+
     private func calculateCurrentJuz(from progress: ReadingProgress) -> Int {
-        // Simplified: Calculate based on total verses read
-        // More accurate calculation would need verse-to-juz mapping
-        let versesPerJuz = 6236 / 30 // ~208 verses per juz
-        return min(30, max(1, (progress.totalVersesRead / versesPerJuz) + 1))
+        let totalRead = progress.totalVersesRead
+        guard totalRead > 0 else { return 1 }
+
+        // Find the first juz whose cumulative end is >= totalVersesRead
+        for (index, endVerse) in Self.juzVerseEnds.enumerated() {
+            if totalRead <= endVerse {
+                return index + 1  // 1-based juz number
+            }
+        }
+        return 30
     }
 
     private func calculateJuzProgress(progress: ReadingProgress, juz: Int) -> Double {
-        let versesPerJuz = 6236 / 30
-        let juzStartVerse = (juz - 1) * versesPerJuz
-        let versesInCurrentJuz = max(0, progress.totalVersesRead - juzStartVerse)
-        return min(1.0, Double(versesInCurrentJuz) / Double(versesPerJuz))
+        let totalRead = progress.totalVersesRead
+        guard totalRead > 0, juz >= 1, juz <= 30 else { return 0.0 }
+
+        let juzStart = juz > 1 ? Self.juzVerseEnds[juz - 2] : 0
+        let juzEnd = Self.juzVerseEnds[juz - 1]
+        let juzSize = juzEnd - juzStart
+
+        guard juzSize > 0 else { return 0.0 }
+
+        let versesInCurrentJuz = max(0, totalRead - juzStart)
+        return min(1.0, Double(versesInCurrentJuz) / Double(juzSize))
     }
 
     private func getSurahName(for surahNumber: Int, from quranVM: QuranViewModel) -> String? {

@@ -7,7 +7,6 @@
 //
 
 import SwiftUI
-import Combine
 
 @MainActor
 @Observable
@@ -18,6 +17,7 @@ final class BookmarksViewModel {
     var spiritualBookmarks: [SpiritualBookmark] = []
     var searchQuery: String = ""
     var selectedTab: BookmarkTab = .spiritual
+    var selectedCategory: String = BookmarkCategory.allBookmarks
     var isLoading = false
 
     // MARK: - Dependencies
@@ -58,16 +58,20 @@ final class BookmarksViewModel {
     }
 
     func refresh() {
-        isLoading = true
-
-        // Reload from services
+        // Reload from services synchronously (no artificial delay needed)
         loadBookmarks()
+    }
 
-        // Simulate brief loading state for smooth UI
-        Task {
-            try? await Task.sleep(nanoseconds: 300_000_000) // 0.3 seconds
-            isLoading = false
-        }
+    // MARK: - Category Support
+
+    /// All available bookmark categories for the filter pills
+    var availableCategories: [String] {
+        quranService.getBookmarkCategories()
+    }
+
+    /// Select a category filter
+    func selectCategory(_ category: String) {
+        selectedCategory = category
     }
 
     // MARK: - Filtered Data
@@ -84,14 +88,25 @@ final class BookmarksViewModel {
     }
 
     var filteredQuranBookmarks: [Bookmark] {
-        guard !searchQuery.isEmpty else { return quranBookmarks }
-
-        let lowercaseQuery = searchQuery.lowercased()
-        return quranBookmarks.filter {
-            // Note: Would need to load verse text to search by content
-            // For now, search by surah/verse numbers
-            "\($0.surahNumber):\($0.verseNumber)".contains(lowercaseQuery)
+        // Apply category filter first
+        var result: [Bookmark]
+        if selectedCategory == BookmarkCategory.allBookmarks {
+            result = quranBookmarks
+        } else {
+            result = quranBookmarks.filter { $0.category == selectedCategory }
         }
+
+        // Then apply search filter
+        if !searchQuery.isEmpty {
+            let lowercaseQuery = searchQuery.lowercased()
+            result = result.filter {
+                "\($0.surahNumber):\($0.verseNumber)".contains(lowercaseQuery) ||
+                ($0.note?.lowercased().contains(lowercaseQuery) ?? false) ||
+                $0.category.lowercased().contains(lowercaseQuery)
+            }
+        }
+
+        return result
     }
 
     // MARK: - Actions
@@ -108,6 +123,19 @@ final class BookmarksViewModel {
 
     func clearSearchQuery() {
         searchQuery = ""
+    }
+
+    func clearCurrentTab() {
+        switch selectedTab {
+        case .spiritual:
+            spiritualBookmarkService.clearAllBookmarks()
+        case .quran:
+            // Clear all Quran bookmarks by removing each one
+            for bookmark in quranBookmarks {
+                quranService.removeBookmark(id: bookmark.id)
+            }
+        }
+        loadBookmarks()
     }
 
     // MARK: - Statistics

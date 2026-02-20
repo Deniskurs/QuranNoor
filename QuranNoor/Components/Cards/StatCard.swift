@@ -15,22 +15,22 @@ struct StatCard: View {
     let title: String
     let value: String
     var subtitle: String? = nil
-    var color: Color? = nil  // Uses theme featureAccent if nil
+    var color: Color? = nil  // Uses theme accent if nil
 
     @Environment(ThemeManager.self) var themeManager: ThemeManager
 
-    /// Resolved color: uses provided color or falls back to theme's featureAccent
+    /// Resolved color: uses provided color or falls back to theme's accent
     private var resolvedColor: Color {
-        color ?? themeManager.currentTheme.featureAccent
+        color ?? themeManager.currentTheme.accent
     }
 
     // MARK: - Body
 
     var body: some View {
-        LiquidGlassCardView(intensity: .subtle) {
+        CardView(intensity: .subtle) {
             VStack(spacing: 12) {
                 Image(systemName: icon)
-                    .font(.system(size: 28))
+                    .font(.title2)
                     .foregroundStyle(resolvedColor.opacity(0.8))
 
                 VStack(spacing: 4) {
@@ -49,6 +49,7 @@ struct StatCard: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 8)
         }
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -62,7 +63,7 @@ struct StatCard: View {
             title: "Verses Read",
             value: "1,234",
             subtitle: "Total progress",
-            color: AppColors.primary.green
+            color: ThemeMode.light.accent
         )
 
         // Without subtitle
@@ -70,7 +71,7 @@ struct StatCard: View {
             icon: "hands.sparkles.fill",
             title: "Sessions",
             value: "42",
-            color: AppColors.primary.gold
+            color: ThemeMode.light.accentMuted
         )
 
         // Grid layout example

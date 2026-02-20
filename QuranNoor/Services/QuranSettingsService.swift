@@ -111,7 +111,9 @@ final class QuranSettingsService {
         self.showTransliteration = UserDefaults.standard.object(forKey: Keys.showTransliteration) as? Bool ?? false
         self.showTranslation = UserDefaults.standard.object(forKey: Keys.showTranslation) as? Bool ?? true
 
+        #if DEBUG
         print("✅ QuranSettingsService initialized: fontSize=\(fontSize.displayName)")
+        #endif
     }
 
     // MARK: - Public Methods
@@ -120,21 +122,27 @@ final class QuranSettingsService {
     func setFontSize(_ size: QuranFontSize) {
         fontSize = size
         UserDefaults.standard.set(size.rawValue, forKey: Keys.fontSize)
+        #if DEBUG
         print("✅ Quran font size set to: \(size.displayName)")
+        #endif
     }
 
     /// Toggle transliteration visibility
     func toggleTransliteration() {
         showTransliteration.toggle()
         UserDefaults.standard.set(showTransliteration, forKey: Keys.showTransliteration)
+        #if DEBUG
         print("✅ Transliteration \(showTransliteration ? "enabled" : "disabled")")
+        #endif
     }
 
     /// Toggle translation visibility
     func toggleTranslation() {
         showTranslation.toggle()
         UserDefaults.standard.set(showTranslation, forKey: Keys.showTranslation)
+        #if DEBUG
         print("✅ Translation \(showTranslation ? "enabled" : "disabled")")
+        #endif
     }
 
     /// Reset to defaults
@@ -144,6 +152,8 @@ final class QuranSettingsService {
         showTranslation = true
         UserDefaults.standard.set(showTransliteration, forKey: Keys.showTransliteration)
         UserDefaults.standard.set(showTranslation, forKey: Keys.showTranslation)
+        #if DEBUG
         print("✅ Quran settings reset to defaults")
+        #endif
     }
 }

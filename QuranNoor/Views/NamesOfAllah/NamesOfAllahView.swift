@@ -32,7 +32,7 @@ struct NamesOfAllahView: View {
             ZStack {
                 // Background
                 LinearGradient(
-                    colors: themeManager.currentTheme.featureGradient,
+                    colors: [themeManager.currentTheme.accent.opacity(0.12), themeManager.currentTheme.accentMuted.opacity(0.08)],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
@@ -96,7 +96,7 @@ struct NamesOfAllahView: View {
                     Circle()
                         .fill(
                             .linearGradient(
-                                colors: [themeManager.currentTheme.featureAccent, themeManager.currentTheme.featureAccentSecondary],
+                                colors: [themeManager.currentTheme.accent, themeManager.currentTheme.accentMuted],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
@@ -128,7 +128,7 @@ struct NamesOfAllahView: View {
                     Text("\(namesService.progress.totalLearned)")
                         .font(.title)
                         .fontWeight(.bold)
-                        .foregroundStyle(themeManager.currentTheme.featureAccent)
+                        .foregroundStyle(themeManager.currentTheme.accent)
 
                     Text("Learned")
                         .font(.caption)
@@ -158,7 +158,7 @@ struct NamesOfAllahView: View {
                     Text(String(format: "%.0f%%", namesService.progress.progressPercentage))
                         .font(.title)
                         .fontWeight(.bold)
-                        .foregroundStyle(themeManager.currentTheme.featureAccent)
+                        .foregroundStyle(themeManager.currentTheme.accent)
 
                     Text("Progress")
                         .font(.caption)
@@ -192,7 +192,7 @@ struct NameCard: View {
                 Circle()
                     .fill(
                         .linearGradient(
-                            colors: [themeManager.currentTheme.featureAccent.opacity(0.3), themeManager.currentTheme.featureAccentSecondary.opacity(0.3)],
+                            colors: [themeManager.currentTheme.accent.opacity(0.3), themeManager.currentTheme.accentMuted.opacity(0.3)],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
@@ -202,7 +202,7 @@ struct NameCard: View {
                 Text("\(name.number)")
                     .font(.headline)
                     .fontWeight(.bold)
-                    .foregroundStyle(themeManager.currentTheme.featureAccent)
+                    .foregroundStyle(themeManager.currentTheme.accent)
             }
 
             // Name Info
@@ -213,7 +213,7 @@ struct NameCard: View {
 
                     if isLearned {
                         Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(themeManager.currentTheme.featureAccent)
+                            .foregroundStyle(themeManager.currentTheme.accent)
                             .font(.caption)
                     }
                 }
@@ -224,7 +224,7 @@ struct NameCard: View {
 
                 Text(name.arabicName)
                     .font(.title3)
-                    .foregroundStyle(themeManager.currentTheme.featureAccent)
+                    .foregroundStyle(themeManager.currentTheme.accent)
             }
 
             Spacer()

@@ -20,6 +20,7 @@ struct HeroCountdownDisplay: View {
     @Environment(\.accessibilityReduceMotion) var reduceMotion
 
     @State private var isPulsing: Bool = false
+    @State private var isViewVisible: Bool = false
 
     // MARK: - Body
 
@@ -31,44 +32,42 @@ struct HeroCountdownDisplay: View {
                 .monospacedDigit()
                 .foregroundColor(countdownColor)
                 .contentTransition(.numericText(countsDown: true))
-                .animation(.spring(response: 0.4, dampingFraction: 0.8), value: countdownString)
+                .animation(.linear(duration: 0.3), value: countdownString)
                 .scaleEffect(isPulsing && urgencyLevel == .critical ? 1.02 : 1.0)
+                .minimumScaleFactor(0.5)
+                .lineLimit(1)
                 .accessibilityLabel("Time remaining: \(accessibleCountdown)")
 
             // Subtle label
             Text(countdownLabel)
-                .font(.system(size: 14, weight: .medium, design: .rounded))
+                .font(AppTypography.caption)
                 .foregroundColor(themeManager.currentTheme.textSecondary)
                 .textCase(.uppercase)
                 .tracking(1.5)
         }
         .onChange(of: urgencyLevel) { _, newLevel in
-            if newLevel == .critical && !reduceMotion {
+            if newLevel == .critical && !reduceMotion && isViewVisible {
                 startPulseAnimation()
             } else {
-                isPulsing = false
+                stopPulseAnimation()
             }
         }
         .onAppear {
+            isViewVisible = true
             if urgencyLevel == .critical && !reduceMotion {
                 startPulseAnimation()
             }
+        }
+        .onDisappear {
+            isViewVisible = false
+            stopPulseAnimation()
         }
     }
 
     // MARK: - Computed Properties
 
     private var countdownColor: Color {
-        switch urgencyLevel {
-        case .relaxed, .normal:
-            return themeManager.currentTheme.accentPrimary
-        case .elevated:
-            return AppColors.primary.gold
-        case .urgent:
-            return .orange
-        case .critical:
-            return .red
-        }
+        urgencyLevel.countdownColor(for: themeManager.currentTheme)
     }
 
     private var countdownLabel: String {
@@ -108,8 +107,15 @@ struct HeroCountdownDisplay: View {
     // MARK: - Animation
 
     private func startPulseAnimation() {
+        guard isViewVisible else { return }
         withAnimation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) {
             isPulsing = true
+        }
+    }
+
+    private func stopPulseAnimation() {
+        withAnimation(.easeOut(duration: 0.2)) {
+            isPulsing = false
         }
     }
 }

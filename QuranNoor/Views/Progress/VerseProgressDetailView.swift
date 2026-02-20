@@ -2,55 +2,49 @@
 //  VerseProgressDetailView.swift
 //  QuranNoor
 //
-//  Detailed view of verse-level progress with grid layout and toggle functionality
+//  Verse-level progress with Arabic hero header, elegant grid, and toggle actions
 //
 
 import SwiftUI
 
 struct VerseProgressDetailView: View {
     let surah: Surah
-    @ObservedObject var viewModel: ProgressManagementViewModel
+    var viewModel: ProgressManagementViewModel
 
     @Environment(ThemeManager.self) var themeManager: ThemeManager
     @Environment(\.dismiss) var dismiss
 
-    @State private var verseStates: [Int: Bool] = [:]  // Cached verse read states
+    @State private var verseStates: [Int: Bool] = [:]
     @State private var showingMarkAllConfirmation = false
     @State private var markAllAsRead = true
-    @State private var selectedVerseToScroll: Int?  // Trigger for scrolling to verse
+    @State private var selectedVerseToScroll: Int?
 
     private let quranService = QuranService.shared
-    private let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 5)
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: 10), count: 5)
 
     var body: some View {
         NavigationStack {
             ZStack {
-                GradientBackground(style: .quran, opacity: 0.2)
+                themeManager.currentTheme.backgroundColor
+                    .ignoresSafeArea()
 
                 ScrollView {
-                    VStack(spacing: 20) {
-                        // Header Card
-                        headerCard
+                    VStack(spacing: Spacing.sectionSpacing) {
+                        heroHeader
 
-                        // Progress Summary
-                        progressSummaryCard
+                        progressBar
 
-                        // Quick Actions
-                        quickActionsCard
-
-                        // Verse Grid
-                        verseGridCard
+                        verseGrid
                     }
-                    .padding()
+                    .padding(.horizontal, Spacing.screenHorizontal)
+                    .padding(.vertical, Spacing.screenVertical)
                 }
             }
             .navigationTitle(surah.englishName)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Done") {
-                        dismiss()
-                    }
+                    Button("Done") { dismiss() }
                 }
 
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -61,6 +55,8 @@ struct VerseProgressDetailView: View {
                             Label("Go to First Unread", systemImage: "arrow.forward.to.line")
                         }
                         .disabled(allVersesRead)
+
+                        Divider()
 
                         Button {
                             markAllAsRead = true
@@ -80,15 +76,16 @@ struct VerseProgressDetailView: View {
                     }
                 }
             }
-            .onAppear {
-                loadVerseStates()
-            }
+            .onAppear { loadVerseStates() }
             .confirmationDialog(
                 markAllAsRead ? "Mark All Read" : "Mark All Unread",
                 isPresented: $showingMarkAllConfirmation,
                 titleVisibility: .visible
             ) {
-                Button(markAllAsRead ? "Mark All Read" : "Mark All Unread", role: markAllAsRead ? .none : .destructive) {
+                Button(
+                    markAllAsRead ? "Mark All Read" : "Mark All Unread",
+                    role: markAllAsRead ? .none : .destructive
+                ) {
                     confirmMarkAll()
                 }
                 Button("Cancel", role: .cancel) {}
@@ -100,225 +97,209 @@ struct VerseProgressDetailView: View {
         }
     }
 
-    // MARK: - Components
+    // MARK: - Hero Header
 
-    private var headerCard: some View {
-        LiquidGlassCardView(showPattern: true, intensity: .moderate) {
-            VStack(spacing: 12) {
-                // Arabic name
-                ThemedText.arabic(surah.name)
-                    .font(.system(size: 32))
-                    .foregroundColor(themeManager.currentTheme.accentInteractive)
+    private var heroHeader: some View {
+        VStack(spacing: Spacing.sm) {
+            // Arabic name as hero
+            Text(surah.name)
+                .font(.custom("KFGQPC HAFS Uthmanic Script Regular", size: 36))
+                .foregroundColor(themeManager.currentTheme.accent)
 
-                // English names
-                VStack(spacing: 4) {
-                    ThemedText(surah.englishName, style: .heading)
-                        .foregroundColor(themeManager.currentTheme.textColor)
+            // English names
+            Text(surah.englishName)
+                .font(.system(size: FontSizes.lg, weight: .semibold))
+                .foregroundColor(themeManager.currentTheme.textPrimary)
 
-                    ThemedText.caption(surah.englishNameTranslation)
-                        .opacity(0.7)
-                }
+            Text(surah.englishNameTranslation)
+                .font(.system(size: FontSizes.sm))
+                .foregroundColor(themeManager.currentTheme.textTertiary)
 
-                IslamicDivider(style: .ornamental, color: themeManager.currentTheme.accentInteractive.opacity(0.3))
+            IslamicDivider(style: .ornamental, color: themeManager.currentTheme.accent.opacity(0.3))
 
-                // Surah info
-                HStack(spacing: 20) {
-                    infoItem(icon: "doc.text", text: "\(surah.numberOfVerses) Verses")
-                    infoItem(icon: "mappin.and.ellipse", text: surah.revelationType.rawValue)
-                    infoItem(icon: "number", text: "Surah \(surah.id)")
-                }
+            // Surah metadata
+            HStack(spacing: Spacing.md) {
+                metadataItem(text: "\(surah.numberOfVerses) Verses")
+                metadataItem(text: surah.revelationType.rawValue)
+                metadataItem(text: "Surah \(surah.id)")
             }
         }
+        .padding(Spacing.md)
+        .background(themeManager.currentTheme.cardColor)
+        .clipShape(RoundedRectangle(cornerRadius: BorderRadius.xl))
+        .overlay(
+            RoundedRectangle(cornerRadius: BorderRadius.xl)
+                .stroke(themeManager.currentTheme.borderColor, lineWidth: 1)
+        )
     }
 
-    private func infoItem(icon: String, text: String) -> some View {
-        VStack(spacing: 4) {
-            Image(systemName: icon)
-                .foregroundColor(themeManager.currentTheme.accentSecondary)
-                .font(.system(size: 14))
-
-            ThemedText.caption(text)
-                .opacity(0.8)
-        }
+    private func metadataItem(text: String) -> some View {
+        Text(text)
+            .font(.system(size: FontSizes.xs))
+            .foregroundColor(themeManager.currentTheme.textTertiary)
     }
 
-    private var progressSummaryCard: some View {
+    // MARK: - Progress Bar
+
+    private var progressBar: some View {
         let stats = getSurahStats()
 
-        return CardView {
-            VStack(spacing: 16) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        ThemedText.caption("PROGRESS")
-                        ThemedText("\(stats.readVerses) / \(stats.totalVerses)", style: .heading)
-                            .foregroundColor(themeManager.currentTheme.accentPrimary)
-                    }
+        return VStack(spacing: Spacing.xs) {
+            HStack {
+                Text("\(stats.readVerses) / \(stats.totalVerses) verses")
+                    .font(.system(size: FontSizes.sm, weight: .medium))
+                    .foregroundColor(themeManager.currentTheme.textPrimary)
 
-                    Spacer()
+                Spacer()
 
-                    VStack(alignment: .trailing, spacing: 4) {
-                        ThemedText.caption("COMPLETION")
-                        ThemedText("\(Int(stats.completionPercentage))%", style: .heading)
-                            .foregroundColor(themeManager.currentTheme.accentSecondary)
-                    }
-                }
+                Text("\(Int(stats.completionPercentage))%")
+                    .font(.system(size: FontSizes.sm, weight: .semibold))
+                    .foregroundColor(themeManager.currentTheme.accent)
+            }
 
-                // Progress bar
-                GeometryReader { geometry in
-                    ZStack(alignment: .leading) {
-                        Rectangle()
-                            .fill(themeManager.currentTheme.textColor.opacity(0.1))
-                            .frame(height: 8)
-                            .cornerRadius(4)
+            GeometryReader { geometry in
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(themeManager.currentTheme.textPrimary.opacity(0.08))
+                        .frame(height: 6)
 
-                        Rectangle()
-                            .fill(
-                                LinearGradient(
-                                    colors: [themeManager.currentTheme.accentPrimary, themeManager.currentTheme.accentSecondary],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
-                            .frame(
-                                width: geometry.size.width * (stats.completionPercentage / 100),
-                                height: 8
-                            )
-                            .cornerRadius(4)
-                    }
-                }
-                .frame(height: 8)
-
-                // Additional info
-                HStack(spacing: 16) {
-                    if let firstRead = stats.firstReadDate {
-                        infoLabel(icon: "calendar.badge.clock", text: "Started: \(formatDate(firstRead))")
-                    }
-
-                    if let lastRead = stats.lastReadDate {
-                        infoLabel(icon: "book.fill", text: "Last: \(formatDate(lastRead))")
-                    }
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(themeManager.currentTheme.accent)
+                        .frame(
+                            width: geometry.size.width * (stats.completionPercentage / 100),
+                            height: 6
+                        )
                 }
             }
-        }
-    }
+            .frame(height: 6)
 
-    private func infoLabel(icon: String, text: String) -> some View {
-        HStack(spacing: 4) {
-            Image(systemName: icon)
-                .font(.caption2)
-            ThemedText.caption(text)
-        }
-        .foregroundColor(themeManager.currentTheme.accentSecondary)
-        .opacity(0.8)
-    }
-
-    private var quickActionsCard: some View {
-        CardView {
-            VStack(spacing: 12) {
-                ThemedText.caption("QUICK ACTIONS")
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .opacity(0.7)
-
-                HStack(spacing: 12) {
-                    // Go to First Unread
-                    ActionButton(
-                        icon: "arrow.forward.to.line",
-                        title: "First Unread",
-                        color: themeManager.currentTheme.accentSecondary,
-                        disabled: allVersesRead
-                    ) {
-                        goToFirstUnread()
-                    }
-
-                    // Mark All Read
-                    ActionButton(
-                        icon: "checkmark.circle.fill",
-                        title: "Mark All Read",
-                        color: themeManager.currentTheme.accentPrimary,
-                        disabled: allVersesRead
-                    ) {
-                        markAllAsRead = true
-                        showingMarkAllConfirmation = true
-                    }
-
-                    // Mark All Unread
-                    ActionButton(
-                        icon: "circle",
-                        title: "Clear All",
-                        color: .red,
-                        disabled: verseStates.values.filter({ $0 }).isEmpty
-                    ) {
-                        markAllAsRead = false
-                        showingMarkAllConfirmation = true
-                    }
+            // Date info
+            HStack(spacing: Spacing.sm) {
+                if let firstRead = stats.firstReadDate {
+                    dateLabel(prefix: "Started", date: firstRead)
                 }
+                if let lastRead = stats.lastReadDate {
+                    dateLabel(prefix: "Last read", date: lastRead)
+                }
+                Spacer()
             }
         }
+        .padding(Spacing.sm)
+        .background(themeManager.currentTheme.cardColor)
+        .clipShape(RoundedRectangle(cornerRadius: BorderRadius.lg))
+        .overlay(
+            RoundedRectangle(cornerRadius: BorderRadius.lg)
+                .stroke(themeManager.currentTheme.borderColor, lineWidth: 1)
+        )
     }
 
-    private var verseGridCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            ThemedText("Verses", style: .heading)
-                .foregroundColor(themeManager.currentTheme.textColor)
-                .padding(.horizontal, 4)
+    private func dateLabel(prefix: String, date: Date) -> some View {
+        Text("\(prefix): \(formatDate(date))")
+            .font(.system(size: 11))
+            .foregroundColor(themeManager.currentTheme.textTertiary)
+    }
 
-            CardView {
-                ScrollViewReader { proxy in
-                    LazyVGrid(columns: columns, spacing: 8) {
-                        ForEach(1...surah.numberOfVerses, id: \.self) { verseNumber in
-                            VerseGridCell(
-                                verseNumber: verseNumber,
-                                isRead: verseStates[verseNumber] ?? false,
-                                onToggle: {
-                                    toggleVerse(verseNumber)
-                                }
-                            )
-                            .id(verseNumber)  // Add ID for scrolling
+    // MARK: - Verse Grid
+
+    private var verseGrid: some View {
+        VStack(alignment: .leading, spacing: Spacing.xs) {
+            Text("Verses")
+                .font(.system(size: FontSizes.lg, weight: .semibold))
+                .foregroundColor(themeManager.currentTheme.textPrimary)
+
+            ScrollViewReader { proxy in
+                LazyVGrid(columns: columns, spacing: 10) {
+                    ForEach(1...surah.numberOfVerses, id: \.self) { verseNumber in
+                        verseCell(verseNumber)
+                            .id(verseNumber)
+                    }
+                }
+                .padding(Spacing.sm)
+                .background(themeManager.currentTheme.cardColor)
+                .clipShape(RoundedRectangle(cornerRadius: BorderRadius.xl))
+                .overlay(
+                    RoundedRectangle(cornerRadius: BorderRadius.xl)
+                        .stroke(themeManager.currentTheme.borderColor, lineWidth: 1)
+                )
+                .onChange(of: selectedVerseToScroll) { _, newValue in
+                    if let verse = newValue {
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            proxy.scrollTo(verse, anchor: .center)
                         }
-                    }
-                    .padding(8)
-                    .onChange(of: selectedVerseToScroll) { _, newValue in
-                        if let verse = newValue {
-                            withAnimation(.easeInOut(duration: 0.3)) {
-                                proxy.scrollTo(verse, anchor: .center)
-                            }
-                            // Reset after scroll
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                                selectedVerseToScroll = nil
-                            }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                            selectedVerseToScroll = nil
                         }
                     }
                 }
             }
         }
+    }
+
+    private func verseCell(_ verseNumber: Int) -> some View {
+        let isRead = verseStates[verseNumber] ?? false
+
+        return Button {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                toggleVerse(verseNumber)
+            }
+        } label: {
+            ZStack {
+                RoundedRectangle(cornerRadius: BorderRadius.md)
+                    .fill(
+                        isRead
+                            ? themeManager.currentTheme.accent
+                            : themeManager.currentTheme.textPrimary.opacity(0.06)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: BorderRadius.md)
+                            .stroke(
+                                isRead
+                                    ? themeManager.currentTheme.accent.opacity(0.6)
+                                    : themeManager.currentTheme.borderColor,
+                                lineWidth: 0.5
+                            )
+                    )
+
+                VStack(spacing: 2) {
+                    Text("\(verseNumber)")
+                        .font(.system(size: FontSizes.base, weight: .medium))
+                        .foregroundColor(
+                            isRead
+                                ? .white
+                                : themeManager.currentTheme.textPrimary
+                        )
+
+                    if isRead {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundColor(.white.opacity(0.8))
+                    }
+                }
+            }
+            .aspectRatio(1, contentMode: .fit)
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Helper Methods
 
     private func loadVerseStates() {
         var states: [Int: Bool] = [:]
-
         for verseNumber in 1...surah.numberOfVerses {
             states[verseNumber] = quranService.isVerseRead(
                 surahNumber: surah.id,
                 verseNumber: verseNumber
             )
         }
-
         verseStates = states
     }
 
     private func toggleVerse(_ verseNumber: Int) {
-        // Optimistic update
         verseStates[verseNumber]?.toggle()
-
-        // Backend update
         quranService.toggleVerseReadStatus(
             surahNumber: surah.id,
             verseNumber: verseNumber
         )
-
-        // Refresh ViewModel
         viewModel.loadProgress()
     }
 
@@ -339,16 +320,12 @@ struct VerseProgressDetailView: View {
                 )
             }
         }
-
-        // Refresh ViewModel
         viewModel.loadProgress()
     }
 
     private func goToFirstUnread() {
-        // Find first unread verse
         for verseNumber in 1...surah.numberOfVerses {
             if !(verseStates[verseNumber] ?? false) {
-                // Scroll to this verse in the grid
                 selectedVerseToScroll = verseNumber
                 return
             }
@@ -356,11 +333,11 @@ struct VerseProgressDetailView: View {
     }
 
     private var allVersesRead: Bool {
-        return verseStates.values.filter({ !$0 }).isEmpty && !verseStates.isEmpty
+        verseStates.values.filter({ !$0 }).isEmpty && !verseStates.isEmpty
     }
 
     private func getSurahStats() -> SurahProgressStats {
-        return quranService.getSurahStatistics(
+        quranService.getSurahStatistics(
             surahNumber: surah.id,
             totalVerses: surah.numberOfVerses
         )
@@ -377,126 +354,13 @@ struct VerseProgressDetailView: View {
     }
 }
 
-// MARK: - Supporting Components
-
-struct VerseGridCell: View {
-    let verseNumber: Int
-    let isRead: Bool
-    let onToggle: () -> Void
-
-    @Environment(ThemeManager.self) var themeManager: ThemeManager
-    @State private var isPressed = false
-
-    var body: some View {
-        Button(action: {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                onToggle()
-            }
-        }) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(
-                        isRead
-                            ? LinearGradient(
-                                colors: [themeManager.currentTheme.accentPrimary, themeManager.currentTheme.accentSecondary],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                            : LinearGradient(
-                                colors: [
-                                    themeManager.currentTheme.textColor.opacity(0.1),
-                                    themeManager.currentTheme.textColor.opacity(0.05)
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8)
-                            .stroke(
-                                isRead
-                                    ? themeManager.currentTheme.accentPrimary.opacity(0.5)
-                                    : themeManager.currentTheme.borderColor,
-                                lineWidth: 1
-                            )
-                    )
-
-                VStack(spacing: 4) {
-                    Text("\(verseNumber)")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(
-                            isRead
-                                ? .white
-                                : themeManager.currentTheme.textColor
-                        )
-
-                    if isRead {
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundColor(.white)
-                    }
-                }
-            }
-            .aspectRatio(1, contentMode: .fit)
-            .scaleEffect(isPressed ? 0.9 : 1.0)
-        }
-        .buttonStyle(.plain)
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 0)
-                .onChanged { _ in
-                    isPressed = true
-                }
-                .onEnded { _ in
-                    isPressed = false
-                }
-        )
-    }
-}
-
-struct ActionButton: View {
-    let icon: String
-    let title: String
-    let color: Color
-    let disabled: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: 8) {
-                Image(systemName: icon)
-                    .font(.system(size: 20))
-
-                Text(title)
-                    .font(.caption)
-                    .fontWeight(.medium)
-            }
-            .foregroundColor(disabled ? .secondary : color)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
-            .background(
-                (disabled ? Color.secondary : color).opacity(0.1)
-            )
-            .cornerRadius(8)
-            .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(
-                        (disabled ? Color.secondary : color).opacity(0.3),
-                        lineWidth: 1
-                    )
-            )
-        }
-        .disabled(disabled)
-        .opacity(disabled ? 0.5 : 1.0)
-    }
-}
-
 // MARK: - Preview
 
 #Preview {
     VerseProgressDetailView(
         surah: Surah(
             id: 1,
-            name: "الفاتحة",
+            name: "\u{0627}\u{0644}\u{0641}\u{0627}\u{062A}\u{062D}\u{0629}",
             englishName: "Al-Fatihah",
             englishNameTranslation: "The Opening",
             numberOfVerses: 7,

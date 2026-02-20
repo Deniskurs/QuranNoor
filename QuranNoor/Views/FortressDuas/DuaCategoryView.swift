@@ -102,11 +102,11 @@ struct FortressDuaDetailCard: View {
     let onTap: () -> Void
 
     private var isFavorite: Bool {
-        duaService.progress.isFavorite(duaId: dua.id)
+        duaService.isFavorite(dua: dua)
     }
 
     private var usageCount: Int {
-        duaService.progress.getUsageCount(duaId: dua.id)
+        duaService.progress.getUsageCount(duaKey: DuaProgress.stableKey(for: dua))
     }
 
     var body: some View {
@@ -128,7 +128,7 @@ struct FortressDuaDetailCard: View {
 
                     Button {
                         withAnimation {
-                            duaService.toggleFavorite(duaId: dua.id)
+                            duaService.toggleFavorite(dua: dua)
                         }
                     } label: {
                         Image(systemName: isFavorite ? "heart.fill" : "heart")

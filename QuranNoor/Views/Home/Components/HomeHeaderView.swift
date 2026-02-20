@@ -12,6 +12,7 @@ import SwiftUI
 private let homeHeaderDateFormatter: DateFormatter = {
     let f = DateFormatter()
     f.dateFormat = "EEEE, MMMM d"
+    f.locale = .autoupdatingCurrent  // Handle RTL languages properly
     return f
 }()
 
@@ -42,7 +43,7 @@ struct HomeHeaderView: View {
                     if let hijri = hijriDate {
                         Image(systemName: "calendar.badge.clock")
                             .font(.system(size: 14))
-                            .foregroundColor(themeManager.currentTheme.accentSecondary)
+                            .foregroundColor(themeManager.currentTheme.accentMuted)
 
                         Text(hijri.formattedDate)
                             .font(.system(size: 15, weight: .medium))
@@ -50,7 +51,7 @@ struct HomeHeaderView: View {
                     } else {
                         Image(systemName: "calendar")
                             .font(.system(size: 14))
-                            .foregroundColor(themeManager.currentTheme.accentSecondary)
+                            .foregroundColor(themeManager.currentTheme.accentMuted)
 
                         Text("Loading...")
                             .font(.system(size: 15, weight: .medium))
@@ -76,17 +77,17 @@ struct HomeHeaderView: View {
                     HStack(spacing: Spacing.xxs) { // Enhanced from 6 to 8
                         Image(systemName: "star.fill")
                             .font(.system(size: 11)) // Enhanced from caption2
-                            .foregroundColor(themeManager.currentTheme.accentSecondary)
+                            .foregroundColor(themeManager.currentTheme.accentMuted)
 
                         Text(holiday)
                             .font(.system(size: 13, weight: .semibold)) // Enhanced from caption + medium
-                            .foregroundColor(themeManager.currentTheme.accentSecondary)
+                            .foregroundColor(themeManager.currentTheme.accentMuted)
                     }
                     .padding(.horizontal, Spacing.sm) // Enhanced from 12 to 16
                     .padding(.vertical, Spacing.xxs) // Enhanced from 6 to 8
                     .background(
                         Capsule() // Changed from cornerRadius for sleeker look
-                            .fill(themeManager.currentTheme.accentSecondary.opacity(0.15))
+                            .fill(themeManager.currentTheme.accentMuted.opacity(0.15))
                     )
                 }
                 .padding(.top, Spacing.xxs) // Add top spacing

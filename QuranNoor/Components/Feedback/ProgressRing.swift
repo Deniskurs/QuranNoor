@@ -24,7 +24,7 @@ struct ProgressRing: View {
         lineWidth: CGFloat = 8,
         size: CGFloat = 80,
         showPercentage: Bool = false,
-        color: Color = AppColors.primary.gold
+        color: Color = .accentColor
     ) {
         self.progress = min(max(progress, 0), 1) // Clamp between 0 and 1
         self.lineWidth = lineWidth
@@ -69,6 +69,9 @@ struct ProgressRing: View {
             }
         }
         .frame(width: size, height: size)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Progress")
+        .accessibilityValue("\(Int(animatedProgress * 100)) percent")
         .onAppear {
             animatedProgress = progress
         }
@@ -83,6 +86,7 @@ struct ProgressRing: View {
 // MARK: - Prayer Time Progress Ring
 struct PrayerProgressRing: View {
     // MARK: - Properties
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
     let timeRemaining: TimeInterval // seconds until next prayer
     let totalDuration: TimeInterval // total seconds between prayers
     let size: CGFloat
@@ -97,17 +101,17 @@ struct PrayerProgressRing: View {
                 lineWidth: 6,
                 size: size,
                 showPercentage: false,
-                color: AppColors.primary.green
+                color: themeManager.currentTheme.accent
             )
 
             // Time remaining in center
             VStack(spacing: 0) {
                 Text(formattedTime)
                     .font(.system(size: size * 0.18, weight: .bold))
-                    .foregroundColor(AppColors.primary.green)
+                    .foregroundColor(themeManager.currentTheme.accent)
                 Text("left")
                     .font(.system(size: size * 0.1, weight: .medium))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(themeManager.currentTheme.textSecondary)
             }
         }
     }
@@ -131,20 +135,21 @@ struct PrayerProgressRing: View {
 // MARK: - Quran Reading Progress Ring
 struct QuranProgressRing: View {
     // MARK: - Properties
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
     let versesRead: Int
     let totalVerses: Int
     let size: CGFloat
 
     // MARK: - Body
     var body: some View {
-        let progress = Double(versesRead) / Double(totalVerses)
+        let progress = totalVerses > 0 ? Double(versesRead) / Double(totalVerses) : 0.0
 
         ProgressRing(
             progress: progress,
             lineWidth: 8,
             size: size,
             showPercentage: true,
-            color: AppColors.primary.gold
+            color: themeManager.currentTheme.accentMuted
         )
     }
 }
@@ -186,21 +191,21 @@ struct QuranProgressRing: View {
                 progress: 0.6,
                 lineWidth: 4,
                 size: 50,
-                color: AppColors.primary.green
+                color: ThemeMode.light.accent
             )
 
             ProgressRing(
                 progress: 0.6,
                 lineWidth: 10,
                 size: 100,
-                color: ThemeMode.light.featureAccent
+                color: ThemeMode.light.accent
             )
 
             ProgressRing(
                 progress: 0.6,
                 lineWidth: 12,
                 size: 120,
-                color: AppColors.primary.gold
+                color: ThemeMode.light.accentMuted
             )
         }
     }

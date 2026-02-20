@@ -2,11 +2,15 @@
 //  ThemeManager.swift
 //  QuraanNoor
 //
-//  Manages app theme state
+//  Manages app theme state and provides convenience accessors
+//  for the simplified color system.
 //
 
 import SwiftUI
 import Observation
+
+// TODO: L13 - Create reusable components: SectionHeader, Badge/Chip, PressableButtonStyle.
+// These patterns are repeated across multiple views and should be extracted into Components/.
 
 // MARK: - Theme Manager
 @Observable
@@ -24,59 +28,150 @@ class ThemeManager {
         }
     }
 
-    // MARK: - Computed Properties
+    // =========================================================================
+    // MARK: - Core Convenience Accessors (New Color System)
+    // =========================================================================
+
     var colorScheme: ColorScheme? {
         currentTheme.colorScheme
     }
 
-    var backgroundColor: Color {
-        currentTheme.backgroundColor
+    // -- Accent Colors --
+
+    /// Primary brand accent for the current theme
+    var accent: Color {
+        currentTheme.accent
     }
 
-    var textColor: Color {
-        currentTheme.textColor
+    /// Muted accent for secondary/decorative elements
+    var accentMuted: Color {
+        currentTheme.accentMuted
+    }
+
+    /// Subtle accent tint for background washes
+    var accentTint: Color {
+        currentTheme.accentTint
+    }
+
+    // -- Surface Colors --
+
+    var backgroundColor: Color {
+        currentTheme.backgroundColor
     }
 
     var cardColor: Color {
         currentTheme.cardColor
     }
 
+    var elevatedCardColor: Color {
+        currentTheme.elevatedCardColor
+    }
+
     var borderColor: Color {
         currentTheme.borderColor
     }
 
-    // MARK: - Additional Computed Properties
+    // -- Text Colors --
+
+    var textPrimary: Color {
+        currentTheme.textPrimary
+    }
+
+    var textSecondary: Color {
+        currentTheme.textSecondary
+    }
+
+    var textTertiary: Color {
+        currentTheme.textTertiary
+    }
+
+    var textDisabled: Color {
+        currentTheme.textDisabled
+    }
+
+    // -- Semantic Colors --
+
+    var semanticSuccess: Color {
+        currentTheme.semanticSuccess
+    }
+
+    var semanticWarning: Color {
+        currentTheme.semanticWarning
+    }
+
+    var semanticError: Color {
+        currentTheme.semanticError
+    }
+
+    var semanticInfo: Color {
+        currentTheme.semanticInfo
+    }
+
+    // =========================================================================
+    // MARK: - Deprecated Convenience Accessors (Backward Compatibility)
+    // =========================================================================
+
+    /// Use `textPrimary` instead.
+    @available(*, deprecated, renamed: "textPrimary",
+               message: "Use 'textPrimary' instead of 'textColor'.")
+    var textColor: Color {
+        currentTheme.textPrimary
+    }
+
+    /// Use `textPrimary` instead.
+    @available(*, deprecated, renamed: "textPrimary",
+               message: "Use 'textPrimary' instead of 'primaryTextColor'.")
     var primaryTextColor: Color {
         currentTheme.textPrimary
     }
 
+    /// Use `textSecondary` instead.
+    @available(*, deprecated, renamed: "textSecondary",
+               message: "Use 'textSecondary' instead of 'secondaryTextColor'.")
     var secondaryTextColor: Color {
         currentTheme.textSecondary
     }
 
+    /// Use `accent` instead.
+    @available(*, deprecated, renamed: "accent",
+               message: "Use 'accent' instead of 'accentColor'.")
     var accentColor: Color {
-        currentTheme.accentPrimary
+        currentTheme.accent
     }
 
+    /// Use `cardColor` instead.
+    @available(*, deprecated, renamed: "cardColor",
+               message: "Use 'cardColor' instead of 'cardBackground'.")
     var cardBackground: Color {
         currentTheme.cardColor
     }
 
-    // MARK: - Feature Colors (Theme-Aware)
+    /// Use `accent` instead.
+    @available(*, deprecated, renamed: "accent",
+               message: "Use 'accent' instead of 'featureAccent'.")
     var featureAccent: Color {
-        currentTheme.featureAccent
+        currentTheme.accent
     }
 
+    /// Use `accentMuted` instead.
+    @available(*, deprecated, renamed: "accentMuted",
+               message: "Use 'accentMuted' instead of 'featureAccentSecondary'.")
     var featureAccentSecondary: Color {
-        currentTheme.featureAccentSecondary
+        currentTheme.accentMuted
     }
 
+    /// Use `accentTint` instead.
+    @available(*, deprecated, renamed: "accentTint",
+               message: "Use 'accentTint' instead of 'featureBackgroundTint'.")
     var featureBackgroundTint: Color {
-        currentTheme.featureBackgroundTint
+        currentTheme.accentTint
     }
 
+    /// Deprecated. Define gradients in individual views instead.
+    @available(*, deprecated,
+               message: "Define gradients in individual views. This returns a basic fallback.")
     var featureGradient: [Color] {
-        currentTheme.featureGradient
+        [currentTheme.accent.opacity(0.12), currentTheme.accentMuted.opacity(0.08)]
     }
 
     // MARK: - Initialization
@@ -99,11 +194,7 @@ class ThemeManager {
     }
 
     private func saveTheme() {
-        let theme = currentTheme.rawValue
-        // Perform UserDefaults write on background queue to avoid blocking UI
-        Task.detached(priority: .utility) {
-            UserDefaults.standard.set(theme, forKey: "themeMode")
-        }
+        UserDefaults.standard.set(currentTheme.rawValue, forKey: "themeMode")
     }
 }
 

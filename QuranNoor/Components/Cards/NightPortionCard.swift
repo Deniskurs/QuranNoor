@@ -25,16 +25,16 @@ struct NightPortionCard: View {
 
     // MARK: - Body
     var body: some View {
-        LiquidGlassCardView(showPattern: true, intensity: .moderate) {
+        CardView(showPattern: true, intensity: .moderate) {
             VStack(spacing: 16) {
                 // Header
                 HStack {
                     Image(systemName: "moon.stars.fill")
-                        .font(.system(size: 24))
-                        .foregroundColor(AppColors.primary.gold)
+                        .font(.title2)
+                        .foregroundColor(themeManager.currentTheme.accentMuted)
 
                     ThemedText("Night Portions", style: .heading)
-                        .foregroundColor(AppColors.primary.gold)
+                        .foregroundColor(themeManager.currentTheme.accentMuted)
 
                     Spacer()
                 }
@@ -54,7 +54,7 @@ struct NightPortionCard: View {
                             icon: "moon.stars",
                             label: "Islamic Midnight",
                             time: midnight,
-                            color: themeManager.currentTheme.featureAccent
+                            color: themeManager.currentTheme.accent
                         )
                     }
 
@@ -63,12 +63,12 @@ struct NightPortionCard: View {
                             icon: "sparkles",
                             label: "Last Third Begins",
                             time: lastThird,
-                            color: AppColors.primary.green,
+                            color: themeManager.currentTheme.accent,
                             highlighted: true
                         )
 
                         ThemedText.caption("The most virtuous time for Tahajjud prayer")
-                            .foregroundColor(AppColors.primary.green)
+                            .foregroundColor(themeManager.currentTheme.accent)
                             .padding(.leading, 44)
                             .opacity(0.8)
                     }
@@ -80,12 +80,10 @@ struct NightPortionCard: View {
     // MARK: - Timeline View
     private var nightTimeline: some View {
         GeometryReader { geometry in
-            let width = geometry.size.width
-
             ZStack(alignment: .leading) {
                 // Background bar
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(themeManager.currentTheme.textColor.opacity(0.1))
+                    .fill(themeManager.currentTheme.textPrimary.opacity(0.1))
                     .frame(height: 40)
 
                 // Night duration gradient
@@ -93,9 +91,9 @@ struct NightPortionCard: View {
                     .fill(
                         LinearGradient(
                             colors: [
-                                AppColors.primary.midnight.opacity(0.5),
-                                themeManager.currentTheme.featureAccent.opacity(0.3),
-                                AppColors.primary.green.opacity(0.5)
+                                themeManager.currentTheme.textPrimary.opacity(0.5),
+                                themeManager.currentTheme.accent.opacity(0.3),
+                                themeManager.currentTheme.accent.opacity(0.5)
                             ],
                             startPoint: .leading,
                             endPoint: .trailing
@@ -106,39 +104,39 @@ struct NightPortionCard: View {
                 // Markers
                 HStack(spacing: 0) {
                     // Sunset marker
-                    marker(label: "Sunset", position: 0, width: width)
+                    marker(label: "Sunset")
 
                     Spacer()
 
                     // Midnight marker (if available)
                     if midnight != nil {
-                        marker(label: "Midnight", position: 0.5, width: width)
+                        marker(label: "Midnight")
                         Spacer()
                     }
 
                     // Last third marker (if available)
                     if lastThird != nil {
-                        marker(label: "Last 1/3", position: lastThirdPosition, width: width, highlight: true)
+                        marker(label: "Last 1/3", highlight: true)
                         Spacer()
                     }
 
                     // Sunrise marker
-                    marker(label: "Sunrise", position: 1, width: width)
+                    marker(label: "Sunrise")
                 }
             }
         }
         .frame(height: 60)
     }
 
-    private func marker(label: String, position: CGFloat, width: CGFloat, highlight: Bool = false) -> some View {
+    private func marker(label: String, highlight: Bool = false) -> some View {
         VStack(spacing: 4) {
             Circle()
-                .fill(highlight ? AppColors.primary.green : themeManager.currentTheme.textColor)
+                .fill(highlight ? themeManager.currentTheme.accent : themeManager.currentTheme.textPrimary)
                 .frame(width: 8, height: 8)
 
             Text(label)
-                .font(.system(size: 9, weight: highlight ? .bold : .regular))
-                .foregroundColor(highlight ? AppColors.primary.green : themeManager.currentTheme.textColor)
+                .font(.caption2.weight(highlight ? .bold : .regular))
+                .foregroundColor(highlight ? themeManager.currentTheme.accent : themeManager.currentTheme.textPrimary)
                 .opacity(highlight ? 1.0 : 0.7)
         }
     }
@@ -152,17 +150,17 @@ struct NightPortionCard: View {
     ) -> some View {
         HStack(spacing: 12) {
             Image(systemName: icon)
-                .font(.system(size: 18))
+                .font(.body)
                 .foregroundColor(color)
                 .frame(width: 28)
 
             ThemedText.body(label)
-                .foregroundColor(highlighted ? color : themeManager.currentTheme.textColor)
+                .foregroundColor(highlighted ? color : themeManager.currentTheme.textPrimary)
 
             Spacer()
 
             Text(formatTime(time))
-                .font(.system(size: 16, weight: highlighted ? .semibold : .regular))
+                .font(.body.weight(highlighted ? .semibold : .regular))
                 .foregroundColor(color)
         }
         .padding(.vertical, 4)
@@ -186,22 +184,23 @@ struct NightPortionCard: View {
 
 // MARK: - Compact Night Portion Info
 struct CompactNightPortionInfo: View {
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
     let lastThird: Date?
 
     var body: some View {
         if let lastThird = lastThird {
             HStack(spacing: 12) {
                 Image(systemName: "sparkles")
-                    .font(.system(size: 16))
-                    .foregroundColor(AppColors.primary.green)
+                    .font(.body)
+                    .foregroundColor(themeManager.currentTheme.accent)
 
                 VStack(alignment: .leading, spacing: 2) {
                     ThemedText.caption("Best time for Tahajjud")
                         .opacity(0.7)
 
                     Text("Begins at \(formatTime(lastThird))")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(AppColors.primary.green)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(themeManager.currentTheme.accent)
                 }
 
                 Spacer()
@@ -209,7 +208,7 @@ struct CompactNightPortionInfo: View {
             .padding()
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(AppColors.primary.green.opacity(0.1))
+                    .fill(themeManager.currentTheme.accent.opacity(0.1))
             )
         }
     }

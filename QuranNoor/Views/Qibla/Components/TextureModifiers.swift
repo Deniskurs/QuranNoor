@@ -88,9 +88,9 @@ struct MeshGradientBackgroundModifier: ViewModifier {
                                 .init(0, 0.5), .init(1, 1)
                             ],
                             colors: [
-                                themeManager.currentTheme.accentPrimary.opacity(0.1),
-                                themeManager.currentTheme.accentSecondary.opacity(0.05),
-                                themeManager.currentTheme.accentInteractive.opacity(0.05),
+                                themeManager.currentTheme.accent.opacity(0.1),
+                                themeManager.currentTheme.accentMuted.opacity(0.05),
+                                themeManager.currentTheme.accent.opacity(0.05),
                                 themeManager.currentTheme.cardColor.opacity(0.5)
                             ]
                         )
@@ -99,7 +99,7 @@ struct MeshGradientBackgroundModifier: ViewModifier {
                         // Fallback for iOS 17
                         RadialGradient(
                             colors: [
-                                themeManager.currentTheme.accentPrimary.opacity(0.08),
+                                themeManager.currentTheme.accent.opacity(0.08),
                                 themeManager.currentTheme.cardColor.opacity(0.5)
                             ],
                             center: .topLeading,

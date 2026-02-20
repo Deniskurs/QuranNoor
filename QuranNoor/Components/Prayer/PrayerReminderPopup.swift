@@ -19,6 +19,7 @@ struct PrayerReminderPopup: View {
     @Environment(ThemeManager.self) var themeManager: ThemeManager
     @State private var scale: CGFloat = 0.8
     @State private var opacity: Double = 0
+    @State private var dismissTask: Task<Void, Never>?
 
     // MARK: - Body
 
@@ -38,23 +39,23 @@ struct PrayerReminderPopup: View {
                     // Prayer icon in circle
                     ZStack {
                         Circle()
-                            .fill(themeManager.currentTheme.accentPrimary.opacity(0.15))
+                            .fill(themeManager.currentTheme.accent.opacity(0.15))
                             .frame(width: 80, height: 80)
 
                         Image(systemName: prayer.name.icon)
-                            .font(.system(size: 36, weight: .medium))
-                            .foregroundColor(themeManager.currentTheme.accentPrimary)
+                            .font(.largeTitle.weight(.medium))
+                            .foregroundColor(themeManager.currentTheme.accent)
                     }
 
                     // Prayer name
                     Text(prayer.name.displayName)
-                        .font(.system(size: 28, weight: .bold))
-                        .foregroundColor(themeManager.currentTheme.textColor)
+                        .font(.title.weight(.bold))
+                        .foregroundColor(themeManager.currentTheme.textPrimary)
 
                     // Prayer time
                     Text(prayer.displayTime)
-                        .font(.system(size: 20, weight: .regular, design: .rounded))
-                        .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
+                        .font(.title3)
+                        .foregroundColor(themeManager.currentTheme.textPrimary.opacity(0.7))
                 }
                 .padding(.top, 32)
                 .padding(.horizontal, 24)
@@ -66,12 +67,12 @@ struct PrayerReminderPopup: View {
                 // Question text
                 VStack(spacing: 12) {
                     Text("Have you prayed?")
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundColor(themeManager.currentTheme.textColor)
+                        .font(.title3.weight(.semibold))
+                        .foregroundColor(themeManager.currentTheme.textPrimary)
 
                     Text("May Allah accept your prayers")
-                        .font(.system(size: 14, weight: .regular))
-                        .foregroundColor(themeManager.currentTheme.accentInteractive)
+                        .font(.subheadline)
+                        .foregroundColor(themeManager.currentTheme.accent)
                         .italic()
                 }
                 .padding(.horizontal, 24)
@@ -85,13 +86,13 @@ struct PrayerReminderPopup: View {
                         dismiss()
                     } label: {
                         Text("Not Yet")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(themeManager.currentTheme.textColor.opacity(0.6))
+                            .font(.body.weight(.semibold))
+                            .foregroundColor(themeManager.currentTheme.textPrimary.opacity(0.6))
                             .frame(maxWidth: .infinity)
                             .frame(height: 50)
                             .background(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .stroke(themeManager.currentTheme.textColor.opacity(0.2), lineWidth: 1.5)
+                                    .stroke(themeManager.currentTheme.textPrimary.opacity(0.2), lineWidth: 1.5)
                             )
                     }
 
@@ -104,23 +105,25 @@ struct PrayerReminderPopup: View {
                             onComplete()
                         }
 
-                        // Dismiss after short delay to show checkmark
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        // Dismiss after short delay to show checkmark using structured concurrency
+                        dismissTask = Task { @MainActor in
+                            try? await Task.sleep(for: .seconds(0.3))
+                            guard !Task.isCancelled else { return }
                             dismiss()
                         }
                     } label: {
                         HStack(spacing: 8) {
                             Image(systemName: "checkmark.circle.fill")
-                                .font(.system(size: 18))
+                                .font(.body)
                             Text("Yes, Alhamdulillah")
-                                .font(.system(size: 16, weight: .semibold))
+                                .font(.body.weight(.semibold))
                         }
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
                         .frame(height: 50)
                         .background(
                             RoundedRectangle(cornerRadius: 12)
-                                .fill(themeManager.currentTheme.accentPrimary)
+                                .fill(themeManager.currentTheme.accent)
                         )
                     }
                 }
@@ -151,6 +154,9 @@ struct PrayerReminderPopup: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Prayer reminder for \(prayer.name.displayName)")
         .accessibilityHint("Have you prayed \(prayer.name.displayName)?")
+        .onDisappear {
+            dismissTask?.cancel()
+        }
     }
 
     // MARK: - Helper Methods
@@ -161,7 +167,9 @@ struct PrayerReminderPopup: View {
             opacity = 0
         }
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(0.2))
+            guard !Task.isCancelled else { return }
             onDismiss()
         }
     }

@@ -17,6 +17,11 @@ struct TasbihCounterView: View {
     @State private var showingHistory = false
     @State private var showingSettings = false
 
+    // Toast state
+    @State private var showToast = false
+    @State private var toastMessage = ""
+    @State private var toastStyle: ToastStyle = .spiritual
+
     private var currentCount: Int {
         tasbihService.currentSession?.currentCount ?? 0
     }
@@ -38,7 +43,7 @@ struct TasbihCounterView: View {
             ZStack {
                 // Background gradient
                 LinearGradient(
-                    colors: themeManager.currentTheme.featureGradient,
+                    colors: [themeManager.currentTheme.accent.opacity(0.12), themeManager.currentTheme.accentMuted.opacity(0.08)],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
@@ -114,6 +119,7 @@ struct TasbihCounterView: View {
                     startNewSession()
                 }
             }
+            .toast(message: toastMessage, style: toastStyle, isPresented: $showToast)
         }
     }
 
@@ -125,7 +131,7 @@ struct TasbihCounterView: View {
                 icon: "calendar",
                 title: "Today",
                 value: "\(tasbihService.statistics.todayCount)",
-                color: themeManager.currentTheme.featureAccent
+                color: themeManager.currentTheme.accent
             )
 
             StatCard(
@@ -224,7 +230,7 @@ struct TasbihCounterView: View {
                     .trim(from: 0, to: progress)
                     .stroke(
                         .linearGradient(
-                            colors: isCompleted ? [.green, .green] : [themeManager.currentTheme.featureAccent, themeManager.currentTheme.featureAccentSecondary],
+                            colors: isCompleted ? [.green, .green] : [themeManager.currentTheme.accent, themeManager.currentTheme.accentMuted],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         ),
@@ -241,7 +247,7 @@ struct TasbihCounterView: View {
                         .contentTransition(.numericText())
                         .foregroundStyle(
                             .linearGradient(
-                                colors: isCompleted ? [.green, .green] : [themeManager.currentTheme.featureAccent, themeManager.currentTheme.featureAccentSecondary],
+                                colors: isCompleted ? [.green, .green] : [themeManager.currentTheme.accent, themeManager.currentTheme.accentMuted],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
@@ -385,8 +391,16 @@ struct TasbihCounterView: View {
     // MARK: - Actions
 
     private func incrementCounter() {
+        let wasCompleted = isCompleted
         withAnimation(.spring(duration: 0.3)) {
             tasbihService.increment()
+        }
+
+        // Show toast when target is just reached
+        if !wasCompleted && isCompleted {
+            toastMessage = "Target reached! Subhan'Allah"
+            toastStyle = .spiritual
+            showToast = true
         }
     }
 

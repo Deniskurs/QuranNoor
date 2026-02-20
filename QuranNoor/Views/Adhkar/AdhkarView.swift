@@ -124,7 +124,7 @@ struct AdhkarView: View {
                             Circle()
                                 .fill(
                                     .linearGradient(
-                                        colors: [themeManager.currentTheme.featureAccent, themeManager.currentTheme.featureAccentSecondary],
+                                        colors: [themeManager.currentTheme.accent, themeManager.currentTheme.accentMuted],
                                         startPoint: .topLeading,
                                         endPoint: .bottomTrailing
                                     )
@@ -381,7 +381,7 @@ struct AdhkarCategoryCard: View {
         case .afterPrayer:
             return .green
         case .beforeSleep:
-            return themeManager.currentTheme.featureAccent
+            return themeManager.currentTheme.accent
         case .waking:
             return .yellow
         case .general:

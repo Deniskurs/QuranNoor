@@ -7,7 +7,7 @@
 //
 
 import Foundation
-import Combine
+
 import Observation
 
 // MARK: - Calculation Source
@@ -156,7 +156,6 @@ final class PrayerTimeService {
                 todayPrayerTimes = cached
             }
             lastCalculationSource = .cache
-            print("📦 Using cached prayer times from \(lastCalculationSource.displayName) source")
             return cached
         }
 
@@ -204,12 +203,10 @@ final class PrayerTimeService {
             // Mark as API source and disable offline mode
             lastCalculationSource = .api
             isUsingOfflineMode = false
-            print("✅ Prayer times calculated from \(lastCalculationSource.displayName) source")
 
             return prayerTimes
 
-        } catch let error as DecodingError {
-            print("❌ API Decoding error: \(error)")
+        } catch is DecodingError {
             // Fallback to offline calculation
             return try await fallbackToOfflineCalculation(
                 coordinates: coordinates,
@@ -218,7 +215,6 @@ final class PrayerTimeService {
                 madhab: madhab
             )
         } catch {
-            print("❌ API Network error: \(error)")
             // Fallback to offline calculation
             return try await fallbackToOfflineCalculation(
                 coordinates: coordinates,
@@ -238,8 +234,6 @@ final class PrayerTimeService {
         method: CalculationMethod,
         madhab: Madhab
     ) async throws -> DailyPrayerTimes {
-        print("🔄 Attempting offline prayer time calculation...")
-
         do {
             let prayerTimes = try offlineService.calculateOfflinePrayerTimes(
                 coordinates: coordinates,
@@ -259,12 +253,10 @@ final class PrayerTimeService {
             // Mark as offline source and enable offline mode
             lastCalculationSource = .offline
             isUsingOfflineMode = true
-            print("✅ Prayer times calculated from \(lastCalculationSource.displayName) source")
 
             return prayerTimes
 
         } catch {
-            print("❌ Offline calculation also failed: \(error)")
             throw PrayerTimeError.offlineFallbackFailed
         }
     }

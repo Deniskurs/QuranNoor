@@ -68,7 +68,6 @@ final class NotificationPreferencesService {
     func setNotificationEnabled(for prayer: PrayerName, enabled: Bool) {
         prayerNotificationsEnabled[prayer] = enabled
         savePreferences()
-        print("🔔 \(prayer.displayName) notifications: \(enabled ? "enabled" : "disabled")")
 
         // Post notification to reschedule
         NotificationCenter.default.post(name: .notificationPreferencesChanged, object: nil)
@@ -88,7 +87,6 @@ final class NotificationPreferencesService {
     func setUrgentNotificationEnabled(for prayer: PrayerName, enabled: Bool) {
         urgentNotificationsEnabled[prayer] = enabled
         savePreferences()
-        print("⚠️ \(prayer.displayName) urgent notifications: \(enabled ? "enabled" : "disabled")")
 
         // Post notification to reschedule
         NotificationCenter.default.post(name: .notificationPreferencesChanged, object: nil)
@@ -110,12 +108,6 @@ final class NotificationPreferencesService {
         reminderMinutes[prayer] = validMinutes
         savePreferences()
 
-        if validMinutes > 0 {
-            print("⏰ \(prayer.displayName) reminder: \(validMinutes) minutes before")
-        } else {
-            print("⏰ \(prayer.displayName) reminder: disabled")
-        }
-
         // Post notification to reschedule
         NotificationCenter.default.post(name: .notificationPreferencesChanged, object: nil)
     }
@@ -126,7 +118,6 @@ final class NotificationPreferencesService {
             prayerNotificationsEnabled[prayer] = true
         }
         savePreferences()
-        print("🔔 All prayer notifications enabled")
 
         NotificationCenter.default.post(name: .notificationPreferencesChanged, object: nil)
     }
@@ -137,7 +128,6 @@ final class NotificationPreferencesService {
             prayerNotificationsEnabled[prayer] = false
         }
         savePreferences()
-        print("🔕 All prayer notifications disabled")
 
         NotificationCenter.default.post(name: .notificationPreferencesChanged, object: nil)
     }
@@ -160,7 +150,6 @@ final class NotificationPreferencesService {
         urgentNotificationsEnabled = Dictionary(uniqueKeysWithValues: PrayerName.allCases.map { ($0, true) })
         reminderMinutes = Dictionary(uniqueKeysWithValues: PrayerName.allCases.map { ($0, 0) })
         savePreferences()
-        print("↩️ Reset notification preferences to defaults")
 
         NotificationCenter.default.post(name: .notificationPreferencesChanged, object: nil)
     }
@@ -216,10 +205,6 @@ final class NotificationPreferencesService {
             }
         }
 
-        // Log loaded preferences
-        let enabledCount = getEnabledNotificationCount()
-        let reminderCount = getEnabledReminderCount()
-        print("🔔 Loaded notification preferences: \(enabledCount)/5 prayers enabled, \(reminderCount) reminders configured")
     }
 }
 

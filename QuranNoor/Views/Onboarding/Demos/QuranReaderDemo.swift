@@ -60,9 +60,9 @@ struct QuranReaderDemo: View {
             VStack(spacing: 8) {
                 HStack {
                     Image(systemName: "book.closed.fill")
-                        .foregroundColor(themeManager.currentTheme.featureAccent)
+                        .foregroundColor(themeManager.currentTheme.accent)
                     ThemedText("Surah Al-Fatiha", style: .heading)
-                        .foregroundColor(themeManager.currentTheme.accentPrimary)
+                        .foregroundColor(themeManager.currentTheme.accent)
                     Spacer()
                     Text("1:1-4")
                         .font(.caption)
@@ -101,18 +101,12 @@ struct QuranReaderDemo: View {
                         ZStack(alignment: .leading) {
                             // Background track
                             RoundedRectangle(cornerRadius: 2)
-                                .fill(Color.secondary.opacity(0.2))
+                                .fill(themeManager.currentTheme.textTertiary.opacity(0.2))
                                 .frame(height: 4)
 
                             // Progress fill
                             RoundedRectangle(cornerRadius: 2)
-                                .fill(
-                                    LinearGradient(
-                                        colors: [themeManager.currentTheme.accentPrimary, themeManager.currentTheme.featureAccent],
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                )
+                                .fill(themeManager.currentTheme.accent)
                                 .frame(width: geometry.size.width * audioService.progress, height: 4)
                                 .animation(.linear(duration: 0.1), value: audioService.progress)
                         }
@@ -128,13 +122,13 @@ struct QuranReaderDemo: View {
                     ForEach(verses.indices, id: \.self) { index in
                         ZStack {
                             Circle()
-                                .fill(currentPage == index ? themeManager.currentTheme.featureAccent : Color.secondary.opacity(0.3))
+                                .fill(currentPage == index ? themeManager.currentTheme.accent : themeManager.currentTheme.textTertiary.opacity(0.3))
                                 .frame(width: 8, height: 8)
 
                             // Playing indicator ring
                             if isPlaying && audioService.currentVerseIndex == index {
                                 Circle()
-                                    .stroke(themeManager.currentTheme.featureAccent, lineWidth: 2)
+                                    .stroke(themeManager.currentTheme.accent, lineWidth: 2)
                                     .frame(width: 14, height: 14)
                                     .scaleEffect(isPlaying ? 1.2 : 1.0)
                                     .opacity(isPlaying ? 0.6 : 0)
@@ -159,7 +153,7 @@ struct QuranReaderDemo: View {
                     } label: {
                         Image(systemName: "chevron.left")
                             .font(.title3)
-                            .foregroundColor(currentPage > 0 ? themeManager.currentTheme.featureAccent : .secondary)
+                            .foregroundColor(currentPage > 0 ? themeManager.currentTheme.accent : themeManager.currentTheme.textTertiary)
                             .frame(width: 44, height: 44)
                             .background(
                                 Circle()
@@ -176,7 +170,7 @@ struct QuranReaderDemo: View {
                             // Outer glow when playing
                             if isPlaying {
                                 Circle()
-                                    .fill(themeManager.currentTheme.featureAccent.opacity(0.2))
+                                    .fill(themeManager.currentTheme.accent.opacity(0.2))
                                     .frame(width: 64, height: 64)
                                     .scaleEffect(isPlaying ? 1.1 : 1.0)
                                     .animation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true), value: isPlaying)
@@ -184,7 +178,7 @@ struct QuranReaderDemo: View {
 
                             Image(systemName: isPlaying ? "pause.circle.fill" : "play.circle.fill")
                                 .font(.system(size: 48))
-                                .foregroundColor(themeManager.currentTheme.featureAccent)
+                                .foregroundColor(themeManager.currentTheme.accent)
                                 .symbolEffect(.bounce, value: audioService.playbackState)
                         }
                     }
@@ -200,7 +194,7 @@ struct QuranReaderDemo: View {
                     } label: {
                         Image(systemName: "chevron.right")
                             .font(.title3)
-                            .foregroundColor(currentPage < verses.count - 1 ? themeManager.currentTheme.featureAccent : .secondary)
+                            .foregroundColor(currentPage < verses.count - 1 ? themeManager.currentTheme.accent : themeManager.currentTheme.textTertiary)
                             .frame(width: 44, height: 44)
                             .background(
                                 Circle()
@@ -222,7 +216,7 @@ struct QuranReaderDemo: View {
                         Text(showTranslation ? "Hide Translation" : "Show Translation")
                             .font(.caption)
                     }
-                    .foregroundColor(themeManager.currentTheme.featureAccent)
+                    .foregroundColor(themeManager.currentTheme.accent)
                 }
                 .buttonStyle(.borderless)
 
@@ -233,7 +227,7 @@ struct QuranReaderDemo: View {
                     Text("Swipe to turn pages • Tap play for recitation")
                         .font(.caption2)
                 }
-                .foregroundColor(.secondary)
+                .foregroundColor(themeManager.currentTheme.textTertiary)
                 .padding(.bottom, 8)
             }
             .padding(.horizontal, 20)
@@ -273,18 +267,18 @@ struct QuranReaderDemo: View {
                         if isThisVersePlaying {
                             Image(systemName: "seal.fill")
                                 .font(.system(size: 52))
-                                .foregroundColor(themeManager.currentTheme.featureAccent.opacity(0.3))
+                                .foregroundColor(themeManager.currentTheme.accent.opacity(0.3))
                                 .scaleEffect(isThisVersePlaying ? 1.15 : 1.0)
                                 .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: isThisVersePlaying)
                         }
 
                         Image(systemName: "seal.fill")
                             .font(.system(size: 40))
-                            .foregroundColor(isThisVersePlaying ? themeManager.currentTheme.featureAccent.opacity(0.5) : themeManager.currentTheme.featureAccent.opacity(0.35))
+                            .foregroundColor(isThisVersePlaying ? themeManager.currentTheme.accent.opacity(0.5) : themeManager.currentTheme.accent.opacity(0.35))
 
                         Text("\(verseNumber)")
                             .font(.caption.weight(.bold))
-                            .foregroundColor(themeManager.currentTheme.featureAccent)
+                            .foregroundColor(themeManager.currentTheme.accent)
                     }
                     Spacer()
                 }
@@ -294,10 +288,10 @@ struct QuranReaderDemo: View {
                     .font(.custom("Arial", size: fontSize))
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 20)
-                    .foregroundColor(themeManager.currentTheme.textColor)
+                    .foregroundColor(themeManager.currentTheme.textPrimary)
                     .environment(\.layoutDirection, .rightToLeft)
                     .shadow(
-                        color: isThisVersePlaying ? themeManager.currentTheme.featureAccent.opacity(0.3) : .clear,
+                        color: isThisVersePlaying ? themeManager.currentTheme.accent.opacity(0.3) : .clear,
                         radius: isThisVersePlaying ? 8 : 0
                     )
                     .animation(.easeInOut(duration: 0.3), value: isThisVersePlaying)
@@ -307,7 +301,7 @@ struct QuranReaderDemo: View {
                     .font(.caption)
                     .italic()
                     .multilineTextAlignment(.center)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(themeManager.currentTheme.textSecondary)
                     .padding(.horizontal, 20)
 
                 // Translation (with animation)
@@ -319,7 +313,7 @@ struct QuranReaderDemo: View {
                         Text(verse.translation)
                             .font(.body)
                             .multilineTextAlignment(.center)
-                            .foregroundColor(themeManager.currentTheme.textColor.opacity(0.9))
+                            .foregroundColor(themeManager.currentTheme.textPrimary.opacity(0.9))
                             .padding(.horizontal, 20)
                             .transition(.asymmetric(
                                 insertion: .move(edge: .top).combined(with: .opacity),
@@ -335,7 +329,7 @@ struct QuranReaderDemo: View {
         // Highlight background when playing
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(isThisVersePlaying ? themeManager.currentTheme.featureAccent.opacity(0.05) : Color.clear)
+                .fill(isThisVersePlaying ? themeManager.currentTheme.accent.opacity(0.05) : Color.clear)
                 .animation(.easeInOut(duration: 0.3), value: isThisVersePlaying)
         )
     }

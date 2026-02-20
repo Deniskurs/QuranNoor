@@ -23,7 +23,6 @@ struct EnhancedPrayerRow: View {
     @Environment(ThemeManager.self) var themeManager: ThemeManager
 
     // Animation states
-    @State private var isPressed: Bool = false
     @State private var showSpecialTimes: Bool = false
 
     // Minimum row height for accessibility
@@ -57,9 +56,9 @@ struct EnhancedPrayerRow: View {
                             .foregroundColor(textColor(isCompleted: isCompleted))
 
                         if isCurrentPrayer {
-                            statusBadge(text: "IN PROGRESS", color: themeManager.currentTheme.accentPrimary)
+                            statusBadge(text: "IN PROGRESS", color: themeManager.currentTheme.accent)
                         } else if isNextPrayer {
-                            statusBadge(text: "NEXT", color: themeManager.currentTheme.accentSecondary)
+                            statusBadge(text: "NEXT", color: themeManager.currentTheme.accentMuted)
                         }
 
                         if PrayerTimeAdjustmentService.shared.isAdjusted(prayer.name) {
@@ -93,7 +92,7 @@ struct EnhancedPrayerRow: View {
                             Text("Done")
                                 .font(.system(size: 11, weight: .medium))
                         }
-                        .foregroundColor(themeManager.currentTheme.accentPrimary)
+                        .foregroundColor(themeManager.currentTheme.accent)
                     }
                 }
                 .padding(.trailing, 16)
@@ -103,8 +102,6 @@ struct EnhancedPrayerRow: View {
         .frame(minHeight: minRowHeight)
         .background(rowBackground(isCompleted: isCompleted))
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .scaleEffect(isPressed ? 0.98 : 1.0)
-        .animation(.easeOut(duration: 0.1), value: isPressed)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityLabel(isCompleted: isCompleted))
@@ -118,7 +115,7 @@ struct EnhancedPrayerRow: View {
             // Glow for current prayer
             if isCurrentPrayer && !isCompleted {
                 Circle()
-                    .fill(themeManager.currentTheme.accentPrimary.opacity(0.2))
+                    .fill(themeManager.currentTheme.accent.opacity(0.2))
                     .frame(width: 44, height: 44)
                     .blur(radius: 6)
             }
@@ -154,7 +151,7 @@ struct EnhancedPrayerRow: View {
                 HStack(spacing: 6) {
                     Image(systemName: specialTime.type.icon)
                         .font(.system(size: 11))
-                        .foregroundColor(themeManager.currentTheme.accentInteractive)
+                        .foregroundColor(themeManager.currentTheme.accent)
                         .opacity(isCompleted ? 0.5 : 0.8)
 
                     Text(specialTime.type.displayName)
@@ -163,7 +160,7 @@ struct EnhancedPrayerRow: View {
 
                     Text(specialTime.displayTime)
                         .font(.system(size: 12, weight: .regular, design: .rounded))
-                        .foregroundColor(themeManager.currentTheme.accentInteractive)
+                        .foregroundColor(themeManager.currentTheme.accent)
                         .opacity(isCompleted ? 0.5 : 0.7)
                 }
             }
@@ -181,7 +178,7 @@ struct EnhancedPrayerRow: View {
                         Image(systemName: showSpecialTimes ? "chevron.up" : "chevron.down")
                             .font(.system(size: 9, weight: .semibold))
                     }
-                    .foregroundColor(themeManager.currentTheme.accentInteractive)
+                    .foregroundColor(themeManager.currentTheme.accent)
                 }
             }
         }
@@ -195,18 +192,18 @@ struct EnhancedPrayerRow: View {
             if isCurrentPrayer && !isCompleted {
                 // Current prayer: highlighted with accent
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(themeManager.currentTheme.accentPrimary.opacity(0.08))
+                    .fill(themeManager.currentTheme.accent.opacity(0.08))
                     .overlay(
                         RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .strokeBorder(themeManager.currentTheme.accentPrimary.opacity(0.3), lineWidth: 1.5)
+                            .strokeBorder(themeManager.currentTheme.accent.opacity(0.3), lineWidth: 1.5)
                     )
             } else if isNextPrayer && !isCompleted {
                 // Next prayer: subtle highlight
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(themeManager.currentTheme.accentSecondary.opacity(0.05))
+                    .fill(themeManager.currentTheme.accentMuted.opacity(0.05))
                     .overlay(
                         RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .strokeBorder(themeManager.currentTheme.accentSecondary.opacity(0.2), lineWidth: 1)
+                            .strokeBorder(themeManager.currentTheme.accentMuted.opacity(0.2), lineWidth: 1)
                     )
             } else {
                 // Default card
@@ -222,11 +219,11 @@ struct EnhancedPrayerRow: View {
         if !canCheckOff {
             return themeManager.currentTheme.textTertiary.opacity(0.1)
         } else if isCompleted {
-            return themeManager.currentTheme.accentPrimary.opacity(0.15)
+            return themeManager.currentTheme.accent.opacity(0.15)
         } else if isCurrentPrayer {
-            return themeManager.currentTheme.accentPrimary.opacity(0.2)
+            return themeManager.currentTheme.accent.opacity(0.2)
         } else if isNextPrayer {
-            return themeManager.currentTheme.accentSecondary.opacity(0.15)
+            return themeManager.currentTheme.accentMuted.opacity(0.15)
         } else {
             return themeManager.currentTheme.textTertiary.opacity(0.1)
         }
@@ -236,11 +233,11 @@ struct EnhancedPrayerRow: View {
         if !canCheckOff {
             return themeManager.currentTheme.textDisabled
         } else if isCompleted {
-            return themeManager.currentTheme.accentPrimary
+            return themeManager.currentTheme.accent
         } else if isCurrentPrayer {
-            return themeManager.currentTheme.accentPrimary
+            return themeManager.currentTheme.accent
         } else if isNextPrayer {
-            return themeManager.currentTheme.accentSecondary
+            return themeManager.currentTheme.accentMuted
         } else {
             return themeManager.currentTheme.textSecondary
         }
@@ -262,7 +259,7 @@ struct EnhancedPrayerRow: View {
         } else if isCompleted {
             return themeManager.currentTheme.textSecondary.opacity(0.6)
         } else if isCurrentPrayer {
-            return themeManager.currentTheme.accentPrimary
+            return themeManager.currentTheme.accent
         } else {
             return themeManager.currentTheme.textPrimary
         }

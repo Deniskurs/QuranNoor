@@ -46,17 +46,18 @@ final class FortressDuaService {
 
     /// Get favorite duas
     func getFavoriteDuas() -> [FortressDua] {
-        allDuas.filter { progress.isFavorite(duaId: $0.id) }
+        allDuas.filter { progress.isFavorite(duaKey: DuaProgress.stableKey(for: $0)) }
             .sorted { $0.order < $1.order }
     }
 
     /// Get most used duas
     func getMostUsedDuas(limit: Int = 5) -> [FortressDua] {
-        let mostUsedIds = progress.getMostUsed(limit: limit)
-        return allDuas.filter { mostUsedIds.contains($0.id) }
+        let mostUsedKeys = progress.getMostUsed(limit: limit)
+        let mostUsedSet = Set(mostUsedKeys)
+        return allDuas.filter { mostUsedSet.contains(DuaProgress.stableKey(for: $0)) }
             .sorted {
-                let count1 = progress.getUsageCount(duaId: $0.id)
-                let count2 = progress.getUsageCount(duaId: $1.id)
+                let count1 = progress.getUsageCount(duaKey: DuaProgress.stableKey(for: $0))
+                let count2 = progress.getUsageCount(duaKey: DuaProgress.stableKey(for: $1))
                 return count1 > count2
             }
     }
@@ -75,20 +76,20 @@ final class FortressDuaService {
     }
 
     /// Toggle favorite
-    func toggleFavorite(duaId: UUID) {
-        progress.toggleFavorite(duaId: duaId)
+    func toggleFavorite(dua: FortressDua) {
+        progress.toggleFavorite(duaKey: DuaProgress.stableKey(for: dua))
         saveProgress()
     }
 
     /// Increment usage
-    func incrementUsage(duaId: UUID) {
-        progress.incrementUsage(duaId: duaId)
+    func incrementUsage(dua: FortressDua) {
+        progress.incrementUsage(duaKey: DuaProgress.stableKey(for: dua))
         saveProgress()
     }
 
     /// Check if favorite
-    func isFavorite(duaId: UUID) -> Bool {
-        progress.isFavorite(duaId: duaId)
+    func isFavorite(dua: FortressDua) -> Bool {
+        progress.isFavorite(duaKey: DuaProgress.stableKey(for: dua))
     }
 
     // MARK: - Private Methods

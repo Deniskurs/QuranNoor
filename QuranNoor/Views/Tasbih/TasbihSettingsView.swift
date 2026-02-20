@@ -82,7 +82,7 @@ struct TasbihSettingsView: View {
                         Text("Completion Rate")
                         Spacer()
                         Text(String(format: "%.1f%%", tasbihService.statistics.completionRate))
-                            .foregroundStyle(themeManager.currentTheme.featureAccent)
+                            .foregroundStyle(themeManager.currentTheme.accent)
                     }
 
                     HStack {

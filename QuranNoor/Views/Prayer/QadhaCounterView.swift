@@ -57,7 +57,7 @@ struct QadhaCounterView: View {
             .padding(.horizontal, 20)
             .padding(.vertical, 16)
         }
-        .background(themeManager.backgroundColor.ignoresSafeArea())
+        .background(themeManager.currentTheme.backgroundColor.ignoresSafeArea())
         .navigationTitle("Qadha Tracker")
         .navigationBarTitleDisplayMode(.large)
         .sheet(isPresented: $showingHistory) {
@@ -82,18 +82,18 @@ struct QadhaCounterView: View {
     // MARK: - Components
 
     private var totalQadhaCard: some View {
-        LiquidGlassCardView {
+        CardView {
             VStack(spacing: 12) {
                 Text("Total Qadha Prayers")
                     .font(.subheadline)
-                    .foregroundStyle(themeManager.secondaryTextColor)
+                    .foregroundStyle(themeManager.currentTheme.textSecondary)
 
                 Text("\(qadhaService.totalQadha)")
                     .font(.system(size: 56, weight: .bold, design: .rounded))
                     .foregroundStyle(
                         qadhaService.totalQadha == 0
-                        ? themeManager.accentColor
-                        : themeManager.primaryTextColor
+                        ? themeManager.currentTheme.accent
+                        : themeManager.currentTheme.textPrimary
                     )
                     .contentTransition(.numericText())
                     .accessibilityValue("\(qadhaService.totalQadha) missed prayers")
@@ -101,7 +101,7 @@ struct QadhaCounterView: View {
                 if qadhaService.totalQadha == 0 {
                     Label("Alhamdulillah! No qadha prayers", systemImage: "checkmark.circle.fill")
                         .font(.caption)
-                        .foregroundStyle(themeManager.accentColor)
+                        .foregroundStyle(themeManager.currentTheme.accent)
                 }
             }
             .frame(maxWidth: .infinity)
@@ -113,15 +113,15 @@ struct QadhaCounterView: View {
     }
 
     private var motivationalMessageCard: some View {
-        LiquidGlassCardView {
+        CardView {
             VStack(alignment: .leading, spacing: 8) {
                 Label("Keep Going", systemImage: "heart.fill")
                     .font(.headline)
-                    .foregroundStyle(themeManager.accentColor)
+                    .foregroundStyle(themeManager.currentTheme.accent)
 
                 Text(getMotivationalMessage())
                     .font(.subheadline)
-                    .foregroundStyle(themeManager.secondaryTextColor)
+                    .foregroundStyle(themeManager.currentTheme.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -139,8 +139,8 @@ struct QadhaCounterView: View {
                     .font(.subheadline.weight(.medium))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
-                    .background(themeManager.cardBackground)
-                    .foregroundStyle(themeManager.primaryTextColor)
+                    .background(themeManager.currentTheme.cardColor)
+                    .foregroundStyle(themeManager.currentTheme.textPrimary)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
             }
             .accessibilityLabel("View qadha history")
@@ -154,8 +154,8 @@ struct QadhaCounterView: View {
                     .font(.subheadline.weight(.medium))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
-                    .background(themeManager.cardBackground)
-                    .foregroundStyle(themeManager.primaryTextColor)
+                    .background(themeManager.currentTheme.cardColor)
+                    .foregroundStyle(themeManager.currentTheme.textPrimary)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
             }
             .accessibilityLabel("View duas for qadha prayers")
@@ -181,15 +181,15 @@ struct QadhaCounterView: View {
     }
 
     private var infoCard: some View {
-        LiquidGlassCardView {
+        CardView {
             VStack(alignment: .leading, spacing: 12) {
                 Label("About Qadha", systemImage: "info.circle.fill")
                     .font(.headline)
-                    .foregroundStyle(themeManager.accentColor)
+                    .foregroundStyle(themeManager.currentTheme.accent)
 
                 Text("Qadha prayers are obligatory prayers that were missed. It is important to make them up as soon as possible.")
                     .font(.caption)
-                    .foregroundStyle(themeManager.secondaryTextColor)
+                    .foregroundStyle(themeManager.currentTheme.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
 
                 Divider()
@@ -210,12 +210,12 @@ struct QadhaCounterView: View {
         HStack(spacing: 8) {
             Image(systemName: icon)
                 .font(.caption)
-                .foregroundStyle(themeManager.accentColor)
+                .foregroundStyle(themeManager.currentTheme.accent)
                 .frame(width: 20)
 
             Text(text)
                 .font(.caption2)
-                .foregroundStyle(themeManager.secondaryTextColor)
+                .foregroundStyle(themeManager.currentTheme.textSecondary)
         }
     }
 
@@ -271,25 +271,25 @@ struct PrayerQadhaRow: View {
     let onLongPress: () -> Void
 
     var body: some View {
-        LiquidGlassCardView {
+        CardView {
             HStack(spacing: 16) {
                 // Prayer Icon & Name
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 8) {
                         Image(systemName: prayer.icon)
                             .font(.title3)
-                            .foregroundStyle(themeManager.accentColor)
+                            .foregroundStyle(themeManager.currentTheme.accent)
                             .accessibilityHidden(true)
 
                         Text(prayer.displayName)
                             .font(.headline)
-                            .foregroundStyle(themeManager.primaryTextColor)
+                            .foregroundStyle(themeManager.currentTheme.textPrimary)
                     }
 
                     if count > 0 {
                         Text("\(count) prayer\(count != 1 ? "s" : "") to complete")
                             .font(.caption2)
-                            .foregroundStyle(themeManager.secondaryTextColor)
+                            .foregroundStyle(themeManager.currentTheme.textSecondary)
                     }
                 }
 
@@ -300,8 +300,8 @@ struct PrayerQadhaRow: View {
                     .font(.system(size: 28, weight: .bold, design: .rounded))
                     .foregroundStyle(
                         count > 0
-                        ? themeManager.primaryTextColor
-                        : themeManager.secondaryTextColor.opacity(0.5)
+                        ? themeManager.currentTheme.textPrimary
+                        : themeManager.currentTheme.textSecondary.opacity(0.5)
                     )
                     .contentTransition(.numericText())
                     .frame(minWidth: 50)
@@ -319,7 +319,7 @@ struct PrayerQadhaRow: View {
                     } label: {
                         Image(systemName: "minus.circle.fill")
                             .font(.title2)
-                            .foregroundStyle(count > 0 ? themeManager.accentColor : themeManager.secondaryTextColor.opacity(0.3))
+                            .foregroundStyle(count > 0 ? themeManager.currentTheme.accent : themeManager.currentTheme.textSecondary.opacity(0.3))
                     }
                     .disabled(count == 0)
                     .accessibilityLabel("Decrease \(prayer.displayName) qadha count")
@@ -330,7 +330,7 @@ struct PrayerQadhaRow: View {
                     } label: {
                         Image(systemName: "plus.circle.fill")
                             .font(.title2)
-                            .foregroundStyle(themeManager.accentColor)
+                            .foregroundStyle(themeManager.currentTheme.accent)
                     }
                     .accessibilityLabel("Increase \(prayer.displayName) qadha count")
                     .accessibilityHint("Increases count by one")
@@ -362,15 +362,15 @@ struct CustomQadhaInputSheet: View {
                 VStack(spacing: 8) {
                     Image(systemName: prayer.icon)
                         .font(.system(size: 48))
-                        .foregroundStyle(themeManager.accentColor)
+                        .foregroundStyle(themeManager.currentTheme.accent)
 
                     Text("\(prayer.displayName) Qadha")
                         .font(.title2.weight(.bold))
-                        .foregroundStyle(themeManager.primaryTextColor)
+                        .foregroundStyle(themeManager.currentTheme.textPrimary)
 
                     Text("Current count: \(qadhaService.getQadhaCount(for: prayer))")
                         .font(.subheadline)
-                        .foregroundStyle(themeManager.secondaryTextColor)
+                        .foregroundStyle(themeManager.currentTheme.textSecondary)
                 }
                 .padding(.top, 32)
 
@@ -378,7 +378,7 @@ struct CustomQadhaInputSheet: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Set custom count")
                         .font(.headline)
-                        .foregroundStyle(themeManager.primaryTextColor)
+                        .foregroundStyle(themeManager.currentTheme.textPrimary)
 
                     TextField("Enter number", text: $customValue)
                         .keyboardType(.numberPad)
@@ -392,7 +392,7 @@ struct CustomQadhaInputSheet: View {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Quick add")
                         .font(.headline)
-                        .foregroundStyle(themeManager.primaryTextColor)
+                        .foregroundStyle(themeManager.currentTheme.textPrimary)
 
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
                         ForEach([1, 5, 10, 20, 30, 50], id: \.self) { value in
@@ -403,8 +403,8 @@ struct CustomQadhaInputSheet: View {
                                     .font(.headline)
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 12)
-                                    .background(themeManager.cardBackground)
-                                    .foregroundStyle(themeManager.primaryTextColor)
+                                    .background(themeManager.currentTheme.cardColor)
+                                    .foregroundStyle(themeManager.currentTheme.textPrimary)
                                     .clipShape(RoundedRectangle(cornerRadius: 10))
                             }
                         }
@@ -422,14 +422,14 @@ struct CustomQadhaInputSheet: View {
                         .font(.headline)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
-                        .background(themeManager.accentColor)
+                        .background(themeManager.currentTheme.accent)
                         .foregroundStyle(.white)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
                 .padding(.horizontal, 24)
                 .disabled(customValue.isEmpty)
             }
-            .background(themeManager.backgroundColor)
+            .background(themeManager.currentTheme.backgroundColor)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

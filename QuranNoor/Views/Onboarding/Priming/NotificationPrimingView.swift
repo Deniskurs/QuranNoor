@@ -28,7 +28,7 @@ struct NotificationPrimingView: View {
                 // Pulsing rings
                 ForEach(0..<3) { index in
                     Circle()
-                        .stroke(themeManager.currentTheme.featureAccent.opacity(0.3), lineWidth: 2)
+                        .stroke(themeManager.currentTheme.accent.opacity(0.3), lineWidth: 2)
                         .frame(width: 120 + CGFloat(index * 30), height: 120 + CGFloat(index * 30))
                         .scaleEffect(animateIcon ? 1.2 : 0.8)
                         .opacity(animateIcon ? 0 : 0.6)
@@ -46,8 +46,8 @@ struct NotificationPrimingView: View {
                         .fill(
                             RadialGradient(
                                 colors: [
-                                    themeManager.currentTheme.featureAccent.opacity(0.3),
-                                    themeManager.currentTheme.featureAccent.opacity(0.1)
+                                    themeManager.currentTheme.accent.opacity(0.3),
+                                    themeManager.currentTheme.accent.opacity(0.1)
                                 ],
                                 center: .center,
                                 startRadius: 0,
@@ -58,7 +58,7 @@ struct NotificationPrimingView: View {
 
                     Image(systemName: "bell.badge.fill")
                         .font(.system(size: 60))
-                        .foregroundColor(themeManager.currentTheme.featureAccent)
+                        .foregroundColor(themeManager.currentTheme.accent)
                         .symbolEffect(.bounce, value: animateIcon)
                 }
             }
@@ -78,7 +78,7 @@ struct NotificationPrimingView: View {
             // MARK: - Title
             VStack(spacing: 12) {
                 ThemedText("Never Miss a Prayer", style: .title)
-                    .foregroundColor(themeManager.currentTheme.accentPrimary)
+                    .foregroundColor(themeManager.currentTheme.accent)
                     .multilineTextAlignment(.center)
 
                 ThemedText.body("Get gentle reminders before each prayer time so you can pray on time, every time")
@@ -103,25 +103,25 @@ struct NotificationPrimingView: View {
                 benefitRow(
                     icon: "clock.badge.checkmark",
                     text: "Timely reminders for all 5 daily prayers",
-                    color: themeManager.currentTheme.featureAccent
+                    color: themeManager.currentTheme.accent
                 )
 
                 benefitRow(
                     icon: "speaker.wave.3.fill",
                     text: "Beautiful Adhan call to prayer (optional)",
-                    color: themeManager.currentTheme.featureAccent
+                    color: themeManager.currentTheme.accent
                 )
 
                 benefitRow(
                     icon: "slider.horizontal.3",
                     text: "Fully customizable notification settings",
-                    color: themeManager.currentTheme.featureAccent
+                    color: themeManager.currentTheme.accent
                 )
 
                 benefitRow(
                     icon: "moon.stars.fill",
                     text: "Special reminders for Tahajjud and Witr",
-                    color: themeManager.currentTheme.featureAccent
+                    color: themeManager.currentTheme.accent
                 )
             }
             .padding(.horizontal, 40)
@@ -133,16 +133,16 @@ struct NotificationPrimingView: View {
             HStack(spacing: 12) {
                 Image(systemName: "hand.raised.fill")
                     .font(.system(size: 24))
-                    .foregroundColor(themeManager.currentTheme.featureAccent)
+                    .foregroundColor(themeManager.currentTheme.accent)
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text("You're Always in Control")
                         .font(.headline)
-                        .foregroundColor(themeManager.currentTheme.textColor)
+                        .foregroundColor(themeManager.currentTheme.textPrimary)
 
                     Text("Customize which prayers to be notified about, or turn them off anytime in Settings")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(themeManager.currentTheme.textSecondary)
                 }
 
                 Spacer()
@@ -150,10 +150,10 @@ struct NotificationPrimingView: View {
             .padding(16)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(themeManager.currentTheme.featureAccent.opacity(0.1))
+                    .fill(themeManager.currentTheme.accent.opacity(0.1))
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
-                            .stroke(themeManager.currentTheme.featureAccent.opacity(0.3), lineWidth: 1)
+                            .stroke(themeManager.currentTheme.accent.opacity(0.3), lineWidth: 1)
                     )
             )
             .padding(.horizontal, 32)
@@ -173,7 +173,7 @@ struct NotificationPrimingView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
-                .tint(themeManager.currentTheme.featureAccent)
+                .tint(themeManager.currentTheme.accent)
 
                 Button {
                     onSkip()
@@ -198,7 +198,7 @@ struct NotificationPrimingView: View {
                 RoundedRectangle(cornerRadius: 8)
                     .fill(
                         LinearGradient(
-                            colors: [themeManager.currentTheme.accentPrimary, themeManager.currentTheme.accentSecondary],
+                            colors: [themeManager.currentTheme.accent, themeManager.currentTheme.accentMuted],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
@@ -215,20 +215,20 @@ struct NotificationPrimingView: View {
                 HStack {
                     Text("Qur'an Noor")
                         .font(.caption.weight(.semibold))
-                        .foregroundColor(themeManager.currentTheme.textColor)
+                        .foregroundColor(themeManager.currentTheme.textPrimary)
 
                     Text("now")
                         .font(.caption2)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(themeManager.currentTheme.textTertiary)
                 }
 
                 Text("Maghrib prayer in 15 minutes")
                     .font(.body)
-                    .foregroundColor(themeManager.currentTheme.textColor)
+                    .foregroundColor(themeManager.currentTheme.textPrimary)
 
                 Text("Prayer time at 6:22 PM • San Francisco")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(themeManager.currentTheme.textSecondary)
             }
 
             Spacer()

@@ -94,11 +94,11 @@ struct PrayerStatusPill: View {
         case .light:
             return Color.white.opacity(0.3)
         case .dark:
-            return themeManager.currentTheme.accentPrimary.opacity(0.1)
+            return themeManager.currentTheme.accent.opacity(0.1)
         case .night:
             return Color.white.opacity(0.05)
         case .sepia:
-            return AppColors.primary.gold.opacity(0.1)
+            return themeManager.currentTheme.accentMuted.opacity(0.1)
         }
     }
 
@@ -146,13 +146,13 @@ struct PrayerStatusPill: View {
 
         switch state {
         case .beforeFajr:
-            return themeManager.currentTheme.accentPrimary
+            return themeManager.currentTheme.accent
         case .inProgress:
-            return themeManager.currentTheme.accentSecondary
+            return themeManager.currentTheme.accentMuted
         case .betweenPrayers:
-            return themeManager.currentTheme.accentInteractive
+            return themeManager.currentTheme.accent
         case .afterIsha:
-            return themeManager.currentTheme.accentPrimary
+            return themeManager.currentTheme.accent
         }
     }
 

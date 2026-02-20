@@ -35,14 +35,12 @@ class PrayerTransitionHandler {
     func start() {
         scheduleMidnightCheck()
         schedulePeriodicRecalculation()
-        print("✅ Prayer transition handler started")
     }
 
     /// Stop all automatic tasks
     func stop() {
         dayTransitionTask?.cancel()
         recalculationTask?.cancel()
-        print("🛑 Prayer transition handler stopped")
     }
 
     // MARK: - Midnight Transition
@@ -56,17 +54,12 @@ class PrayerTransitionHandler {
         let calendar = Calendar.current
         let now = Date()
 
-        guard let tomorrow = calendar.date(byAdding: .day, value: 1, to: now) else {
-            print("❌ Failed to calculate next midnight - could not get tomorrow's date")
-            return
-        }
+        guard let tomorrow = calendar.date(byAdding: .day, value: 1, to: now) else { return }
 
         // startOfDay(for:) returns non-optional Date
         let midnight = calendar.startOfDay(for: tomorrow)
 
         let timeUntilMidnight = midnight.timeIntervalSinceNow
-
-        print("⏰ Midnight check scheduled for \(midnight.formatted(date: .omitted, time: .shortened)) (\(Int(timeUntilMidnight / 60)) minutes)")
 
         // Schedule task to run at midnight (with 5 second buffer)
         dayTransitionTask = Task {
@@ -76,10 +69,7 @@ class PrayerTransitionHandler {
                 try await Task.sleep(nanoseconds: sleepDuration)
 
                 // Check if task was cancelled
-                guard !Task.isCancelled else {
-                    print("⚠️ Midnight transition task cancelled")
-                    return
-                }
+                guard !Task.isCancelled else { return }
 
                 // Perform transition
                 await performDayTransition()
@@ -88,26 +78,19 @@ class PrayerTransitionHandler {
                 self.scheduleMidnightCheck()
 
             } catch {
-                print("⚠️ Midnight transition sleep interrupted: \(error)")
+                // Task was cancelled
             }
         }
     }
 
     /// Perform the actual day transition at midnight
     private func performDayTransition() async {
-        print("🌙 Performing midnight transition...")
-
-        guard let viewModel = viewModel else {
-            print("❌ View model is nil, cannot perform transition")
-            return
-        }
+        guard let viewModel = viewModel else { return }
 
         // Step 1: Promote tomorrow's prayers to today
         if let tomorrow = viewModel.tomorrowPrayerTimes {
             viewModel.todayPrayerTimes = tomorrow
-            print("✅ Promoted tomorrow's prayers to today")
         } else {
-            print("⚠️ No tomorrow's prayers to promote, fetching today instead")
             await viewModel.loadPrayerTimes()
         }
 
@@ -132,13 +115,10 @@ class PrayerTransitionHandler {
                     city: locationInfo.city,
                     countryCode: locationInfo.countryCode
                 )
-                print("✅ Notifications updated for new day")
             } catch {
-                print("⚠️ Failed to update notifications: \(error)")
+                // Notification scheduling failed — non-critical
             }
         }
-
-        print("✅ Midnight transition complete")
     }
 
     // MARK: - Periodic Recalculation
@@ -171,7 +151,6 @@ class PrayerTransitionHandler {
             }
         }
 
-        print("✅ Periodic recalculation scheduled (every 5 minutes)")
     }
 
     // MARK: - Cleanup
@@ -180,6 +159,5 @@ class PrayerTransitionHandler {
         // Cancel tasks directly (can't call stop() from deinit due to MainActor isolation)
         dayTransitionTask?.cancel()
         recalculationTask?.cancel()
-        print("🧹 Prayer transition handler deinitialized")
     }
 }

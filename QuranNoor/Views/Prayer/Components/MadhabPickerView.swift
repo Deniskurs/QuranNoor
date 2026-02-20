@@ -19,7 +19,7 @@ struct MadhabPickerView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                themeManager.backgroundColor
+                themeManager.currentTheme.backgroundColor
                     .ignoresSafeArea()
 
                 ScrollView {
@@ -61,16 +61,16 @@ struct MadhabPickerView: View {
         HStack(spacing: 12) {
             Image(systemName: "info.circle.fill")
                 .font(.system(size: 20))
-                .foregroundStyle(themeManager.accentColor)
+                .foregroundStyle(themeManager.currentTheme.accent)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text("About Madhab Options")
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(themeManager.primaryTextColor)
+                    .foregroundStyle(themeManager.currentTheme.textPrimary)
 
                 Text("Only Asr calculation time is affected. Standard covers Shafi, Maliki, and Hanbali schools (shadow = object). Hanafi uses different calculation (shadow = 2× object).")
                     .font(.system(size: 12, weight: .regular))
-                    .foregroundStyle(themeManager.secondaryTextColor)
+                    .foregroundStyle(themeManager.currentTheme.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
@@ -79,7 +79,7 @@ struct MadhabPickerView: View {
         .padding()
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(themeManager.accentColor.opacity(0.15))
+                .fill(themeManager.currentTheme.accent.opacity(0.15))
         )
     }
 
@@ -89,11 +89,11 @@ struct MadhabPickerView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(madhab.rawValue)
                         .font(.body)
-                        .foregroundStyle(themeManager.primaryTextColor)
+                        .foregroundStyle(themeManager.currentTheme.textPrimary)
 
                     Text(madhab.technicalNote)
                         .font(.system(size: 12, weight: .regular))
-                        .foregroundStyle(themeManager.accentColor)
+                        .foregroundStyle(themeManager.currentTheme.accent)
                 }
 
                 Spacer()
@@ -101,14 +101,14 @@ struct MadhabPickerView: View {
                 if madhab == selectedMadhab {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 24))
-                        .foregroundStyle(themeManager.accentColor)
+                        .foregroundStyle(themeManager.currentTheme.accent)
                 }
             }
 
             // Explanation
             Text(madhab.explanation)
                 .font(.system(size: 11, weight: .regular))
-                .foregroundStyle(themeManager.secondaryTextColor)
+                .foregroundStyle(themeManager.currentTheme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding()
@@ -116,8 +116,8 @@ struct MadhabPickerView: View {
             RoundedRectangle(cornerRadius: 12)
                 .fill(
                     madhab == selectedMadhab
-                        ? themeManager.accentColor.opacity(0.15)
-                        : themeManager.cardBackground
+                        ? themeManager.currentTheme.accent.opacity(0.15)
+                        : themeManager.currentTheme.cardColor
                 )
         )
     }
@@ -131,7 +131,9 @@ struct MadhabPickerView: View {
     MadhabPickerView(
         selectedMadhab: $selectedMadhab,
         onMadhabChanged: { newMadhab in
+            #if DEBUG
             print("Madhab changed to: \(newMadhab)")
+            #endif
         }
     )
     .environment(ThemeManager())

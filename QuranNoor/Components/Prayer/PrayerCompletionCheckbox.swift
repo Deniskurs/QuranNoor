@@ -24,6 +24,8 @@ struct PrayerCompletionCheckbox: View {
     // Animation state
     @State private var scale: CGFloat = 1.0
     @State private var checkmarkScale: CGFloat = 0.8
+    @State private var scaleTask: Task<Void, Never>?
+    @State private var hapticTask: Task<Void, Never>?
 
     // MARK: - Body
 
@@ -34,8 +36,11 @@ struct PrayerCompletionCheckbox: View {
                 scale = 0.95
             }
 
-            // Spring back with delay
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            // Spring back with delay using structured concurrency
+            scaleTask?.cancel()
+            scaleTask = Task { @MainActor in
+                try? await Task.sleep(for: .seconds(0.1))
+                guard !Task.isCancelled else { return }
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
                     scale = 1.0
                 }
@@ -48,7 +53,10 @@ struct PrayerCompletionCheckbox: View {
 
             // Success audio + haptic pattern when completing (not uncompleting)
             if !isCompleted {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                hapticTask?.cancel()
+                hapticTask = Task { @MainActor in
+                    try? await Task.sleep(for: .seconds(0.15))
+                    guard !Task.isCancelled else { return }
                     AudioHapticCoordinator.shared.playPrayerComplete()
                 }
             }
@@ -60,10 +68,10 @@ struct PrayerCompletionCheckbox: View {
 
                 if isCompleted {
                     Image(systemName: "checkmark")
-                        .font(.system(size: 16, weight: .bold))
+                        .font(.body.weight(.bold))
                         .foregroundColor(.white)
                         .scaleEffect(checkmarkScale)
-                        .shadow(color: themeManager.currentTheme.accentPrimary.opacity(0.5), radius: 4)
+                        .shadow(color: themeManager.currentTheme.accent.opacity(0.5), radius: 4)
                         .transition(.scale.combined(with: .opacity))
                         .onAppear {
                             // Checkmark pop animation
@@ -89,6 +97,10 @@ struct PrayerCompletionCheckbox: View {
         .scaleEffect(scale)
         .accessibilityLabel(accessibilityLabel(isCompleted: isCompleted))
         .accessibilityAddTraits(.isButton)
+        .onDisappear {
+            scaleTask?.cancel()
+            hapticTask?.cancel()
+        }
     }
 
     // MARK: - Computed Properties
@@ -96,13 +108,13 @@ struct PrayerCompletionCheckbox: View {
     private func checkboxColor(isCompleted: Bool) -> Color {
         if !canCheckOff {
             // Future prayer - very dimmed
-            return themeManager.currentTheme.textColor.opacity(themeManager.currentTheme.disabledOpacity)
+            return themeManager.currentTheme.textPrimary.opacity(themeManager.currentTheme.disabledOpacity)
         } else if isCompleted {
-            return themeManager.currentTheme.accentPrimary
+            return themeManager.currentTheme.accent
         } else if isCurrentPrayer {
-            return themeManager.currentTheme.accentPrimary
+            return themeManager.currentTheme.accent
         } else {
-            return themeManager.currentTheme.textColor.opacity(themeManager.currentTheme.tertiaryOpacity)
+            return themeManager.currentTheme.textPrimary.opacity(themeManager.currentTheme.tertiaryOpacity)
         }
     }
 

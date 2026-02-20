@@ -150,7 +150,7 @@ extension DailyStats {
         juzProgress: 0.4,
         currentJuz: 3,
         totalVersesRead: 342,
-        overallCompletion: 0.055
+        overallCompletion: 5.5  // 342/6236 * 100 ≈ 5.5%
     )
 
     static let emptyState = DailyStats()
@@ -165,6 +165,6 @@ extension DailyStats {
         juzProgress: 0.75,
         currentJuz: 15,
         totalVersesRead: 1823,
-        overallCompletion: 0.292
+        overallCompletion: 29.2  // 1823/6236 * 100 ≈ 29.2%
     )
 }

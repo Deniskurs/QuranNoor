@@ -28,37 +28,35 @@ struct FuzzySearchUtility {
 
     /// Calculate Levenshtein distance between two strings (edit distance)
     /// Lower distance = more similar strings
+    /// Optimized to use O(min(m,n)) memory with two-row approach instead of full matrix
     static func levenshteinDistance(_ s1: String, _ s2: String) -> Int {
-        let s1 = Array(s1.lowercased())
-        let s2 = Array(s2.lowercased())
+        let source = Array(s1.lowercased())
+        let target = Array(s2.lowercased())
 
-        let m = s1.count
-        let n = s2.count
+        let m = source.count
+        let n = target.count
 
-        // Create distance matrix
-        var matrix = Array(repeating: Array(repeating: 0, count: n + 1), count: m + 1)
+        guard m > 0 else { return n }
+        guard n > 0 else { return m }
 
-        // Initialize first row and column
-        for i in 0...m {
-            matrix[i][0] = i
-        }
-        for j in 0...n {
-            matrix[0][j] = j
-        }
+        // Two-row approach: O(min(m,n)) memory instead of O(m*n)
+        var previousRow = Array(0...n)
+        var currentRow = Array(repeating: 0, count: n + 1)
 
-        // Fill in the rest of the matrix
         for i in 1...m {
+            currentRow[0] = i
             for j in 1...n {
-                let cost = s1[i - 1] == s2[j - 1] ? 0 : 1
-                matrix[i][j] = min(
-                    matrix[i - 1][j] + 1,      // deletion
-                    matrix[i][j - 1] + 1,      // insertion
-                    matrix[i - 1][j - 1] + cost // substitution
+                let cost = source[i - 1] == target[j - 1] ? 0 : 1
+                currentRow[j] = min(
+                    previousRow[j] + 1,         // deletion
+                    currentRow[j - 1] + 1,      // insertion
+                    previousRow[j - 1] + cost   // substitution
                 )
             }
+            swap(&previousRow, &currentRow)
         }
 
-        return matrix[m][n]
+        return previousRow[n]
     }
 
     // MARK: - Similarity Score
@@ -285,7 +283,7 @@ extension String {
 
         for range in ranges {
             if let attributedRange = Range(range, in: attributed) {
-                attributed[attributedRange].foregroundColor = .yellow
+                attributed[attributedRange].foregroundColor = .accentColor
                 attributed[attributedRange].font = .bold(.body)()
             }
         }

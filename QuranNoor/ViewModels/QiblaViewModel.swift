@@ -7,34 +7,53 @@
 
 import Foundation
 import CoreLocation
-import Combine
+import Observation
 #if canImport(UIKit)
 import UIKit
 #endif
 
+@Observable
 @MainActor
-class QiblaViewModel: ObservableObject {
+class QiblaViewModel {
     // MARK: - Cached Codecs (Performance: avoid repeated allocation)
     private static let decoder = JSONDecoder()
     private static let encoder = JSONEncoder()
 
-    // MARK: - Published Properties
-    @Published var qiblaDirection: Double = 0  // Direction to Qibla from North
-    @Published var deviceHeading: Double = 0  // Current device compass heading
-    @Published var distanceToKaaba: Double = 0
-    @Published var userLocation: String = "Locating..."
-    @Published var currentCoordinates: LocationCoordinates?
-    @Published var isLoading: Bool = true
-    @Published var showError: Bool = false
-    @Published var errorMessage: String?
-    @Published var compassAccuracy: String = "Calibrating..."
+    // MARK: - Observable Properties
+    var qiblaDirection: Double = 0  // Direction to Qibla from North
+    var distanceToKaaba: Double = 0
+    var userLocation: String = "Locating..."
+    var currentCoordinates: LocationCoordinates?
+    var isLoading: Bool = true
+    var showError: Bool = false
+    var errorMessage: String?
 
     // Location management
-    @Published var showLocationPicker: Bool = false
-    @Published var savedLocations: [SavedLocation] = []
-    @Published var isUsingManualLocation: Bool = false
+    var showLocationPicker: Bool = false
+    var savedLocations: [SavedLocation] = []
+    var isUsingManualLocation: Bool = false
 
     // MARK: - Computed Properties
+
+    /// Device compass heading — reads directly from LocationService (@Observable tracks this)
+    var deviceHeading: Double {
+        locationService.heading
+    }
+
+    /// Compass accuracy — derived from LocationService heading accuracy
+    var compassAccuracy: String {
+        let accuracy = locationService.headingAccuracy
+        if accuracy < 0 {
+            return "Calibrating..."
+        } else if accuracy <= 5 {
+            return "High"
+        } else if accuracy <= 15 {
+            return "Medium"
+        } else {
+            return "Low"
+        }
+    }
+
     /// Needle rotation - points to Qibla direction relative to device heading
     var needleRotation: Double {
         return qiblaDirection - deviceHeading
@@ -50,12 +69,6 @@ class QiblaViewModel: ObservableObject {
     // MARK: - Private Properties
     private let locationService = LocationService.shared
     private let qiblaService = QiblaService()
-    private var cancellables = Set<AnyCancellable>()
-    private var previousAlignmentState = false
-
-    #if canImport(UIKit)
-    private let hapticGenerator = UINotificationFeedbackGenerator()
-    #endif
 
     // UserDefaults keys
     private let savedLocationsKey = "saved_locations"
@@ -63,7 +76,6 @@ class QiblaViewModel: ObservableObject {
 
     // MARK: - Initialization
     init() {
-        setupLocationObserver()
         loadSavedLocations()
         loadManualLocationPreference()
     }
@@ -166,7 +178,6 @@ class QiblaViewModel: ObservableObject {
     /// Pause compass tracking (called when view disappears or tab is inactive)
     func pause() {
         locationService.stopHeadingUpdates()
-        previousAlignmentState = false  // Reset alignment state
     }
 
     /// Resume compass tracking (called when view appears or tab becomes active)
@@ -175,44 +186,6 @@ class QiblaViewModel: ObservableObject {
     }
 
     // MARK: - Private Methods
-
-    private func setupLocationObserver() {
-        // Observe location updates
-        locationService.$currentLocation
-            .compactMap { $0 }
-            .sink { [weak self] location in
-                Task { @MainActor [weak self] in
-                    await self?.calculateQibla(from: location)
-                }
-            }
-            .store(in: &cancellables)
-
-        // Observe compass heading updates with throttling and deduplication
-        locationService.$heading
-            .throttle(for: .milliseconds(100), scheduler: DispatchQueue.main, latest: true)
-            .removeDuplicates { abs($0 - $1) < 0.5 }  // Only update if change > 0.5°
-            .sink { [weak self] heading in
-                guard let self = self else { return }
-                self.deviceHeading = heading
-
-                // Check alignment and trigger haptic feedback on state change
-                let isNowAligned = self.isAlignedWithQibla
-                if isNowAligned && !self.previousAlignmentState {
-                    // Just became aligned - trigger success haptic
-                    self.triggerAlignmentHaptic()
-                }
-                self.previousAlignmentState = isNowAligned
-            }
-            .store(in: &cancellables)
-
-        // Observe heading accuracy updates
-        locationService.$headingAccuracy
-            .sink { [weak self] accuracy in
-                guard let self = self else { return }
-                self.updateCompassAccuracyFromCL(accuracy: accuracy)
-            }
-            .store(in: &cancellables)
-    }
 
     private func updateQiblaDirection() async {
         do {
@@ -235,23 +208,6 @@ class QiblaViewModel: ObservableObject {
 
         // Calculate distance
         distanceToKaaba = qiblaService.calculateDistanceToKaaba(from: location)
-    }
-
-    private func updateCompassAccuracyFromCL(accuracy: CLLocationDirection) {
-        // CLLocationDirection accuracy:
-        // - Negative value means invalid
-        // - 0-5 degrees: High accuracy
-        // - 5-15 degrees: Medium accuracy
-        // - >15 degrees: Low accuracy
-        if accuracy < 0 {
-            compassAccuracy = "Calibrating..."
-        } else if accuracy <= 5 {
-            compassAccuracy = "High"
-        } else if accuracy <= 15 {
-            compassAccuracy = "Medium"
-        } else {
-            compassAccuracy = "Low"
-        }
     }
 
     private func showErrorAlert(_ message: String) {
@@ -280,13 +236,6 @@ class QiblaViewModel: ObservableObject {
         } else {
             return "Turn left \(Int(360 - normalizedAngle))°"
         }
-    }
-
-    /// Trigger haptic feedback when device aligns with Qibla
-    private func triggerAlignmentHaptic() {
-        #if canImport(UIKit)
-        hapticGenerator.notificationOccurred(.success)
-        #endif
     }
 
     // MARK: - Storage Methods

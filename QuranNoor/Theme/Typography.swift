@@ -33,10 +33,24 @@ struct AppTypography {
     // MARK: - Interactive
     static let button = Font.system(size: FontSizes.base, weight: .semibold, design: .default)
 
-    // MARK: - Arabic Text (Uthmanic Hafs)
-    static let arabicVerse = Font.custom("KFGQPC HAFS Uthmanic Script Regular", size: FontSizes.xl)
-    static let arabicTitle = Font.custom("KFGQPC HAFS Uthmanic Script Regular", size: FontSizes.xxl)
-    static let arabicLarge = Font.custom("KFGQPC HAFS Uthmanic Script Regular", size: FontSizes.xxxl)
+    // MARK: - Semantic Styles (missing from original design system)
+    static let sectionHeader = Font.system(size: FontSizes.sm, weight: .semibold, design: .default)
+    static let statValue = Font.system(size: FontSizes.xxl, weight: .bold, design: .rounded)
+    static let tabLabel = Font.system(size: FontSizes.xs, weight: .medium, design: .default)
+    static let badge = Font.system(size: 11, weight: .bold, design: .default)
+    static let countdown = Font.system(size: FontSizes.xxl, weight: .ultraLight, design: .default)
+
+    // MARK: - Arabic Text (Uthmanic Hafs) — Dynamic Type scaling via relativeTo:
+    //
+    // Font file: "UthmanicHafs.ttf" in Resources/Fonts/
+    // PostScript name: "KFGQPC Uthmanic Script HAFS"
+    // Registration: Must be listed under "Fonts provided by application" (UIAppFonts)
+    //   in Info.plist as "Fonts/UthmanicHafs.ttf" (or the correct bundle-relative path).
+    //   If the font fails to load, SwiftUI silently falls back to the system font.
+    //
+    static let arabicVerse = Font.custom("KFGQPC Uthmanic Script HAFS", size: FontSizes.xl, relativeTo: .title)
+    static let arabicTitle = Font.custom("KFGQPC Uthmanic Script HAFS", size: FontSizes.xxl, relativeTo: .title)
+    static let arabicLarge = Font.custom("KFGQPC Uthmanic Script HAFS", size: FontSizes.xxxl, relativeTo: .largeTitle)
 
     // MARK: - Fallback Arabic (system font)
     static let arabicVerseSystem = Font.system(size: FontSizes.xl, weight: .regular, design: .default)
@@ -44,7 +58,7 @@ struct AppTypography {
 
     // MARK: - Scalable Arabic fonts for user preferences
     static func arabicScalable(size: CGFloat) -> Font {
-        Font.custom("KFGQPC HAFS Uthmanic Script Regular", size: size)
+        Font.custom("KFGQPC Uthmanic Script HAFS", size: size, relativeTo: .body)
     }
 }
 
@@ -82,5 +96,19 @@ extension Text {
     func arabicTitleStyle() -> some View {
         self.font(AppTypography.arabicTitle)
             .lineSpacing(6)
+    }
+
+    func sectionHeaderStyle() -> some View {
+        self.font(AppTypography.sectionHeader)
+            .textCase(.uppercase)
+            .tracking(0.5)
+    }
+
+    func statValueStyle() -> some View {
+        self.font(AppTypography.statValue)
+    }
+
+    func tabLabelStyle() -> some View {
+        self.font(AppTypography.tabLabel)
     }
 }

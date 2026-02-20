@@ -147,7 +147,8 @@ struct AdhkarProgress: Codable {
         let calendar = Calendar.current
         if !calendar.isDateInToday(lastCompletionDate) {
             // New day, reset today's completions
-            if calendar.isDate(lastCompletionDate, inSameDayAs: Date().addingTimeInterval(-86400)) {
+            if let yesterday = calendar.date(byAdding: .day, value: -1, to: Date()),
+               calendar.isDate(lastCompletionDate, inSameDayAs: yesterday) {
                 // Completed yesterday, increment streak
                 streak += 1
             } else {
@@ -180,15 +181,15 @@ struct AdhkarProgress: Codable {
 
     /// Get completion percentage for a category
     func completionPercentage(for category: AdhkarCategory, totalInCategory: Int) -> Double {
-        guard totalInCategory > 0 else { return 0 }
+        guard totalInCategory > 0 else { return 0.0 }
 
         let calendar = Calendar.current
         guard calendar.isDateInToday(lastCompletionDate) else {
-            return 0
+            return 0.0
         }
 
-        // This would need to be calculated with actual dhikr IDs for the category
-        return 0.0
+        let completedCount = completedToday.count
+        return min(1.0, Double(completedCount) / Double(totalInCategory))
     }
 }
 

@@ -9,6 +9,7 @@ import SwiftUI
 
 struct MoreView: View {
     @Environment(ThemeManager.self) var themeManager: ThemeManager
+    var prayerVM: PrayerViewModel
 
     var body: some View {
         NavigationStack {
@@ -22,25 +23,61 @@ struct MoreView: View {
                         // Header
                         headerSection
 
-                        // Main sections
-                        VStack(spacing: Spacing.sm) {
-                            // Adhkar
+                        // MARK: Spiritual Tools
+                        moreSectionCard(title: "Spiritual Tools") {
                             NavigationLink {
                                 AdhkarView()
                             } label: {
                                 MoreMenuItem(
                                     icon: "sparkles",
                                     title: "Adhkar",
-                                    subtitle: "Daily remembrances",
-                                    accentColor: .teal
+                                    subtitle: "Daily remembrances"
                                 )
                             }
                             .buttonStyle(PlainButtonStyle())
 
-                            Divider()
-                                .padding(.horizontal, Spacing.sm)
+                            Divider().padding(.horizontal, Spacing.sm)
 
-                            // Bookmarks
+                            NavigationLink {
+                                NamesOfAllahView()
+                            } label: {
+                                MoreMenuItem(
+                                    icon: "text.book.closed.fill",
+                                    title: "99 Names of Allah",
+                                    subtitle: "Al-Asma al-Husna"
+                                )
+                            }
+                            .buttonStyle(PlainButtonStyle())
+
+                            Divider().padding(.horizontal, Spacing.sm)
+
+                            NavigationLink {
+                                TasbihCounterView()
+                            } label: {
+                                MoreMenuItem(
+                                    icon: "hand.tap.fill",
+                                    title: "Tasbih Counter",
+                                    subtitle: "Digital dhikr counter"
+                                )
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                        }
+
+                        // MARK: Daily Tools
+                        moreSectionCard(title: "Daily Tools") {
+                            NavigationLink {
+                                QiblaCompassView()
+                            } label: {
+                                MoreMenuItem(
+                                    icon: "location.north.fill",
+                                    title: "Qibla Direction",
+                                    subtitle: "Find direction to Makkah"
+                                )
+                            }
+                            .buttonStyle(PlainButtonStyle())
+
+                            Divider().padding(.horizontal, Spacing.sm)
+
                             NavigationLink {
                                 BookmarksView()
                             } label: {
@@ -48,35 +85,51 @@ struct MoreView: View {
                                     icon: "bookmark.fill",
                                     title: "Bookmarks",
                                     subtitle: "Saved verses and inspiration",
-                                    accentColor: AppColors.primary.gold,
                                     badge: bookmarkBadge
                                 )
                             }
                             .buttonStyle(PlainButtonStyle())
+                        }
 
-                            Divider()
-                                .padding(.horizontal, Spacing.sm)
-
-                            // Settings
+                        // MARK: App
+                        moreSectionCard(title: "App") {
                             NavigationLink {
-                                SettingsView()
+                                SettingsView(prayerVM: prayerVM)
                             } label: {
                                 MoreMenuItem(
                                     icon: "gearshape.fill",
                                     title: "Settings",
-                                    subtitle: "Preferences and customization",
-                                    accentColor: themeManager.currentTheme.featureAccent
+                                    subtitle: "Preferences and customization"
+                                )
+                            }
+                            .buttonStyle(PlainButtonStyle())
+
+                            Divider().padding(.horizontal, Spacing.sm)
+
+                            NavigationLink {
+                                AboutView()
+                            } label: {
+                                MoreMenuItem(
+                                    icon: "info.circle.fill",
+                                    title: "About",
+                                    subtitle: "App information"
+                                )
+                            }
+                            .buttonStyle(PlainButtonStyle())
+
+                            Divider().padding(.horizontal, Spacing.sm)
+
+                            NavigationLink {
+                                HelpView()
+                            } label: {
+                                MoreMenuItem(
+                                    icon: "questionmark.circle.fill",
+                                    title: "Help & Support",
+                                    subtitle: "Get assistance"
                                 )
                             }
                             .buttonStyle(PlainButtonStyle())
                         }
-                        .padding(Spacing.sm)
-                        .background(themeManager.currentTheme.cardColor)
-                        .cornerRadius(BorderRadius.xl)
-                        .padding(.horizontal, Spacing.screenHorizontal)
-
-                        // Additional sections
-                        additionalSection
                     }
                     .padding(.vertical, Spacing.md)
                 }
@@ -89,72 +142,40 @@ struct MoreView: View {
     // MARK: - Header Section
 
     private var headerSection: some View {
-        VStack(spacing: Spacing.xs) {
-            // App icon
-            ZStack {
-                Circle()
-                    .fill(
-                        LinearGradient(
-                            colors: [themeManager.currentTheme.featureAccent, themeManager.currentTheme.featureAccentSecondary],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 80, height: 80)
-
-                Image(systemName: "book.closed.fill")
-                    .font(.system(size: 40))
-                    .foregroundColor(.white)
-            }
-
+        VStack(spacing: Spacing.xxxs) {
             Text("Qur'an Noor")
-                .font(.system(size: 20, weight: .bold))
+                .font(.system(size: FontSizes.lg + 2, weight: .bold))
                 .foregroundColor(themeManager.currentTheme.textPrimary)
 
             Text("Light of the Qur'an")
-                .font(.system(size: 14))
+                .font(.system(size: FontSizes.sm))
                 .foregroundColor(themeManager.currentTheme.textSecondary)
         }
-        .padding(.vertical, Spacing.md)
+        .padding(.vertical, Spacing.sm)
     }
 
-    // MARK: - Additional Section
+    // MARK: - Section Card Helper
 
-    private var additionalSection: some View {
-        VStack(spacing: Spacing.sm) {
-            // About
-            NavigationLink {
-                AboutView()
-            } label: {
-                MoreMenuItem(
-                    icon: "info.circle.fill",
-                    title: "About",
-                    subtitle: "App information",
-                    accentColor: AppColors.primary.green
-                )
+    private func moreSectionCard<Content: View>(
+        title: String,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.xs) {
+            // Section header
+            Text(title)
+                .font(.system(size: FontSizes.sm, weight: .semibold))
+                .foregroundColor(themeManager.currentTheme.textSecondary)
+                .textCase(.uppercase)
+                .padding(.horizontal, Spacing.screenHorizontal + Spacing.xs)
+
+            VStack(spacing: Spacing.sm) {
+                content()
             }
-            .buttonStyle(PlainButtonStyle())
-
-            Divider()
-                .padding(.horizontal, Spacing.sm)
-
-            // Help & Support
-            NavigationLink {
-                HelpView()
-            } label: {
-                MoreMenuItem(
-                    icon: "questionmark.circle.fill",
-                    title: "Help & Support",
-                    subtitle: "Get assistance",
-                    accentColor: themeManager.currentTheme.featureAccent
-                )
-            }
-            .buttonStyle(PlainButtonStyle())
+            .padding(Spacing.sm)
+            .background(themeManager.currentTheme.cardColor)
+            .cornerRadius(BorderRadius.xl)
+            .padding(.horizontal, Spacing.screenHorizontal)
         }
-        .padding(Spacing.sm)
-        .background(themeManager.currentTheme.cardColor)
-        .cornerRadius(BorderRadius.xl)
-        .padding(.horizontal, Spacing.screenHorizontal)
     }
 
     // MARK: - Computed Properties
@@ -176,7 +197,6 @@ private struct MoreMenuItem: View {
     let icon: String
     let title: String
     let subtitle: String
-    let accentColor: Color
     var badge: Int? = nil
 
     var body: some View {
@@ -184,22 +204,22 @@ private struct MoreMenuItem: View {
             // Icon
             ZStack {
                 Circle()
-                    .fill(accentColor.opacity(0.12))
-                    .frame(width: 48, height: 48)
+                    .fill(themeManager.currentTheme.accentTint)
+                    .frame(width: Spacing.xxl, height: Spacing.xxl)
 
                 Image(systemName: icon)
-                    .font(.system(size: 20))
-                    .foregroundColor(accentColor)
+                    .font(.system(size: FontSizes.lg + 2))
+                    .foregroundColor(themeManager.currentTheme.accent)
             }
 
             // Text
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: Spacing.xxxs) {
                 Text(title)
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: FontSizes.base, weight: .semibold))
                     .foregroundColor(themeManager.currentTheme.textPrimary)
 
                 Text(subtitle)
-                    .font(.system(size: 13))
+                    .font(.system(size: FontSizes.sm - 1))
                     .foregroundColor(themeManager.currentTheme.textSecondary)
             }
 
@@ -208,18 +228,18 @@ private struct MoreMenuItem: View {
             // Badge or chevron
             if let badge = badge {
                 Text("\(badge)")
-                    .font(.system(size: 14, weight: .bold))
+                    .font(.system(size: FontSizes.sm, weight: .bold))
                     .foregroundColor(.white)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
+                    .padding(.horizontal, Spacing.xxs + 2)
+                    .padding(.vertical, Spacing.xxxs)
                     .background(
                         Capsule()
-                            .fill(AppColors.primary.gold)
+                            .fill(themeManager.currentTheme.accentMuted)
                     )
             }
 
             Image(systemName: "chevron.right")
-                .font(.system(size: 14, weight: .semibold))
+                .font(.system(size: FontSizes.sm, weight: .semibold))
                 .foregroundColor(themeManager.currentTheme.textTertiary)
         }
         .padding(Spacing.xs)
@@ -239,15 +259,15 @@ struct AboutView: View {
 
             VStack(spacing: Spacing.lg) {
                 Text("About Qur'an Noor")
-                    .font(.system(size: 24, weight: .bold))
+                    .font(.system(size: FontSizes.xl, weight: .bold))
                     .foregroundColor(themeManager.currentTheme.textPrimary)
 
                 Text("Version 1.0.0")
-                    .font(.system(size: 16))
+                    .font(.system(size: FontSizes.base))
                     .foregroundColor(themeManager.currentTheme.textSecondary)
 
                 Text("A premium Islamic companion app for prayer times, Qur'an reading, and spiritual growth.")
-                    .font(.system(size: 14))
+                    .font(.system(size: FontSizes.sm))
                     .multilineTextAlignment(.center)
                     .foregroundColor(themeManager.currentTheme.textSecondary)
                     .padding(.horizontal, Spacing.lg)
@@ -268,16 +288,16 @@ struct HelpView: View {
 
             VStack(spacing: Spacing.md) {
                 Text("Help & Support")
-                    .font(.system(size: 24, weight: .bold))
+                    .font(.system(size: FontSizes.xl, weight: .bold))
                     .foregroundColor(themeManager.currentTheme.textPrimary)
 
                 Text("For assistance, please contact:")
-                    .font(.system(size: 14))
+                    .font(.system(size: FontSizes.sm))
                     .foregroundColor(themeManager.currentTheme.textSecondary)
 
                 Text("support@qurannoor.app")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(themeManager.currentTheme.accentInteractive)
+                    .font(.system(size: FontSizes.base, weight: .medium))
+                    .foregroundColor(themeManager.currentTheme.accent)
             }
         }
         .navigationTitle("Help & Support")
@@ -288,12 +308,12 @@ struct HelpView: View {
 // MARK: - Preview
 
 #Preview("More View") {
-    MoreView()
+    MoreView(prayerVM: PrayerViewModel())
         .environment(ThemeManager())
 }
 
 #Preview("Dark Mode") {
-    MoreView()
+    MoreView(prayerVM: PrayerViewModel())
         .environment({
             let manager = ThemeManager()
             manager.setTheme(.dark)

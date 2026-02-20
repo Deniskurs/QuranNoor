@@ -83,7 +83,7 @@ struct NameDetailView: View {
             Circle()
                 .fill(
                     .linearGradient(
-                        colors: [themeManager.currentTheme.featureAccent, themeManager.currentTheme.featureAccentSecondary],
+                        colors: [themeManager.currentTheme.accent, themeManager.currentTheme.accentMuted],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
@@ -111,7 +111,7 @@ struct NameDetailView: View {
                 .multilineTextAlignment(.center)
                 .foregroundStyle(
                     .linearGradient(
-                        colors: [themeManager.currentTheme.featureAccent, themeManager.currentTheme.featureAccentSecondary],
+                        colors: [themeManager.currentTheme.accent, themeManager.currentTheme.accentMuted],
                         startPoint: .leading,
                         endPoint: .trailing
                     )
@@ -170,7 +170,7 @@ struct NameDetailView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Image(systemName: "book.closed.fill")
-                    .foregroundStyle(themeManager.currentTheme.featureAccent)
+                    .foregroundStyle(themeManager.currentTheme.accent)
                 Text("Meaning")
                     .font(.headline)
                 Spacer()
@@ -183,7 +183,7 @@ struct NameDetailView: View {
         .padding()
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(themeManager.currentTheme.featureBackgroundTint)
+                .fill(themeManager.currentTheme.accentTint)
         )
     }
 
@@ -244,12 +244,12 @@ struct NameDetailView: View {
                 }
                 .font(.subheadline)
                 .fontWeight(.semibold)
-                .foregroundStyle(isLearned ? themeManager.currentTheme.featureAccent : .primary)
+                .foregroundStyle(isLearned ? themeManager.currentTheme.accent : .primary)
                 .frame(maxWidth: .infinity)
                 .padding()
                 .background(
                     RoundedRectangle(cornerRadius: 12)
-                        .fill(isLearned ? themeManager.currentTheme.featureAccent.opacity(0.2) : Color.gray.opacity(0.1))
+                        .fill(isLearned ? themeManager.currentTheme.accent.opacity(0.2) : Color.gray.opacity(0.1))
                 )
             }
             .buttonStyle(.plain)

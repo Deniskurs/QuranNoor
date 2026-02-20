@@ -19,11 +19,10 @@ final class OnboardingCoordinator {
 
     enum OnboardingStep: Int, Codable, CaseIterable, Identifiable {
         case welcome = 0
-        case valueProposition = 1
-        case locationAndCalculation = 2
-        case notifications = 3
-        case personalization = 4
-        case themeSelection = 5
+        case locationAndCalculation = 1
+        case notifications = 2
+        case personalization = 3
+        case themeSelection = 4
 
         var id: Int { rawValue }
 
@@ -31,8 +30,6 @@ final class OnboardingCoordinator {
             switch self {
             case .welcome:
                 return "Welcome"
-            case .valueProposition:
-                return "Discover Features"
             case .locationAndCalculation:
                 return "Prayer Times Setup"
             case .notifications:
@@ -48,8 +45,6 @@ final class OnboardingCoordinator {
             switch self {
             case .welcome:
                 return "Welcome to Qur'an Noor, your spiritual companion"
-            case .valueProposition:
-                return "Explore the app's key features interactively"
             case .locationAndCalculation:
                 return "Set up your location for accurate prayer times"
             case .notifications:
@@ -227,16 +222,6 @@ final class OnboardingCoordinator {
             "step_index": "\(currentStep.rawValue)"
         ])
         complete()
-    }
-
-    /// Start express mode (use defaults, skip optional steps)
-    func startExpressMode() {
-        isExpressMode = true
-        analyticsService.track(event: .onboardingExpressModeSelected, properties: [:])
-
-        // Jump to first required step (location)
-        currentStep = .locationAndCalculation
-        saveState()
     }
 
     /// Mark onboarding as complete

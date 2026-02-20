@@ -65,7 +65,7 @@ struct PrayerTimeAdjustmentView: View {
                 .padding(.horizontal, 20)
                 .padding(.vertical, 16)
             }
-            .background(themeManager.backgroundColor.ignoresSafeArea())
+            .background(themeManager.currentTheme.backgroundColor.ignoresSafeArea())
             .navigationTitle("Adjust Prayer Times")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -113,21 +113,21 @@ struct PrayerTimeAdjustmentView: View {
     // MARK: - Components
 
     private var summaryCard: some View {
-        LiquidGlassCardView {
+        CardView {
             VStack(spacing: 12) {
                 HStack {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.title2)
-                        .foregroundStyle(themeManager.accentColor)
+                        .foregroundStyle(themeManager.currentTheme.accent)
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Custom Times Active")
                             .font(.headline)
-                            .foregroundStyle(themeManager.primaryTextColor)
+                            .foregroundStyle(themeManager.currentTheme.textPrimary)
 
                         Text("\(adjustmentService.adjustedPrayerCount) prayer\(adjustmentService.adjustedPrayerCount != 1 ? "s" : "") adjusted")
                             .font(.caption)
-                            .foregroundStyle(themeManager.secondaryTextColor)
+                            .foregroundStyle(themeManager.currentTheme.textSecondary)
                     }
 
                     Spacer()
@@ -140,7 +140,7 @@ struct PrayerTimeAdjustmentView: View {
                         HStack {
                             Text(prayer.displayName)
                                 .font(.subheadline)
-                                .foregroundStyle(themeManager.primaryTextColor)
+                                .foregroundStyle(themeManager.currentTheme.textPrimary)
 
                             Spacer()
 
@@ -149,7 +149,7 @@ struct PrayerTimeAdjustmentView: View {
                                 .foregroundStyle(
                                     adjustmentService.getAdjustment(for: prayer) > 0
                                     ? Color.orange
-                                    : themeManager.accentColor
+                                    : themeManager.currentTheme.accent
                                 )
                         }
                     }
@@ -160,20 +160,20 @@ struct PrayerTimeAdjustmentView: View {
     }
 
     private var infoBanner: some View {
-        LiquidGlassCardView {
+        CardView {
             HStack(spacing: 12) {
                 Image(systemName: "lightbulb.fill")
                     .font(.title3)
-                    .foregroundStyle(themeManager.accentColor)
+                    .foregroundStyle(themeManager.currentTheme.accent)
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Sync with Your Mosque")
                         .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(themeManager.primaryTextColor)
+                        .foregroundStyle(themeManager.currentTheme.textPrimary)
 
                     Text("Adjust times to match your local mosque's schedule")
                         .font(.caption)
-                        .foregroundStyle(themeManager.secondaryTextColor)
+                        .foregroundStyle(themeManager.currentTheme.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
@@ -203,11 +203,11 @@ struct PrayerTimeAdjustmentView: View {
     }
 
     private var detailedInfoCard: some View {
-        LiquidGlassCardView {
+        CardView {
             VStack(alignment: .leading, spacing: 12) {
                 Label("When to Use Adjustments", systemImage: "info.circle.fill")
                     .font(.headline)
-                    .foregroundStyle(themeManager.accentColor)
+                    .foregroundStyle(themeManager.currentTheme.accent)
 
                 VStack(alignment: .leading, spacing: 8) {
                     bulletPoint("Your mosque announces prayer times slightly different from calculated times")
@@ -222,11 +222,11 @@ struct PrayerTimeAdjustmentView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("How It Works")
                         .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(themeManager.primaryTextColor)
+                        .foregroundStyle(themeManager.currentTheme.textPrimary)
 
                     Text("Adjustments are applied after calculating prayer times. Negative values make prayers earlier, positive values make them later. All notifications and reminders will use the adjusted times.")
                         .font(.caption)
-                        .foregroundStyle(themeManager.secondaryTextColor)
+                        .foregroundStyle(themeManager.currentTheme.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -238,11 +238,11 @@ struct PrayerTimeAdjustmentView: View {
     private func bulletPoint(_ text: String) -> some View {
         HStack(alignment: .top, spacing: 8) {
             Text("•")
-                .foregroundStyle(themeManager.accentColor)
+                .foregroundStyle(themeManager.currentTheme.accent)
 
             Text(text)
                 .font(.caption)
-                .foregroundStyle(themeManager.secondaryTextColor)
+                .foregroundStyle(themeManager.currentTheme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -287,25 +287,25 @@ struct PrayerAdjustmentRow: View {
     }
 
     var body: some View {
-        LiquidGlassCardView {
+        CardView {
             VStack(spacing: 16) {
                 // Header
                 HStack {
                     HStack(spacing: 12) {
                         Image(systemName: prayer.icon)
                             .font(.title3)
-                            .foregroundStyle(themeManager.accentColor)
+                            .foregroundStyle(themeManager.currentTheme.accent)
                             .frame(width: 32)
 
                         VStack(alignment: .leading, spacing: 2) {
                             Text(prayer.displayName)
                                 .font(.headline)
-                                .foregroundStyle(themeManager.primaryTextColor)
+                                .foregroundStyle(themeManager.currentTheme.textPrimary)
 
                             if isAdjusted {
                                 Text(formatDescription())
                                     .font(.caption2)
-                                    .foregroundStyle(themeManager.secondaryTextColor)
+                                    .foregroundStyle(themeManager.currentTheme.textSecondary)
                             }
                         }
                     }
@@ -318,15 +318,15 @@ struct PrayerAdjustmentRow: View {
                             .font(.system(size: 20, weight: .bold, design: .rounded))
                             .foregroundStyle(
                                 adjustmentInt == 0
-                                ? themeManager.secondaryTextColor
-                                : (adjustmentInt > 0 ? Color.orange : themeManager.accentColor)
+                                ? themeManager.currentTheme.textSecondary
+                                : (adjustmentInt > 0 ? Color.orange : themeManager.currentTheme.accent)
                             )
                             .contentTransition(.numericText())
 
                         if isAdjusted {
                             Text(adjustmentInt > 0 ? "later" : "earlier")
                                 .font(.caption2)
-                                .foregroundStyle(themeManager.secondaryTextColor)
+                                .foregroundStyle(themeManager.currentTheme.textSecondary)
                         }
                     }
                     .frame(minWidth: 70)
@@ -343,13 +343,13 @@ struct PrayerAdjustmentRow: View {
                     } minimumValueLabel: {
                         Text("\(PrayerTimeAdjustmentService.minAdjustment)")
                             .font(.caption2)
-                            .foregroundStyle(themeManager.secondaryTextColor)
+                            .foregroundStyle(themeManager.currentTheme.textSecondary)
                     } maximumValueLabel: {
                         Text("+\(PrayerTimeAdjustmentService.maxAdjustment)")
                             .font(.caption2)
-                            .foregroundStyle(themeManager.secondaryTextColor)
+                            .foregroundStyle(themeManager.currentTheme.textSecondary)
                     }
-                    .tint(adjustmentInt == 0 ? themeManager.secondaryTextColor : themeManager.accentColor)
+                    .tint(adjustmentInt == 0 ? themeManager.currentTheme.textSecondary : themeManager.currentTheme.accent)
                     .onChange(of: adjustment) { _, _ in
                         AudioHapticCoordinator.shared.playHapticOnly(.light)
                     }
@@ -361,7 +361,7 @@ struct PrayerAdjustmentRow: View {
                                 Spacer()
                                 Text("0")
                                     .font(.caption2.weight(.semibold))
-                                    .foregroundStyle(themeManager.accentColor)
+                                    .foregroundStyle(themeManager.currentTheme.accent)
                                 Spacer()
                             } else {
                                 Spacer()
@@ -383,9 +383,9 @@ struct PrayerAdjustmentRow: View {
                             Spacer()
                         }
                         .font(.subheadline.weight(.medium))
-                        .foregroundStyle(themeManager.accentColor)
+                        .foregroundStyle(themeManager.currentTheme.accent)
                         .padding(.vertical, 8)
-                        .background(themeManager.accentColor.opacity(0.1))
+                        .background(themeManager.currentTheme.accent.opacity(0.1))
                         .clipShape(RoundedRectangle(cornerRadius: 8))
                     }
                 }
@@ -428,15 +428,15 @@ struct AdjustmentInfoSheet: View {
                     VStack(spacing: 12) {
                         Image(systemName: "clock.badge.checkmark.fill")
                             .font(.system(size: 48))
-                            .foregroundStyle(themeManager.accentColor)
+                            .foregroundStyle(themeManager.currentTheme.accent)
 
                         Text("Prayer Time Adjustments")
                             .font(.title2.weight(.bold))
-                            .foregroundStyle(themeManager.primaryTextColor)
+                            .foregroundStyle(themeManager.currentTheme.textPrimary)
 
                         Text("Fine-tune prayer times to match your local mosque or personal preferences")
                             .font(.subheadline)
-                            .foregroundStyle(themeManager.secondaryTextColor)
+                            .foregroundStyle(themeManager.currentTheme.textSecondary)
                             .multilineTextAlignment(.center)
                     }
                     .frame(maxWidth: .infinity)
@@ -479,7 +479,7 @@ struct AdjustmentInfoSheet: View {
                     )
 
                     // Important Notes
-                    LiquidGlassCardView {
+                    CardView {
                         VStack(alignment: .leading, spacing: 12) {
                             Label("Important Notes", systemImage: "exclamationmark.triangle.fill")
                                 .font(.headline)
@@ -497,7 +497,7 @@ struct AdjustmentInfoSheet: View {
                 }
                 .padding(20)
             }
-            .background(themeManager.backgroundColor.ignoresSafeArea())
+            .background(themeManager.currentTheme.backgroundColor.ignoresSafeArea())
             .navigationTitle("About Adjustments")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -514,17 +514,17 @@ struct AdjustmentInfoSheet: View {
         VStack(alignment: .leading, spacing: 12) {
             Label(title, systemImage: icon)
                 .font(.headline)
-                .foregroundStyle(themeManager.primaryTextColor)
+                .foregroundStyle(themeManager.currentTheme.textPrimary)
 
             VStack(alignment: .leading, spacing: 8) {
                 ForEach(items, id: \.self) { item in
                     HStack(alignment: .top, spacing: 8) {
                         Text("•")
-                            .foregroundStyle(themeManager.accentColor)
+                            .foregroundStyle(themeManager.currentTheme.accent)
 
                         Text(item)
                             .font(.subheadline)
-                            .foregroundStyle(themeManager.secondaryTextColor)
+                            .foregroundStyle(themeManager.currentTheme.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
@@ -541,7 +541,7 @@ struct AdjustmentInfoSheet: View {
 
             Text(text)
                 .font(.caption)
-                .foregroundStyle(themeManager.secondaryTextColor)
+                .foregroundStyle(themeManager.currentTheme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }

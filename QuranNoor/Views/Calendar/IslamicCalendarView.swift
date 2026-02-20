@@ -96,7 +96,7 @@ struct IslamicCalendarView: View {
             VStack(spacing: 4) {
                 HStack {
                     Image(systemName: calendarService.getCurrentHijriMonth().isSacred ? "star.fill" : "calendar")
-                        .foregroundStyle(calendarService.getCurrentHijriMonth().isSacred ? .yellow : themeManager.currentTheme.featureAccent)
+                        .foregroundStyle(calendarService.getCurrentHijriMonth().isSacred ? .yellow : themeManager.currentTheme.accent)
 
                     Text(calendarService.getCurrentHijriMonth().isSacred ? "Sacred Month" : "Islamic Month")
                         .font(.caption)
@@ -139,7 +139,7 @@ struct IslamicCalendarView: View {
                     Circle()
                         .fill(
                             .linearGradient(
-                                colors: [themeManager.currentTheme.featureAccentSecondary, themeManager.currentTheme.featureAccent],
+                                colors: [themeManager.currentTheme.accentMuted, themeManager.currentTheme.accent],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
@@ -357,7 +357,7 @@ struct EventCard: View {
     let onTap: () -> Void
 
     private var isFavorite: Bool {
-        calendarService.isFavorite(eventId: event.id)
+        calendarService.isFavorite(event: event)
     }
 
     var body: some View {
@@ -378,7 +378,7 @@ struct EventCard: View {
                     // Favorite button
                     Button {
                         withAnimation {
-                            calendarService.toggleFavorite(eventId: event.id)
+                            calendarService.toggleFavorite(event: event)
                         }
                     } label: {
                         Image(systemName: isFavorite ? "heart.fill" : "heart")

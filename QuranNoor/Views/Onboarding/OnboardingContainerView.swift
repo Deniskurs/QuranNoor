@@ -17,7 +17,7 @@ struct OnboardingContainerView: View {
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
 
     @State private var coordinator: OnboardingCoordinator
-    @StateObject private var permissionManager = PermissionManager.shared
+    @State private var permissionManager = PermissionManager.shared
 
     // Audio & Haptic coordinator
     private let feedbackCoordinator = AudioHapticCoordinator.shared
@@ -41,10 +41,10 @@ struct OnboardingContainerView: View {
             return false
         }
 
-        // Step 2 = Location permission (locationAndCalculation)
-        let isLocationStep = (currentStepIndex == 2)
-        // Step 3 = Notification permission
-        let isNotificationStep = (currentStepIndex == 3)
+        // Step 1 = Location permission (locationAndCalculation)
+        let isLocationStep = (currentStepIndex == 1)
+        // Step 2 = Notification permission
+        let isNotificationStep = (currentStepIndex == 2)
 
         // On permission steps, hide container button
         // Location step has embedded Continue button (after method selection)
@@ -100,35 +100,31 @@ struct OnboardingContainerView: View {
                     WelcomeView(coordinator: coordinator)
                         .tag(0)
 
-                    // Step 1: Value Proposition (interactive demos)
-                    ValuePropositionView(coordinator: coordinator)
-                        .tag(1)
-
-                    // Step 2: Location & Calculation (combined view)
+                    // Step 1: Location & Calculation (combined view)
                     LocationAndCalculationView(
+                        coordinator: coordinator,
+                        permissionManager: permissionManager
+                    )
+                    .tag(1)
+
+                    // Step 2: Notifications
+                    NotificationPermissionView(
                         coordinator: coordinator,
                         permissionManager: permissionManager
                     )
                     .tag(2)
 
-                    // Step 3: Notifications
-                    NotificationPermissionView(
-                        coordinator: coordinator,
-                        permissionManager: permissionManager
-                    )
-                    .tag(3)
-
-                    // Step 4: Personalization (name entry)
+                    // Step 3: Personalization (name entry)
                     PersonalizationView(
                         coordinator: coordinator
                     )
-                    .tag(4)
+                    .tag(3)
 
-                    // Step 5: Theme Selection
+                    // Step 4: Theme Selection
                     ThemeSelectionView(
                         coordinator: coordinator
                     )
-                    .tag(5)
+                    .tag(4)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never)) // Hide default page indicator
                 .animation(.smooth(duration: 0.3), value: coordinator.currentStep)
@@ -144,7 +140,7 @@ struct OnboardingContainerView: View {
                         }
                         .buttonStyle(.borderless)
                         .controlSize(.large)
-                        .tint(themeManager.currentTheme.accentSecondary)
+                        .tint(themeManager.currentTheme.accentMuted)
                     }
 
                     Spacer()
@@ -164,7 +160,7 @@ struct OnboardingContainerView: View {
                         }
                         .buttonStyle(.borderedProminent)
                         .controlSize(.large)
-                        .tint(themeManager.currentTheme.accentPrimary)
+                        .tint(themeManager.currentTheme.accent)
                     }
                 }
                 .padding(.horizontal, 24)
@@ -217,6 +213,32 @@ struct OnboardingContainerView: View {
 
     /// Complete onboarding and transition to main app
     private func completeOnboarding() {
+        // MARK: - Transfer coordinator selections to live services
+
+        // 1. Apply selected theme to ThemeManager
+        if let theme = ThemeMode(rawValue: coordinator.selectedTheme) {
+            themeManager.setTheme(theme)
+        }
+
+        // 2. Apply calculation method to UserDefaults (PrayerViewModel reads from here)
+        let methodMapping: [String: String] = [
+            "ISNA": "ISNA (North America)",
+            "MWL": "Muslim World League",
+            "Egypt": "Egyptian General Authority",
+            "Egyptian": "Egyptian General Authority",
+            "Makkah": "Umm al-Qura (Makkah)",
+            "Umm al-Qura": "Umm al-Qura (Makkah)",
+            "Karachi": "University of Islamic Sciences, Karachi",
+            "Tehran": "Institute of Geophysics, Tehran",
+            "Dubai": "Dubai",
+            "Moonsighting": "Moonsighting Committee Worldwide"
+        ]
+        let methodKey = coordinator.selectedCalculationMethod
+        let fullMethodName = methodMapping[methodKey] ?? methodKey
+        UserDefaults.standard.set(fullMethodName, forKey: "selectedCalculationMethod")
+
+        // 3. User name is already saved by PersonalizationView.saveName() — no action needed
+
         // Mark onboarding as complete (coordinator saves to storage)
         coordinator.complete()
 
@@ -252,18 +274,18 @@ struct OnboardingProgressView: View {
             GeometryReader { geometry in
                 ZStack(alignment: .leading) {
                     // Background
-                    RoundedRectangle(cornerRadius: 2)
+                    RoundedRectangle(cornerRadius: 3)
                         .fill(themeManager.currentTheme.textTertiary.opacity(0.3))
-                        .frame(height: 4)
+                        .frame(height: 6)
 
                     // Progress
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(themeManager.currentTheme.accentPrimary)
-                        .frame(width: geometry.size.width * progress, height: 4)
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(themeManager.currentTheme.accent)
+                        .frame(width: geometry.size.width * progress, height: 6)
                         .animation(.smooth(duration: 0.3), value: progress)
                 }
             }
-            .frame(height: 4)
+            .frame(height: 6)
             .accessibilityLabel("Onboarding progress")
             .accessibilityValue("\(Int(progress * 100)) percent complete, step \(currentStep) of \(totalSteps)")
         }

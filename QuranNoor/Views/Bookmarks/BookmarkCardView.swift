@@ -59,7 +59,7 @@ struct SpiritualBookmarkCard: View {
 
                     Image(systemName: "bookmark.fill")
                         .font(.system(size: 12))
-                        .foregroundColor(AppColors.primary.gold)
+                        .foregroundColor(themeManager.currentTheme.accentMuted)
                 }
             }
             .padding(Spacing.sm)
@@ -79,13 +79,13 @@ struct SpiritualBookmarkCard: View {
     private var accentColor: Color {
         switch bookmark.contentType {
         case .verse:
-            return themeManager.currentTheme.featureAccent
+            return themeManager.currentTheme.accent
         case .hadith:
-            return AppColors.primary.gold
+            return themeManager.currentTheme.accentMuted
         case .wisdom:
-            return AppColors.primary.green
+            return themeManager.currentTheme.accent
         case .dua:
-            return themeManager.currentTheme.featureAccent
+            return themeManager.currentTheme.accent
         }
     }
 
@@ -110,7 +110,7 @@ struct QuranBookmarkCard: View {
                 HStack {
                     Image(systemName: "book.fill")
                         .font(.system(size: 14))
-                        .foregroundColor(themeManager.currentTheme.featureAccent)
+                        .foregroundColor(themeManager.currentTheme.accent)
 
                     Text("QUR'AN VERSE")
                         .font(.system(size: 11, weight: .semibold))
@@ -138,17 +138,30 @@ struct QuranBookmarkCard: View {
                         .foregroundColor(themeManager.currentTheme.textSecondary)
                 }
 
-                // Footer
+                // Footer with category badge
                 HStack {
-                    Text("Tap to read verse")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(themeManager.currentTheme.textTertiary)
+                    // Category badge
+                    if bookmark.category != BookmarkCategory.allBookmarks {
+                        Text(bookmark.category)
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(themeManager.currentTheme.accent)
+                            .padding(.horizontal, Spacing.xxs)
+                            .padding(.vertical, 3)
+                            .background(
+                                Capsule()
+                                    .fill(themeManager.currentTheme.accent.opacity(0.12))
+                            )
+                    } else {
+                        Text("Tap to read verse")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(themeManager.currentTheme.textTertiary)
+                    }
 
                     Spacer()
 
                     Image(systemName: "bookmark.fill")
                         .font(.system(size: 12))
-                        .foregroundColor(AppColors.primary.gold)
+                        .foregroundColor(themeManager.currentTheme.accentMuted)
                 }
             }
             .padding(Spacing.sm)
@@ -157,7 +170,7 @@ struct QuranBookmarkCard: View {
             .cornerRadius(BorderRadius.lg)
             .overlay(
                 RoundedRectangle(cornerRadius: BorderRadius.lg)
-                    .strokeBorder(themeManager.currentTheme.featureAccent.opacity(0.15), lineWidth: 1)
+                    .strokeBorder(themeManager.currentTheme.accent.opacity(0.15), lineWidth: 1)
             )
         }
         .buttonStyle(PlainButtonStyle())

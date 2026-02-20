@@ -50,7 +50,7 @@ struct AdhkarQuickAccessCard: View {
             Image(systemName: "sparkles")
                 .font(.title3)
                 .foregroundStyle(.linearGradient(
-                    colors: [themeManager.currentTheme.featureAccent, themeManager.currentTheme.featureAccentSecondary],
+                    colors: [themeManager.currentTheme.accent, themeManager.currentTheme.accentMuted],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 ))
@@ -65,13 +65,13 @@ struct AdhkarQuickAccessCard: View {
             NavigationLink {
                 AdhkarView()
             } label: {
-                HStack(spacing: 4) {
+                HStack(spacing: Spacing.xxxs) {
                     Text("View All")
                         .font(.caption)
                     Image(systemName: "chevron.right")
                         .font(.caption2)
                 }
-                .foregroundColor(themeManager.currentTheme.accentSecondary)
+                .foregroundColor(themeManager.currentTheme.accentMuted)
             }
         }
     }
@@ -81,10 +81,10 @@ struct AdhkarQuickAccessCard: View {
     private var statsSection: some View {
         HStack(spacing: Spacing.md) {
             // Streak
-            HStack(spacing: 8) {
+            HStack(spacing: Spacing.xxs) {
                 Image(systemName: "flame.fill")
                     .font(.title3)
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(themeManager.currentTheme.accentMuted)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("\(adhkarService.progress.streak)")
@@ -98,18 +98,18 @@ struct AdhkarQuickAccessCard: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.vertical, 12)
-            .padding(.horizontal, 16)
+            .padding(.vertical, Spacing.xs)
+            .padding(.horizontal, Spacing.sm)
             .background(
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: BorderRadius.lg)
                     .fill(.ultraThinMaterial)
             )
 
             // Total Completions
-            HStack(spacing: 8) {
+            HStack(spacing: Spacing.xxs) {
                 Image(systemName: "checkmark.circle.fill")
                     .font(.title3)
-                    .foregroundStyle(.green)
+                    .foregroundStyle(themeManager.currentTheme.accent)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("\(adhkarService.progress.totalCompletions)")
@@ -123,10 +123,10 @@ struct AdhkarQuickAccessCard: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.vertical, 12)
-            .padding(.horizontal, 16)
+            .padding(.vertical, Spacing.xs)
+            .padding(.horizontal, Spacing.sm)
             .background(
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: BorderRadius.lg)
                     .fill(.ultraThinMaterial)
             )
         }
@@ -135,18 +135,18 @@ struct AdhkarQuickAccessCard: View {
     // MARK: - Quick Actions Section
 
     private var quickActionsSection: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: Spacing.xs) {
             // Tasbih Button
             Button {
                 showTasbih = true
                 HapticManager.shared.trigger(.light)
             } label: {
-                HStack(spacing: 8) {
+                HStack(spacing: Spacing.xxs) {
                     ZStack {
                         Circle()
                             .fill(
                                 .linearGradient(
-                                    colors: [themeManager.currentTheme.featureAccent, themeManager.currentTheme.featureAccentSecondary],
+                                    colors: [themeManager.currentTheme.accent, themeManager.currentTheme.accentMuted],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 )
@@ -154,7 +154,7 @@ struct AdhkarQuickAccessCard: View {
                             .frame(width: 36, height: 36)
 
                         Image(systemName: "hand.tap.fill")
-                            .font(.system(size: 14))
+                            .font(.system(size: FontSizes.sm))
                             .foregroundStyle(.white)
                     }
 
@@ -164,10 +164,10 @@ struct AdhkarQuickAccessCard: View {
                         .foregroundColor(themeManager.currentTheme.textPrimary)
                 }
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-                .padding(.horizontal, 12)
+                .padding(.vertical, Spacing.xs)
+                .padding(.horizontal, Spacing.xs)
                 .background(
-                    RoundedRectangle(cornerRadius: 12)
+                    RoundedRectangle(cornerRadius: BorderRadius.lg)
                         .fill(.ultraThinMaterial)
                 )
             }
@@ -178,12 +178,12 @@ struct AdhkarQuickAccessCard: View {
                 showNamesOfAllah = true
                 HapticManager.shared.trigger(.light)
             } label: {
-                HStack(spacing: 8) {
+                HStack(spacing: Spacing.xxs) {
                     ZStack {
                         Circle()
                             .fill(
                                 .linearGradient(
-                                    colors: [.green, .teal],
+                                    colors: [themeManager.currentTheme.accent, themeManager.currentTheme.accentMuted],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 )
@@ -191,7 +191,7 @@ struct AdhkarQuickAccessCard: View {
                             .frame(width: 36, height: 36)
 
                         Text("99")
-                            .font(.system(size: 12, weight: .bold))
+                            .font(.system(size: FontSizes.xs, weight: .bold))
                             .foregroundStyle(.white)
                     }
 
@@ -201,10 +201,10 @@ struct AdhkarQuickAccessCard: View {
                         .foregroundColor(themeManager.currentTheme.textPrimary)
                 }
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-                .padding(.horizontal, 12)
+                .padding(.vertical, Spacing.xs)
+                .padding(.horizontal, Spacing.xs)
                 .background(
-                    RoundedRectangle(cornerRadius: 12)
+                    RoundedRectangle(cornerRadius: BorderRadius.lg)
                         .fill(.ultraThinMaterial)
                 )
             }
@@ -215,7 +215,7 @@ struct AdhkarQuickAccessCard: View {
     // MARK: - Categories Section
 
     private var categoriesSection: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: Spacing.xxs) {
             ForEach(displayCategories) { category in
                 NavigationLink {
                     AdhkarCategoryView(category: category, adhkarService: adhkarService)
@@ -240,7 +240,7 @@ private struct CategoryRowView: View {
     let themeManager: ThemeManager
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: Spacing.xs) {
             // Icon
             ZStack {
                 Circle()
@@ -248,12 +248,12 @@ private struct CategoryRowView: View {
                     .frame(width: 40, height: 40)
 
                 Image(systemName: category.icon)
-                    .font(.system(size: 16))
+                    .font(.system(size: FontSizes.base))
                     .foregroundStyle(categoryColor)
             }
 
             // Title and progress text
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: Spacing.xxxs) {
                 Text(category.displayName)
                     .font(.subheadline)
                     .fontWeight(.semibold)
@@ -269,14 +269,14 @@ private struct CategoryRowView: View {
             // Progress bar
             ProgressCapsule(
                 progress: statistics.completionPercentage / 100,
-                color: statistics.isFullyCompleted ? .green : categoryColor
+                color: statistics.isFullyCompleted ? themeManager.currentTheme.accent : categoryColor
             )
             .frame(width: 60)
 
             // Completion check or chevron
             if statistics.isFullyCompleted {
                 Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
+                    .foregroundStyle(themeManager.currentTheme.accent)
                     .font(.body)
             } else {
                 Image(systemName: "chevron.right")
@@ -284,32 +284,32 @@ private struct CategoryRowView: View {
                     .font(.caption)
             }
         }
-        .padding(.vertical, 10)
-        .padding(.horizontal, 12)
+        .padding(.vertical, Spacing.xxs + 2)
+        .padding(.horizontal, Spacing.xs)
         .background(
-            RoundedRectangle(cornerRadius: 12)
+            RoundedRectangle(cornerRadius: BorderRadius.lg)
                 .fill(.ultraThinMaterial)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(statistics.isFullyCompleted ? .green.opacity(0.3) : .clear, lineWidth: 1)
+            RoundedRectangle(cornerRadius: BorderRadius.lg)
+                .stroke(statistics.isFullyCompleted ? themeManager.currentTheme.accent.opacity(0.3) : .clear, lineWidth: 1)
         )
     }
 
     private var categoryColor: Color {
         switch category {
         case .morning:
-            return .orange
+            return themeManager.currentTheme.accentMuted
         case .evening:
-            return .purple
+            return themeManager.currentTheme.accentMuted
         case .afterPrayer:
-            return .green
+            return themeManager.currentTheme.accent
         case .beforeSleep:
-            return themeManager.currentTheme.featureAccent
+            return themeManager.currentTheme.accent
         case .waking:
-            return .yellow
+            return themeManager.currentTheme.accentMuted.opacity(0.8)
         case .general:
-            return .teal
+            return themeManager.currentTheme.accent
         }
     }
 }

@@ -51,7 +51,7 @@ class PrayerCompletionService {
         // Increment change counter to trigger reactive UI updates
         changeCounter += 1
 
-        print(completed ? "✅ \(prayer.displayName) marked as completed" : "⭕ \(prayer.displayName) marked as incomplete")
+    
     }
 
     /// Toggle completion status for a prayer
@@ -99,13 +99,13 @@ class PrayerCompletionService {
         // Increment change counter to trigger reactive UI updates
         changeCounter += 1
 
-        print("🔄 Prayer completions reset")
     }
 
-    /// Get streak information (future enhancement)
+    /// Get streak information
+    /// Returns 0 because prayer completion uses UserDefaults with daily reset,
+    /// so historical completion data is not persisted across days.
+    /// A SwiftData-backed history would be needed for real streak tracking.
     func getStreakDays() -> Int {
-        // TODO: Implement streak tracking across multiple days
-        // This would require storing historical completion data
         return 0
     }
 
@@ -139,7 +139,6 @@ class PrayerCompletionService {
 
             // If last reset was not today, reset completions
             if today > lastResetDay {
-                print("🌙 New day detected, resetting prayer completions")
                 resetCompletions()
             }
         } else {

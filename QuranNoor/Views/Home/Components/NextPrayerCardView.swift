@@ -12,11 +12,8 @@ import SwiftUI
 struct NextPrayerCardView: View {
     @Environment(ThemeManager.self) var themeManager: ThemeManager
     @Environment(\.accessibilityReduceMotion) var reduceMotion
-    @State var prayerVM: PrayerViewModel
+    var prayerVM: PrayerViewModel
     @Binding var selectedTab: Int
-
-    /// Tracks the last state to detect when deadline is crossed
-    @State private var lastStateDescription: String = ""
 
     /// Dynamic update interval based on prayer state (Performance: reduce updates when not urgent)
     @State private var updateInterval: TimeInterval = 1.0
@@ -30,26 +27,15 @@ struct NextPrayerCardView: View {
     // MARK: - Body
 
     var body: some View {
-        TimelineView(.periodic(from: .now, by: isViewVisible ? updateInterval : 60.0)) { context in
-            LiquidGlassCardView(intensity: .prominent) {
-                VStack(spacing: Spacing.md) {
-                    if let period = prayerVM.currentPrayerPeriod {
-                        unifiedContent(for: period)
-                            .onAppear {
-                                checkForDeadlineCrossing(period: period, date: context.date)
-                                // Update interval based on current state
-                                updateInterval = PerformanceOptimizationService.shared.getOptimalUpdateInterval(for: period.state)
-                            }
-                            .onChange(of: context.date) { _, newDate in
-                                checkForDeadlineCrossing(period: period, date: newDate)
-                            }
-                            .onChange(of: period.state) { _, newState in
-                                // Dynamically adjust update frequency based on urgency
-                                updateInterval = PerformanceOptimizationService.shared.getOptimalUpdateInterval(for: newState)
-                            }
-                    } else {
-                        loadingContent
-                    }
+        CardView(intensity: .prominent) {
+            VStack(spacing: Spacing.md) {
+                if let period = prayerVM.currentPrayerPeriod {
+                    unifiedContent(for: period)
+                        .onChange(of: period.state) { _, newState in
+                            updateInterval = PerformanceOptimizationService.shared.getOptimalUpdateInterval(for: newState)
+                        }
+                } else {
+                    loadingContent
                 }
             }
         }
@@ -60,6 +46,9 @@ struct NextPrayerCardView: View {
         }
         .onAppear {
             isViewVisible = true
+            if let state = prayerVM.currentPrayerPeriod?.state {
+                updateInterval = PerformanceOptimizationService.shared.getOptimalUpdateInterval(for: state)
+            }
         }
         .onDisappear {
             isViewVisible = false
@@ -85,18 +74,36 @@ struct NextPrayerCardView: View {
             // Prayer name
             if let nextPrayer = period.nextPrayer {
                 Text(nextPrayer.name.displayName)
-                    .font(.system(size: 28, weight: .bold))
+                    .font(.system(size: FontSizes.xl + 4, weight: .bold))
                     .foregroundColor(theme.textPrimary)
             }
 
-            // HERO COUNTDOWN - Always 56pt, never changes size
-            Text(period.countdownString)
-                .font(.system(size: 56, weight: .light, design: .rounded))
-                .tracking(2)
-                .foregroundColor(urgency.countdownColor(for: theme))
-                .contentTransition(.numericText())
-                .monospacedDigit()
-                .animation(.easeInOut(duration: 0.5), value: urgency)
+            // HERO COUNTDOWN - Narrow TimelineView wraps ONLY the countdown text
+            // so the rest of the card doesn't rebuild every second
+            TimelineView(.periodic(from: .now, by: isViewVisible ? updateInterval : 60.0)) { context in
+                let deadline = period.state.nextEventTime
+                let interval = max(deadline.timeIntervalSince(context.date), 0)
+                let hours = Int(interval) / 3600
+                let minutes = (Int(interval) % 3600) / 60
+                let seconds = Int(interval) % 60
+                let liveCountdown = hours > 0
+                    ? String(format: "%02d:%02d:%02d", hours, minutes, seconds)
+                    : String(format: "%02d:%02d", minutes, seconds)
+
+                Text(liveCountdown)
+                    .font(.system(size: FontSizes.xxxl + 8, weight: .light, design: .rounded))
+                    .tracking(2)
+                    .foregroundColor(urgency.countdownColor(for: theme))
+                    .contentTransition(.numericText(countsDown: true))
+                    .monospacedDigit()
+                    .animation(.linear(duration: 0.3), value: liveCountdown)
+                    .onChange(of: liveCountdown) { _, newValue in
+                        // Only check for deadline crossing when countdown reaches zero
+                        if newValue == "00:00" || newValue == "00:00:00" {
+                            prayerVM.recalculatePeriod()
+                        }
+                    }
+            }
 
             // Context label
             Text(contextLabel(for: period))
@@ -137,19 +144,19 @@ struct NextPrayerCardView: View {
 
     @ViewBuilder
     private func statusBadge(period: PrayerPeriod, urgency: UrgencyLevel, theme: ThemeMode) -> some View {
-        HStack(spacing: 6) {
+        HStack(spacing: Spacing.xxxs + 2) {
             Image(systemName: stateIcon(for: period))
-                .font(.system(size: 14, weight: .semibold))
+                .font(.system(size: FontSizes.sm, weight: .semibold))
 
             Text(statusBadgeText(for: period))
-                .font(.system(size: 11, weight: .semibold))
+                .font(.system(size: FontSizes.xs - 1, weight: .semibold))
                 .textCase(.uppercase)
         }
         .foregroundColor(urgency.badgeForeground(for: theme))
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
+        .padding(.horizontal, Spacing.xxs + 2)
+        .padding(.vertical, Spacing.xxxs + 2)
         .background(
-            RoundedRectangle(cornerRadius: 8)
+            RoundedRectangle(cornerRadius: BorderRadius.md)
                 .fill(urgency.badgeBackground(for: theme))
         )
         .animation(.easeInOut(duration: 0.3), value: urgency)
@@ -161,14 +168,14 @@ struct NextPrayerCardView: View {
         // Read changeCounter to establish observation dependency for instant UI updates
         let _ = completionService.changeCounter
 
-        return HStack(spacing: 16) {
+        return HStack(spacing: Spacing.sm) {
             ForEach(Array(times.prefix(5)), id: \.name) { time in
                 let isCompleted = completionService.isCompleted(time.name)
 
-                VStack(spacing: 4) {
+                VStack(spacing: Spacing.xxxs) {
                     Image(systemName: isCompleted ? "checkmark.circle.fill" : "circle")
                         .font(.title3)
-                        .foregroundColor(isCompleted ? theme.accentPrimary : theme.textTertiary)
+                        .foregroundColor(isCompleted ? theme.accent : theme.textTertiary)
                         .symbolEffect(.bounce, options: .speed(0.5), value: isCompleted)
 
                     Text(String(time.name.displayName.prefix(3)))
@@ -182,15 +189,15 @@ struct NextPrayerCardView: View {
     // MARK: - Loading State
 
     private var loadingContent: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: Spacing.sm) {
             ProgressView()
-                .tint(themeManager.currentTheme.accentInteractive)
+                .tint(themeManager.currentTheme.accent)
 
             Text("Calculating prayer times...")
                 .font(.subheadline)
                 .foregroundColor(themeManager.currentTheme.textSecondary)
         }
-        .padding(40)
+        .padding(Spacing.xl)
     }
 
     // MARK: - Computed Properties
@@ -253,27 +260,6 @@ struct NextPrayerCardView: View {
         return "\(prayerName) in \(timeRemaining). \(urgency.accessibilityDescription)"
     }
 
-    // MARK: - Deadline Crossing Detection
-
-    /// Checks if the deadline has been crossed and triggers recalculation
-    /// This fixes the issue where countdown shows 00:00 but state doesn't update
-    private func checkForDeadlineCrossing(period: PrayerPeriod, date: Date) {
-        // If countdown has reached or passed 0, recalculate immediately
-        if period.timeUntilNextEvent <= 0 {
-            // Only recalculate if state hasn't already changed (prevents duplicate calls)
-            let currentDescription = period.state.description
-            if lastStateDescription != currentDescription || lastStateDescription.isEmpty {
-                lastStateDescription = currentDescription
-                prayerVM.recalculatePeriod()
-            }
-        } else {
-            // Update tracked state when not at deadline
-            let currentDescription = period.state.description
-            if lastStateDescription != currentDescription {
-                lastStateDescription = currentDescription
-            }
-        }
-    }
 }
 
 // MARK: - Preview

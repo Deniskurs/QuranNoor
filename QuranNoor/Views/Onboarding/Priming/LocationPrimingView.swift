@@ -27,7 +27,7 @@ struct LocationPrimingView: View {
                 // Pulsing rings
                 ForEach(0..<3) { index in
                     Circle()
-                        .stroke(themeManager.currentTheme.featureAccent.opacity(0.3), lineWidth: 2)
+                        .stroke(themeManager.currentTheme.accent.opacity(0.3), lineWidth: 2)
                         .frame(width: 120 + CGFloat(index * 30), height: 120 + CGFloat(index * 30))
                         .scaleEffect(animateIcon ? 1.2 : 0.8)
                         .opacity(animateIcon ? 0 : 0.6)
@@ -45,8 +45,8 @@ struct LocationPrimingView: View {
                         .fill(
                             RadialGradient(
                                 colors: [
-                                    themeManager.currentTheme.featureAccent.opacity(0.3),
-                                    themeManager.currentTheme.featureAccent.opacity(0.1)
+                                    themeManager.currentTheme.accent.opacity(0.3),
+                                    themeManager.currentTheme.accent.opacity(0.1)
                                 ],
                                 center: .center,
                                 startRadius: 0,
@@ -57,7 +57,7 @@ struct LocationPrimingView: View {
 
                     Image(systemName: "map.fill")
                         .font(.system(size: 60))
-                        .foregroundColor(themeManager.currentTheme.featureAccent)
+                        .foregroundColor(themeManager.currentTheme.accent)
                         .symbolEffect(.pulse, value: animateIcon)
                 }
             }
@@ -71,7 +71,7 @@ struct LocationPrimingView: View {
             // MARK: - Title
             VStack(spacing: 12) {
                 ThemedText("See Your Exact Prayer Times", style: .title)
-                    .foregroundColor(themeManager.currentTheme.accentPrimary)
+                    .foregroundColor(themeManager.currentTheme.accent)
                     .multilineTextAlignment(.center)
 
                 ThemedText.body("We use your location once to calculate accurate prayer times for your area")
@@ -88,19 +88,19 @@ struct LocationPrimingView: View {
                 benefitRow(
                     icon: "clock.badge.checkmark.fill",
                     text: "Precise prayer times based on your exact location",
-                    color: themeManager.currentTheme.featureAccent
+                    color: themeManager.currentTheme.accent
                 )
 
                 benefitRow(
                     icon: "location.north.fill",
                     text: "Accurate Qibla direction to Mecca",
-                    color: themeManager.currentTheme.featureAccent
+                    color: themeManager.currentTheme.accent
                 )
 
                 benefitRow(
                     icon: "bell.badge.fill",
                     text: "Location-aware prayer notifications",
-                    color: themeManager.currentTheme.featureAccent
+                    color: themeManager.currentTheme.accent
                 )
             }
             .padding(.horizontal, 40)
@@ -112,12 +112,12 @@ struct LocationPrimingView: View {
             HStack(spacing: 12) {
                 Image(systemName: "lock.shield.fill")
                     .font(.system(size: 24))
-                    .foregroundColor(themeManager.currentTheme.accentSecondary)
+                    .foregroundColor(themeManager.currentTheme.accentMuted)
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Your Privacy is Protected")
                         .font(.headline)
-                        .foregroundColor(themeManager.currentTheme.textColor)
+                        .foregroundColor(themeManager.currentTheme.textPrimary)
 
                     Text("Your location stays on your device and is never shared or tracked")
                         .font(.caption)
@@ -129,10 +129,10 @@ struct LocationPrimingView: View {
             .padding(16)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(themeManager.currentTheme.accentSecondary.opacity(0.1))
+                    .fill(themeManager.currentTheme.accentMuted.opacity(0.1))
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
-                            .stroke(themeManager.currentTheme.accentSecondary.opacity(0.3), lineWidth: 1)
+                            .stroke(themeManager.currentTheme.accentMuted.opacity(0.3), lineWidth: 1)
                     )
             )
             .padding(.horizontal, 32)
@@ -152,7 +152,7 @@ struct LocationPrimingView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
-                .tint(themeManager.currentTheme.featureAccent)
+                .tint(themeManager.currentTheme.accent)
 
                 Button {
                     onSkip()

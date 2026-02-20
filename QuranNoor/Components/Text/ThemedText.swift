@@ -56,14 +56,15 @@ struct ThemedText: View {
     }()
 
     // Cache computed fonts to avoid repeated lookups
+    // Uses semantic text styles for proper Dynamic Type scaling
     private static let cachedFonts: [TextStyleType: Font] = [
         .title: hasCustomTitleFont
-            ? .custom("PPEditorialNew-Ultralight", size: 32)
-            : .system(size: 32, weight: .ultraLight, design: .default),
-        .heading: .system(size: 24, weight: .semibold, design: .default),
-        .body: .system(size: 16, weight: .regular, design: .default),
-        .caption: .system(size: 14, weight: .regular, design: .default),
-        .arabic: .system(size: 20, weight: .regular, design: .default)
+            ? .custom("PPEditorialNew-Ultralight", size: 32, relativeTo: .title)
+            : .title.weight(.ultraLight),
+        .heading: .title2.weight(.semibold),
+        .body: .body,
+        .caption: .subheadline,
+        .arabic: Font.custom("KFGQPC Uthmanic Script HAFS", size: 20, relativeTo: .title)
     ]
 
     // MARK: - Initializer

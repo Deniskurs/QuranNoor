@@ -97,19 +97,6 @@ struct SpiritualBookmark: Identifiable, Codable, Hashable, Sendable {
         }
     }
 
-    /// Returns accent color for the content type
-    var accentColor: AppColors.PrimaryColors {
-        switch contentType {
-        case .verse:
-            return AppColors.primary // teal
-        case .hadith:
-            return AppColors.primary // gold
-        case .wisdom:
-            return AppColors.primary // green
-        case .dua:
-            return AppColors.primary // teal
-        }
-    }
 }
 
 // MARK: - Preview Helpers

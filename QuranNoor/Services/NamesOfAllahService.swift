@@ -9,6 +9,7 @@ import Foundation
 import Observation
 
 @Observable
+@MainActor
 final class NamesOfAllahService {
     // MARK: - Cached Codecs (Performance: avoid repeated allocation)
     private static let decoder = JSONDecoder()

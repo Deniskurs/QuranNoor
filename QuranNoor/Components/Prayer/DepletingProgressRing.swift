@@ -35,7 +35,6 @@ struct DepletingProgressRing: View {
 
     // MARK: - Animation State
 
-    @State private var animatedProgress: Double = 1.0
     @State private var pulseScale: CGFloat = 1.0
     @State private var pulseOpacity: Double = 0.6
     @State private var isViewVisible: Bool = false
@@ -61,7 +60,7 @@ struct DepletingProgressRing: View {
 
             // Depleting progress ring
             Circle()
-                .trim(from: 0, to: animatedProgress)
+                .trim(from: 0, to: progress)
                 .stroke(
                     ringColor,
                     style: StrokeStyle(
@@ -84,7 +83,6 @@ struct DepletingProgressRing: View {
         .drawingGroup() // Metal acceleration for 120fps
         .onAppear {
             isViewVisible = true
-            animatedProgress = progress
             if urgencyLevel.shouldPulse && !reduceMotion {
                 startPulsing()
             }
@@ -94,12 +92,6 @@ struct DepletingProgressRing: View {
             // Reset pulse animation state
             pulseScale = 1.0
             pulseOpacity = 0.6
-        }
-        .onChange(of: progress) { _, newValue in
-            // Smooth animation for progress changes
-            withAnimation(.linear(duration: 0.3)) {
-                animatedProgress = newValue
-            }
         }
         .onChange(of: urgencyLevel) { oldValue, newValue in
             // Start/stop pulsing when urgency changes

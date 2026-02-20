@@ -17,11 +17,11 @@ struct PrayerTimesDemo: View {
     // Sample prayer times - colors will be resolved dynamically based on theme
     private var prayers: [(name: String, time: String, icon: String, color: Color)] {
         [
-            ("Fajr", "05:42 AM", "sunrise.fill", themeManager.currentTheme.featureAccent),
-            ("Dhuhr", "12:35 PM", "sun.max.fill", themeManager.currentTheme.accentSecondary),
-            ("Asr", "03:48 PM", "sun.haze.fill", themeManager.currentTheme.accentInteractive),
-            ("Maghrib", "06:22 PM", "sunset.fill", themeManager.currentTheme.accentPrimary),
-            ("Isha", "07:45 PM", "moon.stars.fill", themeManager.currentTheme.featureAccent)
+            ("Fajr", "05:42 AM", "sunrise.fill", themeManager.currentTheme.accent),
+            ("Dhuhr", "12:35 PM", "sun.max.fill", themeManager.currentTheme.accentMuted),
+            ("Asr", "03:48 PM", "sun.haze.fill", themeManager.currentTheme.accent),
+            ("Maghrib", "06:22 PM", "sunset.fill", themeManager.currentTheme.accent),
+            ("Isha", "07:45 PM", "moon.stars.fill", themeManager.currentTheme.accent)
         ]
     }
 
@@ -32,9 +32,9 @@ struct PrayerTimesDemo: View {
             VStack(spacing: 12) {
                 HStack(spacing: 8) {
                     Image(systemName: "mappin.circle.fill")
-                        .foregroundColor(themeManager.currentTheme.featureAccent)
+                        .foregroundColor(themeManager.currentTheme.accent)
                     ThemedText("San Francisco, CA", style: .heading)
-                        .foregroundColor(themeManager.currentTheme.accentPrimary)
+                        .foregroundColor(themeManager.currentTheme.accent)
                 }
 
                 // Hijri date
@@ -80,7 +80,7 @@ struct PrayerTimesDemo: View {
                             Text("Never miss a prayer with timely notifications")
                                 .font(.caption)
                         }
-                        .foregroundColor(.secondary)
+                        .foregroundColor(themeManager.currentTheme.textTertiary)
                         .padding(.vertical, 8)
                     }
                 }
@@ -106,7 +106,7 @@ struct PrayerTimesDemo: View {
             HStack {
                 Text("NEXT PRAYER")
                     .font(.caption.weight(.bold))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(themeManager.currentTheme.textTertiary)
 
                 Spacer()
 
@@ -117,18 +117,18 @@ struct PrayerTimesDemo: View {
             // Prayer name
             Text(prayers[selectedPrayer].name)
                 .font(.system(size: 32, weight: .bold, design: .rounded))
-                .foregroundColor(themeManager.currentTheme.accentPrimary)
+                .foregroundColor(themeManager.currentTheme.accent)
 
             // Countdown timer
             HStack(spacing: 4) {
                 countdownComponent(value: 2, label: "h")
                 Text(":")
                     .font(.title.weight(.bold))
-                    .foregroundColor(themeManager.currentTheme.featureAccent)
+                    .foregroundColor(themeManager.currentTheme.accent)
                 countdownComponent(value: 34, label: "m")
                 Text(":")
                     .font(.title.weight(.bold))
-                    .foregroundColor(themeManager.currentTheme.featureAccent)
+                    .foregroundColor(themeManager.currentTheme.accent)
                 countdownComponent(value: Int(currentTime.timeIntervalSince1970.truncatingRemainder(dividingBy: 60)), label: "s")
             }
 
@@ -144,7 +144,7 @@ struct PrayerTimesDemo: View {
             // Progress ring
             ZStack {
                 Circle()
-                    .stroke(Color.secondary.opacity(0.2), lineWidth: 8)
+                    .stroke(themeManager.currentTheme.textTertiary.opacity(0.2), lineWidth: 8)
 
                 Circle()
                     .trim(from: 0, to: 0.65) // 65% progress
@@ -161,7 +161,7 @@ struct PrayerTimesDemo: View {
                 VStack(spacing: 4) {
                     Text("65%")
                         .font(.title2.weight(.bold))
-                        .foregroundColor(themeManager.currentTheme.accentPrimary)
+                        .foregroundColor(themeManager.currentTheme.accent)
                     Text("of day passed")
                         .font(.caption2)
                         .foregroundColor(themeManager.currentTheme.textSecondary)
@@ -184,13 +184,13 @@ struct PrayerTimesDemo: View {
         VStack(spacing: 4) {
             Text(String(format: "%02d", value))
                 .font(.system(size: 36, weight: .bold, design: .rounded))
-                .foregroundColor(themeManager.currentTheme.textColor)
+                .foregroundColor(themeManager.currentTheme.textPrimary)
                 .monospacedDigit()
                 .contentTransition(.numericText())
 
             Text(label)
                 .font(.caption2)
-                .foregroundColor(.secondary)
+                .foregroundColor(themeManager.currentTheme.textTertiary)
         }
         .frame(width: 60)
         .padding(.vertical, 8)
@@ -225,7 +225,7 @@ struct PrayerTimesDemo: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(prayer.name)
                         .font(.headline)
-                        .foregroundColor(themeManager.currentTheme.textColor)
+                        .foregroundColor(themeManager.currentTheme.textPrimary)
 
                     if index == selectedPrayer {
                         Text("Upcoming")
@@ -247,7 +247,7 @@ struct PrayerTimesDemo: View {
                 VStack(alignment: .trailing, spacing: 4) {
                     Text(prayer.time)
                         .font(.headline.monospacedDigit())
-                        .foregroundColor(index == selectedPrayer ? prayer.color : themeManager.currentTheme.textColor)
+                        .foregroundColor(index == selectedPrayer ? prayer.color : themeManager.currentTheme.textPrimary)
 
                     // Checkmark for completed prayers
                     if index < selectedPrayer {
@@ -257,7 +257,7 @@ struct PrayerTimesDemo: View {
                             Text("Prayed")
                                 .font(.caption2)
                         }
-                        .foregroundColor(themeManager.currentTheme.featureAccent)
+                        .foregroundColor(themeManager.currentTheme.accent)
                     }
                 }
 

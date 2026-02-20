@@ -49,7 +49,7 @@ class PrayerViewModel {
     private let locationService = LocationService.shared
     private let prayerTimeService = PrayerTimeService.shared
     private let mosqueFinderService = MosqueFinderService.shared
-    let notificationService = NotificationService() // Public for notification toggle
+    let notificationService = NotificationService.shared
 
     // MARK: - Urgent Notification Tracking
 
@@ -125,9 +125,6 @@ class PrayerViewModel {
         periodProgress
     }
 
-    // MARK: - Notification Preferences Observer
-    private var notificationPreferencesObserver: NSObjectProtocol?
-
     // MARK: - Initializer
     init() {
         loadCalculationMethod()
@@ -136,12 +133,18 @@ class PrayerViewModel {
         setupNotificationPreferencesObserver()
     }
 
-    // Note: Observer cleanup is handled by NotificationCenter when object is deallocated
-    // since we use addObserver with a closure that captures [weak self]
+    // MARK: - Observer Cleanup
+    @ObservationIgnored private nonisolated(unsafe) var _notificationObserverToken: (any NSObjectProtocol)?
+
+    deinit {
+        if let token = _notificationObserverToken {
+            NotificationCenter.default.removeObserver(token)
+        }
+    }
 
     /// Listen for notification preference changes and reschedule
     private func setupNotificationPreferencesObserver() {
-        notificationPreferencesObserver = NotificationCenter.default.addObserver(
+        _notificationObserverToken = NotificationCenter.default.addObserver(
             forName: .notificationPreferencesChanged,
             object: nil,
             queue: .main
@@ -171,21 +174,13 @@ class PrayerViewModel {
             // Step 1: Request location permission if needed
             if !locationService.hasLocationPermission() {
                 locationService.requestLocationPermission()
-
-                // Wait efficiently for permission using exponential backoff (max 5 seconds)
-                // Much more efficient than constant 0.3s polling
-                var waitTime: UInt64 = 100_000_000  // Start at 0.1s
-                let maxWaitTime: UInt64 = 1_000_000_000  // Max 1s between checks
-                let deadline = Date().addingTimeInterval(5)
-
-                while !locationService.hasLocationPermission() && Date() < deadline {
-                    try await Task.sleep(nanoseconds: waitTime)
-                    waitTime = min(waitTime * 2, maxWaitTime)  // Exponential backoff
-                }
-
-                guard locationService.hasLocationPermission() else {
-                    throw LocationServiceError.permissionDenied
-                }
+                
+                // Don't block — return early and let the UI show a permission prompt.
+                // Prayer times will load once permission is granted and the user
+                // triggers a refresh or the view re-appears.
+                isLoadingPrayerTimes = false
+                isLoadingLocation = false
+                return
             }
 
             // Step 2: Get location with city name
@@ -227,10 +222,7 @@ class PrayerViewModel {
 
     /// Load tomorrow's prayer times (for midnight transition)
     func loadTomorrowPrayerTimes() async {
-        guard let coordinates = locationService.currentLocation else {
-            print("⚠️ No location available, skipping tomorrow's prayer times")
-            return
-        }
+        guard let coordinates = locationService.currentLocation else { return }
 
         do {
             // Calculate TOMORROW's prayer times
@@ -245,30 +237,19 @@ class PrayerViewModel {
             // Apply manual adjustments (if any)
             let adjustedTomorrowPrayers = PrayerTimeAdjustmentService.shared.applyAdjustments(to: tomorrowPrayers)
             tomorrowPrayerTimes = adjustedTomorrowPrayers
-            print("✅ Tomorrow's prayer times loaded successfully (with adjustments if configured)")
-
         } catch {
-            print("⚠️ Failed to fetch tomorrow's prayers: \(error.localizedDescription)")
             // Not critical - will fetch when needed
         }
     }
 
     /// Recalculate the current prayer period
     func recalculatePeriod() {
-        guard let today = todayPrayerTimes else {
-            print("⚠️ Cannot recalculate period: no today's prayer times")
-            return
-        }
+        guard let today = todayPrayerTimes else { return }
 
         currentPrayerPeriod = PrayerPeriodCalculator.calculate(
             today: today,
             tomorrow: tomorrowPrayerTimes
         )
-
-        print("📅 Prayer period recalculated: \(currentPrayerPeriod?.state.description ?? "Unknown")")
-        print("⏱️ Countdown: \(countdownString)")
-        print("📊 Progress: \(String(format: "%.1f%%", periodProgress * 100))")
-        print("🚨 Urgent: \(isUrgent)")
 
         // Check and schedule urgent notifications
         checkAndScheduleUrgentNotification()
@@ -288,10 +269,7 @@ class PrayerViewModel {
 
         // Check if urgent notifications are enabled for this prayer
         let prefs = NotificationPreferencesService.shared
-        guard prefs.isUrgentNotificationEnabled(for: prayer) else {
-            print("⏭️ Skipping urgent notification for \(prayer.displayName) (disabled in preferences)")
-            return
-        }
+        guard prefs.isUrgentNotificationEnabled(for: prayer) else { return }
 
         // Create unique identifier for this prayer+deadline combination
         let notificationKey = "\(prayer.rawValue)-\(deadline.timeIntervalSince1970)"
@@ -324,10 +302,8 @@ class PrayerViewModel {
 
                 // Mark as scheduled
                 urgentNotificationsScheduled.insert(notificationKey)
-
-                print("🚨 Urgent notification scheduled for \(prayer.displayName) at \(deadline)")
             } catch {
-                print("⚠️ Failed to schedule urgent notification: \(error.localizedDescription)")
+                // Not critical — will retry on next period recalculation
             }
         }
     }
@@ -343,7 +319,7 @@ class PrayerViewModel {
 
         // If today's prayer times are no longer for today, reload
         if !Calendar.current.isDateInToday(today.date) {
-            print("🌙 Day transition detected, reloading prayer times...")
+            // Day transition — reload prayer times
             await loadPrayerTimes()
             await loadTomorrowPrayerTimes()
             recalculatePeriod()
@@ -448,7 +424,6 @@ class PrayerViewModel {
         guard notificationService.isAuthorized,
               notificationService.notificationsEnabled,
               let prayerTimes = todayPrayerTimes else {
-            print("⏭️ Skipping reschedule: not authorized, not enabled, or no prayer times")
             return
         }
 
@@ -459,9 +434,8 @@ class PrayerViewModel {
                 city: locationInfo.city,
                 countryCode: locationInfo.countryCode
             )
-            print("✅ Notifications rescheduled after preference change")
         } catch {
-            print("⚠️ Failed to reschedule notifications: \(error.localizedDescription)")
+            // Not critical — will retry on next preference change
         }
     }
 
@@ -482,42 +456,21 @@ class PrayerViewModel {
     private func handleError(_ error: Error) {
         errorMessage = error.localizedDescription
         showError = true
-        print("❌ PrayerViewModel error: \(error.localizedDescription)")
     }
 
     private func setupNotificationCategories() {
         notificationService.registerNotificationCategories()
     }
 
-    /// Convert country name to 2-letter country code
+    /// Convert country name to 2-letter country code using system locale data
     private func convertToCountryCode(_ countryName: String) -> String {
-        // Common countries mapping
-        let countryMappings: [String: String] = [
-            "United Kingdom": "GB",
-            "United States": "US",
-            "Canada": "CA",
-            "Australia": "AU",
-            "Saudi Arabia": "SA",
-            "United Arab Emirates": "AE",
-            "Pakistan": "PK",
-            "India": "IN",
-            "Malaysia": "MY",
-            "Indonesia": "ID",
-            "Turkey": "TR",
-            "Egypt": "EG",
-            "Morocco": "MA",
-            "Algeria": "DZ",
-            "Tunisia": "TN",
-            "France": "FR",
-            "Germany": "DE",
-            "Netherlands": "NL",
-            "Belgium": "BE",
-            "Sweden": "SE",
-            "Norway": "NO",
-            "Denmark": "DK"
-        ]
-
-        return countryMappings[countryName] ?? "Unknown"
+        // Use efficient Locale-based conversion
+        if let code = Locale.Region.isoRegions.map(\.identifier).first(where: { code in
+            Locale.current.localizedString(forRegionCode: code) == countryName
+        }) {
+            return code
+        }
+        return countryName  // fallback to the name itself
     }
 
     // MARK: - UserDefaults

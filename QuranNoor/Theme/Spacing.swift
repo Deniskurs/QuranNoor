@@ -99,3 +99,14 @@ struct BorderRadius {
     /// Full pill shape
     static let full: CGFloat = 9999
 }
+
+// MARK: - Corner Radius (Convenience Alias)
+/// Standardized corner radius constants for consistent UI rounding.
+/// Preferred over ad-hoc magic numbers throughout the codebase.
+enum CornerRadius {
+    static let sm: CGFloat = 8
+    static let md: CGFloat = 12
+    static let lg: CGFloat = 16
+    static let xl: CGFloat = 20
+    static let xxl: CGFloat = 24
+}

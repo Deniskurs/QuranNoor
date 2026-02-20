@@ -175,7 +175,7 @@ final class IslamicCalendarService {
 
     /// Get favorite events
     func getFavoriteEvents() -> [IslamicEvent] {
-        return allEvents.filter { progress.isFavorite(eventId: $0.id) }
+        return allEvents.filter { progress.isFavorite(eventKey: CalendarProgress.stableKey(for: $0)) }
     }
 
     /// Search events
@@ -191,13 +191,13 @@ final class IslamicCalendarService {
 
     // MARK: - Progress Management
 
-    func toggleFavorite(eventId: UUID) {
-        progress.toggleFavorite(eventId: eventId)
+    func toggleFavorite(event: IslamicEvent) {
+        progress.toggleFavorite(eventKey: CalendarProgress.stableKey(for: event))
         saveProgress()
     }
 
-    func isFavorite(eventId: UUID) -> Bool {
-        progress.isFavorite(eventId: eventId)
+    func isFavorite(event: IslamicEvent) -> Bool {
+        progress.isFavorite(eventKey: CalendarProgress.stableKey(for: event))
     }
 
     // MARK: - Ramadan Tracking

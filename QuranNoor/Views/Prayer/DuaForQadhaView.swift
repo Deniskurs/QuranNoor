@@ -68,7 +68,7 @@ struct DuaForQadhaView: View {
                 .padding(.horizontal, 20)
                 .padding(.vertical, 16)
             }
-            .background(themeManager.backgroundColor.ignoresSafeArea())
+            .background(themeManager.currentTheme.backgroundColor.ignoresSafeArea())
             .navigationTitle("Duas for Qadha")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -82,15 +82,15 @@ struct DuaForQadhaView: View {
     }
 
     private var headerView: some View {
-        LiquidGlassCardView {
+        CardView {
             VStack(spacing: 12) {
                 Image(systemName: "book.closed.fill")
                     .font(.system(size: 40))
-                    .foregroundStyle(themeManager.accentColor)
+                    .foregroundStyle(themeManager.currentTheme.accent)
 
                 Text("Recite these duas while making up your missed prayers")
                     .font(.subheadline)
-                    .foregroundStyle(themeManager.secondaryTextColor)
+                    .foregroundStyle(themeManager.currentTheme.textSecondary)
                     .multilineTextAlignment(.center)
             }
             .padding(20)
@@ -98,11 +98,11 @@ struct DuaForQadhaView: View {
     }
 
     private var reminderCard: some View {
-        LiquidGlassCardView {
+        CardView {
             VStack(alignment: .leading, spacing: 12) {
                 Label("Remember", systemImage: "lightbulb.fill")
                     .font(.headline)
-                    .foregroundStyle(themeManager.accentColor)
+                    .foregroundStyle(themeManager.currentTheme.accent)
 
                 VStack(alignment: .leading, spacing: 8) {
                     bulletPoint("Make sincere intention (niyyah) for each qadha prayer")
@@ -119,11 +119,11 @@ struct DuaForQadhaView: View {
     private func bulletPoint(_ text: String) -> some View {
         HStack(alignment: .top, spacing: 8) {
             Text("•")
-                .foregroundStyle(themeManager.accentColor)
+                .foregroundStyle(themeManager.currentTheme.accent)
 
             Text(text)
                 .font(.caption)
-                .foregroundStyle(themeManager.secondaryTextColor)
+                .foregroundStyle(themeManager.currentTheme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -137,17 +137,17 @@ struct QadhaDuaCard: View {
     let dua: DuaContent
 
     var body: some View {
-        LiquidGlassCardView {
+        CardView {
             VStack(alignment: .leading, spacing: 16) {
                 // Title
                 Text(dua.title)
                     .font(.headline)
-                    .foregroundStyle(themeManager.accentColor)
+                    .foregroundStyle(themeManager.currentTheme.accent)
 
                 // Arabic Text
                 Text(dua.arabic)
                     .font(.title3)
-                    .foregroundStyle(themeManager.primaryTextColor)
+                    .foregroundStyle(themeManager.currentTheme.textPrimary)
                     .multilineTextAlignment(.trailing)
                     .frame(maxWidth: .infinity, alignment: .trailing)
                     .padding(.vertical, 8)
@@ -159,12 +159,12 @@ struct QadhaDuaCard: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Transliteration")
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(themeManager.secondaryTextColor)
+                        .foregroundStyle(themeManager.currentTheme.textSecondary)
                         .textCase(.uppercase)
 
                     Text(dua.transliteration)
                         .font(.subheadline)
-                        .foregroundStyle(themeManager.primaryTextColor)
+                        .foregroundStyle(themeManager.currentTheme.textPrimary)
                         .italic()
                 }
 
@@ -172,12 +172,12 @@ struct QadhaDuaCard: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Translation")
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(themeManager.secondaryTextColor)
+                        .foregroundStyle(themeManager.currentTheme.textSecondary)
                         .textCase(.uppercase)
 
                     Text(dua.translation)
                         .font(.subheadline)
-                        .foregroundStyle(themeManager.primaryTextColor)
+                        .foregroundStyle(themeManager.currentTheme.textPrimary)
                 }
 
                 // Reference
@@ -185,7 +185,7 @@ struct QadhaDuaCard: View {
                     Spacer()
                     Text(dua.reference)
                         .font(.caption2)
-                        .foregroundStyle(themeManager.secondaryTextColor)
+                        .foregroundStyle(themeManager.currentTheme.textSecondary)
                         .italic()
                 }
             }

@@ -3,6 +3,8 @@
 //  QuranNoor
 //
 //  Welcome screen for onboarding
+//  Design: Sacred restraint — bismillah as visual centerpiece,
+//  warm typography, Islamic geometric divider, no flashy gradients.
 //
 
 import SwiftUI
@@ -14,45 +16,36 @@ struct WelcomeView: View {
 
     // MARK: - Body
     var body: some View {
-        VStack(spacing: 32) {
+        let theme = themeManager.currentTheme
+
+        VStack(spacing: 0) {
             Spacer()
 
-            // App Icon/Logo
-            ZStack {
-                Circle()
-                    .fill(
-                        LinearGradient(
-                            colors: [themeManager.currentTheme.accentPrimary, themeManager.currentTheme.accentSecondary],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 120, height: 120)
-                    .shadow(color: themeManager.currentTheme.accentPrimary.opacity(0.3), radius: 20)
+            // MARK: - Bismillah (Visual Centerpiece)
+            Text("بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ")
+                .font(.custom("KFGQPC HAFS Uthmanic Script Regular", size: 28))
+                .foregroundColor(theme.textPrimary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, Spacing.screenHorizontal)
 
-                Image(systemName: "book.fill")
-                    .font(.system(size: 60))
-                    .foregroundColor(themeManager.currentTheme.backgroundColor)
-            }
-
-            // Welcome text
-            VStack(spacing: 16) {
+            // MARK: - App Identity
+            VStack(spacing: Spacing.xxs) {
                 ThemedText.title("Qur'an Noor", italic: false)
-                    .foregroundColor(themeManager.currentTheme.accentPrimary)
+                    .foregroundColor(theme.accent)
 
-                ThemedText("Light of the Quran", style: .heading)
-                    .foregroundColor(themeManager.currentTheme.accentSecondary)
-
-                ThemedText.body("Your comprehensive Islamic companion for spiritual growth, prayer times, Quran reading, and more")
-                    .multilineTextAlignment(.center)
-                    .opacity(0.8)
-                    .padding(.horizontal, 40)
+                Text("Light of the Qur'an")
+                    .font(.system(size: 16, weight: .regular, design: .default))
+                    .foregroundColor(theme.textSecondary)
             }
+            .padding(.top, Spacing.md)
 
-            Spacer()
+            // MARK: - Islamic Geometric Divider
+            IslamicDivider(style: .ornamental, color: theme.accent)
+                .padding(.vertical, Spacing.lg)
+                .padding(.horizontal, Spacing.xl)
 
-            // Features highlights
-            VStack(spacing: 20) {
+            // MARK: - Feature Highlights
+            VStack(spacing: Spacing.md) {
                 FeatureRow(
                     icon: "clock.fill",
                     title: "Accurate Prayer Times",
@@ -71,11 +64,12 @@ struct WelcomeView: View {
                     description: "Find the direction to Mecca anywhere"
                 )
             }
-            .padding(.horizontal, 32)
+            .padding(.horizontal, Spacing.screenHorizontal)
 
             Spacer()
+            Spacer()
         }
-        .padding()
+        .padding(.vertical, Spacing.screenVertical)
     }
 }
 
@@ -88,18 +82,22 @@ struct FeatureRow: View {
     @Environment(ThemeManager.self) var themeManager: ThemeManager
 
     var body: some View {
-        HStack(spacing: 16) {
+        let theme = themeManager.currentTheme
+
+        HStack(spacing: Spacing.sm) {
             Image(systemName: icon)
-                .font(.system(size: 28))
-                .foregroundColor(themeManager.currentTheme.accentSecondary)
-                .frame(width: 44)
+                .font(.system(size: 22))
+                .foregroundColor(theme.accent)
+                .frame(width: Spacing.tapTarget, height: Spacing.tapTarget)
 
-            VStack(alignment: .leading, spacing: 4) {
-                ThemedText(title, style: .body)
-                    .fontWeight(.semibold)
+            VStack(alignment: .leading, spacing: Spacing.xxxs) {
+                Text(title)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(theme.textPrimary)
 
-                ThemedText.caption(description)
-                    .opacity(0.7)
+                Text(description)
+                    .font(.system(size: 14, weight: .regular))
+                    .foregroundColor(theme.textSecondary)
             }
 
             Spacer()

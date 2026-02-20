@@ -123,6 +123,8 @@ struct PresetCard: View {
 
 #Preview {
     PresetPickerView(selectedPreset: .constant(.subhanAllah)) {
+        #if DEBUG
         print("Selected")
+        #endif
     }
 }

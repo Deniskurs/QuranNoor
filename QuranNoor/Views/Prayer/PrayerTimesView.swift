@@ -14,10 +14,11 @@ struct PrayerTimesView: View {
     // MARK: - Properties
 
     @Environment(ThemeManager.self) var themeManager: ThemeManager
-    @State private var viewModel = PrayerViewModel()
+    @Bindable var viewModel: PrayerViewModel
     @State private var transitionHandler: PrayerTransitionHandler?
 
     // Note: Access singletons directly - don't wrap in @State
+    private let hijriService = HijriCalendarService()
 
     // UI State
     @State private var showMethodPicker: Bool = false
@@ -29,9 +30,6 @@ struct PrayerTimesView: View {
     @State private var showCompletionToast: Bool = false
     @State private var completedPrayerName: String = ""
     @State private var lastCompletedPrayer: PrayerName? = nil
-
-    // View visibility tracking
-    @State private var isViewVisible: Bool = true
 
     // Namespace for scroll animations
     @Namespace private var scrollNamespace
@@ -45,53 +43,61 @@ struct PrayerTimesView: View {
                 themeManager.currentTheme.backgroundColor
                     .ignoresSafeArea()
 
-                // Main content - Fixed 1s interval for reliable countdown updates
-                TimelineView(.periodic(from: Date(), by: 1.0)) { context in
-                    ScrollViewReader { scrollProxy in
-                        ScrollView {
-                            VStack(spacing: 20) {
-                                // Immersive Hero Section
-                                if let period = viewModel.currentPrayerPeriod {
+                // Gradient overlay
+                GradientBackground(style: .prayer, opacity: 0.3)
+
+                // Main content
+                ScrollViewReader { scrollProxy in
+                    ScrollView {
+                        VStack(spacing: Spacing.sectionSpacing) {
+                            // Arabic calligraphy header with Hijri date
+                            prayerHeader
+
+                            // Immersive Hero Section — only this needs per-second updates
+                            if let period = viewModel.currentPrayerPeriod {
                                     PrayerHeroSection(
-                                        period: period,
-                                        currentTime: context.date,  // Live time for real-time countdown
-                                        location: viewModel.userLocation,
-                                        isLoadingLocation: viewModel.isLoadingLocation
-                                    )
-                                }
-
-                                // Today's Prayers List
-                                if let times = viewModel.todayPrayerTimes {
-                                    prayerListSection(times, scrollProxy: scrollProxy)
-                                }
-
-                                // Completion Statistics with Celebration
-                                CelebrationCompletionCard()
-
-                                // Settings Section
-                                settingsSection
-
-                                // Mosque Finder
-                                mosqueFinderButton
-
-                                // Qadha Counter
-                                qadhaCounterButton
-
-                                // Bottom padding
-                                Spacer()
-                                    .frame(height: 20)
+                                    period: period,
+                                    location: viewModel.userLocation,
+                                    isLoadingLocation: viewModel.isLoadingLocation
+                                )
                             }
-                            .padding(.horizontal, 16)
-                        }
-                        .refreshable {
-                            await viewModel.refreshPrayerTimes()
-                        }
-                    }
-                }
 
-                // Loading overlay
-                if viewModel.isLoadingPrayerTimes {
-                    LoadingOverlay()
+                            // Islamic divider after hero
+                            IslamicDivider(style: .ornamental)
+
+                            // Today's Prayers List (static — no per-second updates needed)
+                            if viewModel.isLoadingPrayerTimes {
+                                // Loading state
+                                VStack(spacing: Spacing.sm) {
+                                    LoadingView(size: .large, message: "Calculating prayer times...")
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, Spacing.xl)
+                            } else if let times = viewModel.todayPrayerTimes {
+                                prayerListSection(times, scrollProxy: scrollProxy)
+                            } else if !viewModel.isLoadingLocation {
+                                // Empty state - no location available
+                                emptyLocationState
+                            }
+
+                            // Completion Statistics with Celebration
+                            CelebrationCompletionCard()
+
+                            // Islamic divider before settings
+                            IslamicDivider(style: .ornamental)
+
+                            // Settings, Mosque Finder, and Qadha grouped in CardView
+                            settingsActionsCard
+
+                            // Bottom padding
+                            Spacer()
+                                .frame(height: Spacing.screenPadding)
+                        }
+                        .padding(.horizontal, Spacing.screenPadding)
+                    }
+                    .refreshable {
+                        await viewModel.refreshPrayerTimes()
+                    }
                 }
 
                 // Prayer reminder popup
@@ -117,21 +123,19 @@ struct PrayerTimesView: View {
             #endif
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    IconButton(icon: "arrow.clockwise", size: 36) {
-                        Task {
-                            await viewModel.refreshPrayerTimes()
-                        }
+                    Button {
+                        Task { await viewModel.refreshPrayerTimes() }
+                    } label: {
+                        Image(systemName: "arrow.clockwise")
+                            .font(.system(size: FontSizes.lg, weight: .medium))
+                            .foregroundColor(themeManager.currentTheme.accentMuted)
                     }
                 }
             }
             .task {
                 await initializeView()
             }
-            .onAppear {
-                isViewVisible = true
-            }
             .onDisappear {
-                isViewVisible = false
                 transitionHandler?.stop()
             }
             .onReceive(NotificationCenter.default.publisher(for: .prayerAdjustmentsChanged)) { _ in
@@ -181,6 +185,31 @@ struct PrayerTimesView: View {
         }
     }
 
+    // MARK: - Prayer Header
+
+    private var prayerHeader: some View {
+        VStack(spacing: 6) {
+            Text("أوقات الصلاة")
+                .font(.system(size: 34, weight: .regular, design: .default))
+                .foregroundColor(themeManager.currentTheme.accent)
+
+            Text("PRAYER TIMES")
+                .font(.system(size: 13, weight: .regular))
+                .foregroundColor(themeManager.currentTheme.textTertiary)
+                .tracking(1.5)
+                .textCase(.uppercase)
+
+            // Hijri date if available
+            if let hijriDate = hijriService.getCachedHijriDate() {
+                Text(hijriDate.formatted)
+                    .font(.system(size: FontSizes.xs, weight: .regular))
+                    .foregroundColor(themeManager.currentTheme.textTertiary)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, Spacing.xxxs)
+    }
+
     // MARK: - View Initialization
 
     private func initializeView() async {
@@ -212,13 +241,6 @@ struct PrayerTimesView: View {
         }
     }
 
-    // MARK: - Completed Prayers Set
-
-    private var completedPrayersSet: Set<PrayerName> {
-        let _ = PrayerCompletionService.shared.changeCounter
-        return Set(PrayerName.allCases.filter { PrayerCompletionService.shared.isCompleted($0) })
-    }
-
     // MARK: - Prayer List Section
 
     private func prayerListSection(_ times: DailyPrayerTimes, scrollProxy: ScrollViewProxy) -> some View {
@@ -230,31 +252,39 @@ struct PrayerTimesView: View {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("TODAY'S PRAYERS")
-                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                        .sectionHeaderStyle()
                         .foregroundColor(themeManager.currentTheme.textTertiary)
-                        .tracking(1.5)
 
-                    Text(formattedDate)
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(themeManager.currentTheme.textSecondary)
+                    // Date with Hijri inline
+                    if let hijriDate = hijriService.getCachedHijriDate() {
+                        Text("\(formattedDate) · \(hijriDate.formatted)")
+                            .font(.system(size: FontSizes.sm, weight: .medium))
+                            .foregroundColor(themeManager.currentTheme.textSecondary)
+                            .monospacedDigit()
+                    } else {
+                        Text(formattedDate)
+                            .font(.system(size: FontSizes.sm, weight: .medium))
+                            .foregroundColor(themeManager.currentTheme.textSecondary)
+                            .monospacedDigit()
+                    }
                 }
 
                 Spacer()
 
                 // Swipe hint
-                HStack(spacing: 4) {
+                HStack(spacing: Spacing.xxxs) {
                     Image(systemName: "arrow.left")
-                        .font(.system(size: 10, weight: .medium))
-                    Text("Swipe to complete")
-                        .font(.system(size: 11, weight: .medium))
+                        .font(.system(size: FontSizes.xs, weight: .medium))
+                    Text("Swipe")
+                        .font(.system(size: FontSizes.xs, weight: .medium))
                 }
                 .foregroundColor(themeManager.currentTheme.textTertiary)
-                .opacity(0.7)
+                .opacity(0.5)
             }
-            .padding(.bottom, 16)
+            .padding(.bottom, Spacing.sm)
 
             // Prayer rows - isCompleted passed from parent to avoid @Observable in gesture views
-            VStack(spacing: 10) {
+            VStack(spacing: Spacing.xxs) {
                 ForEach(times.prayerTimes) { prayer in
                     let isCompleted = PrayerCompletionService.shared.isCompleted(prayer.name)
 
@@ -289,165 +319,170 @@ struct PrayerTimesView: View {
         }
     }
 
-    // MARK: - Settings Section
+    // MARK: - Settings & Actions Card
 
-    private var settingsSection: some View {
-        VStack(spacing: 12) {
-            HStack {
-                Text("SETTINGS")
-                    .font(.system(size: 11, weight: .bold, design: .rounded))
-                    .foregroundColor(themeManager.currentTheme.textTertiary)
-                    .tracking(1.5)
-                Spacer()
-            }
+    private var settingsActionsCard: some View {
+        CardView(intensity: .subtle) {
+            VStack(spacing: 0) {
+                // Settings section header
+                HStack {
+                    Text("SETTINGS")
+                        .sectionHeaderStyle()
+                        .foregroundColor(themeManager.currentTheme.textTertiary)
+                    Spacer()
+                }
+                .padding(.bottom, Spacing.xs)
 
-            // Calculation Method
-            Button {
-                showMethodPicker = true
-            } label: {
-                settingRow(
-                    icon: "function",
-                    title: "Calculation Method",
-                    value: viewModel.selectedCalculationMethod.rawValue,
-                    color: themeManager.currentTheme.accentPrimary
-                )
-            }
+                // Calculation Method
+                Button {
+                    showMethodPicker = true
+                } label: {
+                    settingRow(
+                        icon: "function",
+                        title: "Calculation Method",
+                        value: viewModel.selectedCalculationMethod.rawValue,
+                        color: themeManager.currentTheme.accent
+                    )
+                }
 
-            // Madhab
-            Button {
-                showMadhabPicker = true
-            } label: {
-                settingRow(
-                    icon: "globe",
-                    title: "Madhab (Asr)",
-                    value: viewModel.selectedMadhab.rawValue,
-                    color: themeManager.currentTheme.accentSecondary
-                )
+                IslamicDivider(style: .simple)
+                    .padding(.vertical, Spacing.xs)
+
+                // Madhab
+                Button {
+                    showMadhabPicker = true
+                } label: {
+                    settingRow(
+                        icon: "globe",
+                        title: "Madhab (Asr)",
+                        value: viewModel.selectedMadhab.rawValue,
+                        color: themeManager.currentTheme.accentMuted
+                    )
+                }
+
+                IslamicDivider(style: .simple)
+                    .padding(.vertical, Spacing.xs)
+
+                // Mosque Finder
+                NavigationLink {
+                    MosqueFinderView()
+                        .environment(themeManager)
+                        .environment(LocationService.shared)
+                } label: {
+                    mosqueFinderRow
+                }
+                .accessibilityLabel("Find nearby mosques")
+
+                IslamicDivider(style: .simple)
+                    .padding(.vertical, Spacing.xs)
+
+                // Qadha Counter
+                NavigationLink {
+                    QadhaCounterView()
+                        .environment(themeManager)
+                } label: {
+                    qadhaCounterRow
+                }
+                .accessibilityLabel(qadhaAccessibilityLabel)
             }
         }
     }
 
+    // MARK: - Settings Section
+
     private func settingRow(icon: String, title: String, value: String, color: Color) -> some View {
-        HStack(spacing: 14) {
+        HStack(spacing: Spacing.xs) {
             // Icon
             ZStack {
                 Circle()
                     .fill(color.opacity(0.15))
-                    .frame(width: 40, height: 40)
+                    .frame(width: Spacing.xl, height: Spacing.xl)
 
                 Image(systemName: icon)
-                    .font(.system(size: 16, weight: .medium))
+                    .font(.system(size: FontSizes.base, weight: .medium))
                     .foregroundColor(color)
             }
 
             // Text
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.system(size: 15, weight: .medium))
+                    .font(.system(size: FontSizes.sm, weight: .medium))
                     .foregroundColor(themeManager.currentTheme.textPrimary)
 
                 Text(value)
-                    .font(.system(size: 13, weight: .regular))
+                    .font(.system(size: FontSizes.xs, weight: .regular))
                     .foregroundColor(themeManager.currentTheme.textSecondary)
             }
 
             Spacer()
 
             Image(systemName: "chevron.right")
-                .font(.system(size: 14, weight: .medium))
+                .font(.system(size: FontSizes.sm, weight: .medium))
                 .foregroundColor(themeManager.currentTheme.textTertiary)
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(themeManager.currentTheme.cardColor)
-        )
     }
 
-    // MARK: - Mosque Finder Button
+    // MARK: - Mosque Finder Row
 
-    private var mosqueFinderButton: some View {
-        NavigationLink {
-            MosqueFinderView()
-                .environment(themeManager)
-                .environmentObject(LocationService.shared)
-        } label: {
-            HStack(spacing: 14) {
-                ZStack {
-                    Circle()
-                        .fill(themeManager.currentTheme.accentInteractive.opacity(0.15))
-                        .frame(width: 40, height: 40)
+    private var mosqueFinderRow: some View {
+        HStack(spacing: Spacing.xs) {
+            ZStack {
+                Circle()
+                    .fill(themeManager.currentTheme.accent.opacity(0.15))
+                    .frame(width: Spacing.xl, height: Spacing.xl)
 
-                    Image(systemName: "building.2.fill")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(themeManager.currentTheme.accentInteractive)
-                }
-
-                Text("Find Nearby Mosques")
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundColor(themeManager.currentTheme.textPrimary)
-
-                Spacer()
-
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(themeManager.currentTheme.textTertiary)
+                Image(systemName: "building.2.fill")
+                    .font(.system(size: FontSizes.base, weight: .medium))
+                    .foregroundColor(themeManager.currentTheme.accent)
             }
-            .padding(16)
-            .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(themeManager.currentTheme.cardColor)
-            )
+
+            Text("Find Nearby Mosques")
+                .font(.system(size: FontSizes.sm, weight: .medium))
+                .foregroundColor(themeManager.currentTheme.textPrimary)
+
+            Spacer()
+
+            Image(systemName: "chevron.right")
+                .font(.system(size: FontSizes.sm, weight: .medium))
+                .foregroundColor(themeManager.currentTheme.textTertiary)
         }
-        .accessibilityLabel("Find nearby mosques")
     }
 
-    // MARK: - Qadha Counter Button
+    // MARK: - Qadha Counter Row
 
-    private var qadhaCounterButton: some View {
-        NavigationLink {
-            QadhaCounterView()
-                .environment(themeManager)
-        } label: {
-            HStack(spacing: 14) {
-                ZStack {
-                    Circle()
-                        .fill(Color.orange.opacity(0.15))
-                        .frame(width: 40, height: 40)
+    private var qadhaCounterRow: some View {
+        HStack(spacing: Spacing.xs) {
+            ZStack {
+                Circle()
+                    .fill(themeManager.currentTheme.accentMuted.opacity(0.15))
+                    .frame(width: Spacing.xl, height: Spacing.xl)
 
-                    Image(systemName: "clock.arrow.circlepath")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.orange)
-                }
-
-                Text("Track Qadha Prayers")
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundColor(themeManager.currentTheme.textPrimary)
-
-                Spacer()
-
-                // Badge for pending qadha
-                let totalQadha = QadhaTrackerService.shared.totalQadha
-                if totalQadha > 0 {
-                    Text("\(totalQadha)")
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 4)
-                        .background(Capsule().fill(Color.orange))
-                }
-
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(themeManager.currentTheme.textTertiary)
+                Image(systemName: "clock.arrow.circlepath")
+                    .font(.system(size: FontSizes.base, weight: .medium))
+                    .foregroundColor(themeManager.currentTheme.accentMuted)
             }
-            .padding(16)
-            .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(themeManager.currentTheme.cardColor)
-            )
+
+            Text("Track Qadha Prayers")
+                .font(.system(size: FontSizes.sm, weight: .medium))
+                .foregroundColor(themeManager.currentTheme.textPrimary)
+
+            Spacer()
+
+            // Badge for pending qadha
+            let totalQadha = QadhaTrackerService.shared.totalQadha
+            if totalQadha > 0 {
+                Text("\(totalQadha)")
+                    .font(.system(size: FontSizes.xs, weight: .bold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, Spacing.xxs)
+                    .padding(.vertical, Spacing.xxxs)
+                    .background(Capsule().fill(themeManager.currentTheme.accentMuted))
+            }
+
+            Image(systemName: "chevron.right")
+                .font(.system(size: FontSizes.sm, weight: .medium))
+                .foregroundColor(themeManager.currentTheme.textTertiary)
         }
-        .accessibilityLabel(qadhaAccessibilityLabel)
     }
 
     private var qadhaAccessibilityLabel: String {
@@ -456,6 +491,37 @@ struct PrayerTimesView: View {
             return "Track qadha prayers, \(totalQadha) pending"
         }
         return "Track qadha prayers"
+    }
+
+    // MARK: - Empty Location State
+
+    private var emptyLocationState: some View {
+        VStack(spacing: Spacing.md) {
+            Image(systemName: "location.slash.fill")
+                .font(.system(size: 48, weight: .light))
+                .foregroundColor(themeManager.currentTheme.textTertiary)
+                .padding(.bottom, Spacing.xxs)
+
+            Text("Location Required")
+                .font(.system(size: FontSizes.lg, weight: .semibold))
+                .foregroundColor(themeManager.currentTheme.textPrimary)
+
+            Text("We need your location to calculate accurate prayer times for your area.")
+                .font(.system(size: FontSizes.sm))
+                .foregroundColor(themeManager.currentTheme.textSecondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, Spacing.lg)
+
+            PrimaryButton("Grant Location Permission", icon: "location.fill") {
+                Task {
+                    await viewModel.loadPrayerTimes()
+                }
+            }
+            .padding(.horizontal, Spacing.lg)
+            .padding(.top, Spacing.xs)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, Spacing.xxl)
     }
 
     // MARK: - Helper Methods
@@ -495,6 +561,6 @@ struct PrayerTimesView: View {
 // MARK: - Preview
 
 #Preview {
-    PrayerTimesView()
+    PrayerTimesView(viewModel: PrayerViewModel())
         .environment(ThemeManager())
 }

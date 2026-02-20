@@ -6,12 +6,13 @@
 //
 
 import Foundation
-import Combine
+
 
 // MARK: - Cached Formatters (Performance: avoid repeated allocation)
 private let sharedTimeFormatter: DateFormatter = {
     let f = DateFormatter()
     f.timeStyle = .short
+    f.locale = Locale.autoupdatingCurrent
     return f
 }()
 
@@ -181,7 +182,7 @@ struct DailyPrayerTimes {
 }
 
 // MARK: - Calculation Method
-enum CalculationMethod: String, CaseIterable, Identifiable {
+enum CalculationMethod: String, CaseIterable, Identifiable, Codable {
     case muslimWorldLeague = "Muslim World League"
     case isna = "ISNA (North America)"
     case egyptian = "Egyptian General Authority"
@@ -230,7 +231,7 @@ enum CalculationMethod: String, CaseIterable, Identifiable {
 }
 
 // MARK: - Madhab (Asr calculation school)
-enum Madhab: String, CaseIterable, Identifiable {
+enum Madhab: String, CaseIterable, Identifiable, Codable {
     case shafi = "Standard (Shafi, Maliki, Hanbali)"
     case hanafi = "Hanafi"
 

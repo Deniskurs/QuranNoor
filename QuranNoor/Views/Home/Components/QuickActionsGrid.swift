@@ -14,6 +14,8 @@ struct QuickActionsGrid: View {
     @Binding var selectedTab: Int
     let lastReadLocation: String?
 
+    @State private var showQibla = false
+
     var body: some View {
         // Grid of individual action cards
         LazyVGrid(columns: gridColumns, spacing: Spacing.gridSpacing) {
@@ -22,20 +24,20 @@ struct QuickActionsGrid: View {
                 icon: "book.fill",
                 title: "Continue Reading",
                 subtitle: lastReadLocation ?? "Start reading",
-                gradient: [themeManager.currentTheme.featureAccent, themeManager.currentTheme.featureAccentSecondary],
+                gradient: [themeManager.currentTheme.accent, themeManager.currentTheme.accentMuted],
                 action: {
                     selectedTab = 1 // Quran tab
                 }
             )
 
-            // Find Qibla
+            // Find Qibla (opens as sheet since it's no longer a tab)
             QuickActionButton(
                 icon: "location.north.fill",
                 title: "Find Qibla",
                 subtitle: "Prayer direction",
-                gradient: [themeManager.currentTheme.featureAccentSecondary, themeManager.currentTheme.featureAccent],
+                gradient: [themeManager.currentTheme.accentMuted, themeManager.currentTheme.accent],
                 action: {
-                    selectedTab = 3 // Qibla tab
+                    showQibla = true
                 }
             )
 
@@ -44,22 +46,34 @@ struct QuickActionsGrid: View {
                 icon: "clock.fill",
                 title: "Prayer Times",
                 subtitle: "View all prayers",
-                gradient: [AppColors.primary.gold, themeManager.currentTheme.featureAccent],
+                gradient: [themeManager.currentTheme.accentMuted, themeManager.currentTheme.accent],
                 action: {
                     selectedTab = 2 // Prayer tab
                 }
             )
 
-            // Settings
+            // More
             QuickActionButton(
-                icon: "gearshape.fill",
-                title: "Settings",
-                subtitle: "Customize app",
-                gradient: [AppColors.primary.midnight, AppColors.primary.green],
+                icon: "ellipsis.circle.fill",
+                title: "More",
+                subtitle: "Adhkar & tools",
+                gradient: [themeManager.currentTheme.textPrimary, themeManager.currentTheme.accent],
                 action: {
-                    selectedTab = 4 // Settings tab
+                    selectedTab = 3 // More tab
                 }
             )
+        }
+        .sheet(isPresented: $showQibla) {
+            NavigationStack {
+                QiblaCompassView()
+                    .navigationTitle("Qibla Direction")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button("Done") { showQibla = false }
+                        }
+                    }
+            }
         }
     }
 
@@ -91,7 +105,7 @@ struct QuickActionButton: View {
 
             action()
         }) {
-            LiquidGlassCardView(intensity: .moderate) {
+            CardView(intensity: .moderate) {
                 VStack(alignment: .leading, spacing: Spacing.sm) {
                     // Icon with gradient background
                     ZStack {
@@ -106,7 +120,7 @@ struct QuickActionButton: View {
                             .frame(width: 48, height: 48)
 
                         Image(systemName: icon)
-                            .font(.system(size: 22))
+                            .font(.title3)
                             .foregroundColor(gradient.first ?? .white)
                     }
 

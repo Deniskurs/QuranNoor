@@ -23,6 +23,8 @@ enum LoadingSize {
 // MARK: - Loading View Component
 struct LoadingView: View {
     // MARK: - Properties
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
+
     let size: LoadingSize
     let message: String?
 
@@ -43,7 +45,7 @@ struct LoadingView: View {
         VStack(spacing: 16) {
             // Crescent moon animation
             CrescentMoonShape()
-                .stroke(AppColors.primary.gold, lineWidth: size == .small ? 2 : 3)
+                .stroke(themeManager.currentTheme.accentMuted, lineWidth: size == .small ? 2 : 3)
                 .frame(width: size.dimension, height: size.dimension)
                 .rotationEffect(Angle(degrees: isRotating ? 360 : 0))
                 .animation(
@@ -67,6 +69,8 @@ struct LoadingView: View {
                     .multilineTextAlignment(.center)
             }
         }
+        .accessibilityLabel(message ?? "Loading")
+        .accessibilityAddTraits(.updatesFrequently)
     }
 }
 

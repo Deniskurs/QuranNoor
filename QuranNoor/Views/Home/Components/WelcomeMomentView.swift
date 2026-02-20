@@ -33,16 +33,21 @@ struct WelcomeMomentView: View {
                 // Animated crescent moon icon
                 Image(systemName: "moon.stars.fill")
                     .font(.system(size: 72))
-                    .foregroundColor(themeManager.currentTheme.featureAccent)
+                    .foregroundColor(themeManager.currentTheme.accent)
                     .scaleEffect(animationPhase == 0 ? 0.5 : 1.0)
                     .opacity(animationPhase == 0 ? 0 : 1)
 
                 // Welcome message
                 VStack(spacing: 12) {
-                    Text("As Salamu Alaykum! 🌙")
-                        .font(.system(size: 32, weight: .bold))
-                        .foregroundColor(themeManager.currentTheme.textPrimary)
-                        .opacity(animationPhase < 1 ? 0 : 1)
+                    HStack(spacing: 8) {
+                        Text("As Salamu Alaykum!")
+                            .font(.system(size: 32, weight: .bold))
+                            .foregroundColor(themeManager.currentTheme.textPrimary)
+                        Image(systemName: "moon.stars.fill")
+                            .font(.system(size: 28, weight: .bold))
+                            .foregroundColor(themeManager.currentTheme.accent)
+                    }
+                    .opacity(animationPhase < 1 ? 0 : 1)
 
                     Text("Your spiritual companion is ready")
                         .font(.title3)
@@ -62,7 +67,7 @@ struct WelcomeMomentView: View {
                     VStack(spacing: 16) {
                         suggestionRow(
                             icon: "book.pages",
-                            iconColor: themeManager.currentTheme.featureAccent,
+                            iconColor: themeManager.currentTheme.accent,
                             title: "Read Today's Verse",
                             subtitle: "Inspire yourself with a beautiful Quranic message",
                             isPrimary: true
@@ -74,7 +79,7 @@ struct WelcomeMomentView: View {
 
                         suggestionRow(
                             icon: "clock",
-                            iconColor: AppColors.primary.green,
+                            iconColor: themeManager.currentTheme.accent,
                             title: "View Prayer Times",
                             subtitle: "Never miss a prayer with accurate times",
                             isPrimary: false
@@ -86,7 +91,7 @@ struct WelcomeMomentView: View {
 
                         suggestionRow(
                             icon: "text.book.closed",
-                            iconColor: AppColors.primary.gold,
+                            iconColor: themeManager.currentTheme.accentMuted,
                             title: "Browse Quran",
                             subtitle: "Explore all 114 surahs",
                             isPrimary: false
@@ -120,7 +125,7 @@ struct WelcomeMomentView: View {
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
-                        .background(themeManager.currentTheme.featureAccent)
+                        .background(themeManager.currentTheme.accent)
                         .cornerRadius(16)
                 }
                 .padding(.horizontal, 32)
@@ -183,7 +188,7 @@ struct WelcomeMomentView: View {
                 if isPrimary {
                     Image(systemName: "star.fill")
                         .font(.caption)
-                        .foregroundColor(AppColors.primary.gold)
+                        .foregroundColor(themeManager.currentTheme.accentMuted)
                 }
             }
             .padding(16)
@@ -203,29 +208,27 @@ struct WelcomeMomentView: View {
 
     private func animateEntrance() {
         guard !reduceMotion else {
-            // Skip to final state if reduced motion enabled
             animationPhase = 4
             return
         }
 
-        // Staggered animation sequence
+        // Staggered animation sequence using Task.sleep (lifecycle-safe)
         withAnimation(.spring(response: 0.6, dampingFraction: 0.7)) {
             animationPhase = 1
         }
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(200))
             withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
                 animationPhase = 2
             }
-        }
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+            try? await Task.sleep(for: .milliseconds(200))
             withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
                 animationPhase = 3
             }
-        }
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+            try? await Task.sleep(for: .milliseconds(200))
             withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
                 animationPhase = 4
             }
@@ -249,7 +252,9 @@ struct ScaleButtonStyle: ButtonStyle {
     @Previewable @State var selectedTab = 0
 
     WelcomeMomentView(selectedTab: $selectedTab) {
+        #if DEBUG
         print("Dismissed")
+        #endif
     }
     .environment(ThemeManager())
 }
@@ -258,7 +263,9 @@ struct ScaleButtonStyle: ButtonStyle {
     @Previewable @State var selectedTab = 0
 
     WelcomeMomentView(selectedTab: $selectedTab) {
+        #if DEBUG
         print("Dismissed")
+        #endif
     }
     .environment({
         let manager = ThemeManager()

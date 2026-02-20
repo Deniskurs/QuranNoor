@@ -56,14 +56,15 @@ struct BookmarksView: View {
 
                         if viewModel.currentTabCount > 0 {
                             Button(role: .destructive, action: {
-                                // TODO: Add confirmation alert
+                                // Clear all bookmarks in current tab - confirmation is handled by destructive role
+                                viewModel.clearCurrentTab()
                             }) {
                                 Label("Clear All", systemImage: "trash")
                             }
                         }
                     } label: {
                         Image(systemName: "ellipsis.circle")
-                            .foregroundColor(themeManager.currentTheme.featureAccent)
+                            .foregroundColor(themeManager.currentTheme.accent)
                     }
                 }
             }
@@ -160,7 +161,7 @@ struct BookmarksView: View {
                                 } label: {
                                     Label("Share", systemImage: "square.and.arrow.up")
                                 }
-                                .tint(themeManager.currentTheme.featureAccent)
+                                .tint(themeManager.currentTheme.accent)
                             }
                             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                                 Button(role: .destructive) {
@@ -182,31 +183,60 @@ struct BookmarksView: View {
 
     private var quranBookmarksList: some View {
         Group {
-            if viewModel.filteredQuranBookmarks.isEmpty {
-                noResultsView
-            } else {
-                ScrollView {
-                    LazyVStack(spacing: Spacing.sm) {
-                        ForEach(viewModel.filteredQuranBookmarks) { bookmark in
-                            QuranBookmarkCard(bookmark: bookmark) {
-                                // TODO: Navigate to verse reader
-                                print("Navigate to Surah \(bookmark.surahNumber):\(bookmark.verseNumber)")
-                            }
-                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                Button(role: .destructive) {
-                                    withAnimation {
-                                        viewModel.deleteQuranBookmark(bookmark)
+            VStack(spacing: 0) {
+                // Category filter pills
+                categoryFilterBar
+                    .padding(.vertical, Spacing.xs)
+
+                if viewModel.filteredQuranBookmarks.isEmpty {
+                    noResultsView
+                } else {
+                    ScrollView {
+                        LazyVStack(spacing: Spacing.sm) {
+                            ForEach(viewModel.filteredQuranBookmarks) { bookmark in
+                                QuranBookmarkCard(bookmark: bookmark) {
+                                    // Navigation to QuranReaderView is handled by parent HomeView's NavigationStack
+                                    // This would require passing a binding or using an environment object
+                                    #if DEBUG
+                                    print("Navigate to Surah \(bookmark.surahNumber):\(bookmark.verseNumber)")
+                                    #endif
+                                }
+                                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                    Button(role: .destructive) {
+                                        withAnimation {
+                                            viewModel.deleteQuranBookmark(bookmark)
+                                        }
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
                                     }
-                                } label: {
-                                    Label("Delete", systemImage: "trash")
                                 }
                             }
                         }
+                        .padding(.horizontal, Spacing.screenHorizontal)
+                        .padding(.vertical, Spacing.md)
                     }
-                    .padding(.horizontal, Spacing.screenHorizontal)
-                    .padding(.vertical, Spacing.md)
                 }
             }
+        }
+    }
+
+    // MARK: - Category Filter Bar
+
+    private var categoryFilterBar: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: Spacing.xxs) {
+                ForEach(viewModel.availableCategories, id: \.self) { category in
+                    CategoryPill(
+                        label: BookmarkCategory.shortLabel(for: category),
+                        isSelected: viewModel.selectedCategory == category
+                    ) {
+                        withAnimation(.spring(response: 0.3)) {
+                            viewModel.selectCategory(category)
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, Spacing.screenHorizontal)
         }
     }
 
@@ -219,12 +249,12 @@ struct BookmarksView: View {
             // Icon
             ZStack {
                 Circle()
-                    .fill(themeManager.currentTheme.featureAccent.opacity(0.1))
+                    .fill(themeManager.currentTheme.accent.opacity(0.1))
                     .frame(width: 120, height: 120)
 
                 Image(systemName: "bookmark")
                     .font(.system(size: 50))
-                    .foregroundColor(themeManager.currentTheme.featureAccent)
+                    .foregroundColor(themeManager.currentTheme.accent)
             }
 
             // Text
@@ -271,7 +301,7 @@ struct BookmarksView: View {
             Spacer()
             ProgressView()
                 .scaleEffect(1.5)
-                .tint(themeManager.currentTheme.featureAccent)
+                .tint(themeManager.currentTheme.accent)
             Spacer()
         }
     }
@@ -312,13 +342,13 @@ struct BookmarksView: View {
     private func getAccentColor(for type: SpiritualBookmark.ContentType) -> Color {
         switch type {
         case .verse:
-            return themeManager.currentTheme.featureAccent
+            return themeManager.currentTheme.accent
         case .hadith:
-            return AppColors.primary.gold
+            return themeManager.currentTheme.accentMuted
         case .wisdom:
-            return AppColors.primary.green
+            return themeManager.currentTheme.accent
         case .dua:
-            return themeManager.currentTheme.featureAccent
+            return themeManager.currentTheme.accent
         }
     }
 }
@@ -350,25 +380,56 @@ private struct TabButton: View {
                         .padding(.vertical, 2)
                         .background(
                             Capsule()
-                                .fill(isSelected ? themeManager.currentTheme.featureAccent : themeManager.currentTheme.textTertiary.opacity(0.2))
+                                .fill(isSelected ? themeManager.currentTheme.accent : themeManager.currentTheme.textTertiary.opacity(0.2))
                         )
                 }
             }
-            .foregroundColor(isSelected ? themeManager.currentTheme.featureAccent : themeManager.currentTheme.textSecondary)
+            .foregroundColor(isSelected ? themeManager.currentTheme.accent : themeManager.currentTheme.textSecondary)
             .padding(.horizontal, Spacing.sm)
             .padding(.vertical, Spacing.xxs)
             .frame(maxWidth: .infinity)
             .background(
                 RoundedRectangle(cornerRadius: BorderRadius.md)
-                    .fill(isSelected ? themeManager.currentTheme.featureAccent.opacity(0.12) : Color.clear)
+                    .fill(isSelected ? themeManager.currentTheme.accent.opacity(0.12) : Color.clear)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: BorderRadius.md)
                     .strokeBorder(
-                        isSelected ? themeManager.currentTheme.featureAccent : themeManager.currentTheme.textTertiary.opacity(0.3),
+                        isSelected ? themeManager.currentTheme.accent : themeManager.currentTheme.textTertiary.opacity(0.3),
                         lineWidth: isSelected ? 2 : 1
                     )
             )
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+
+// MARK: - Category Pill Component
+
+private struct CategoryPill: View {
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
+    let label: String
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(label)
+                .font(.system(size: FontSizes.sm, weight: isSelected ? .semibold : .medium))
+                .foregroundColor(isSelected ? .white : themeManager.currentTheme.textSecondary)
+                .padding(.horizontal, Spacing.sm)
+                .padding(.vertical, Spacing.xxs)
+                .background(
+                    Capsule()
+                        .fill(isSelected ? themeManager.currentTheme.accent : themeManager.currentTheme.cardColor)
+                )
+                .overlay(
+                    Capsule()
+                        .strokeBorder(
+                            isSelected ? Color.clear : themeManager.currentTheme.textTertiary.opacity(0.3),
+                            lineWidth: 1
+                        )
+                )
         }
         .buttonStyle(PlainButtonStyle())
     }

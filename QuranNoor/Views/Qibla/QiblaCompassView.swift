@@ -11,7 +11,7 @@ import SwiftUI
 struct QiblaCompassView: View {
     // MARK: - Properties
     @Environment(ThemeManager.self) var themeManager: ThemeManager
-    @StateObject private var viewModel = QiblaViewModel()
+    @State private var viewModel = QiblaViewModel()
     @State private var showSaveLocationAlert = false
     @State private var locationName = ""
 
@@ -177,7 +177,7 @@ struct QiblaCompassView: View {
             HStack(spacing: 6) {
                 Image(systemName: "location.north.line.fill")
                     .font(.system(size: 20))
-                    .foregroundColor(themeManager.currentTheme.accentSecondary)
+                    .foregroundColor(themeManager.currentTheme.accentMuted)
                 Text("Qibla Direction")
                     .font(.headline)
                     .fontWeight(.semibold)
@@ -192,7 +192,7 @@ struct QiblaCompassView: View {
             } label: {
                 Image(systemName: "ellipsis.circle.fill")
                     .font(.title3)
-                    .foregroundColor(themeManager.currentTheme.accentSecondary)
+                    .foregroundColor(themeManager.currentTheme.accentMuted)
             }
             .frame(minWidth: 44, minHeight: 44)
             .accessibilityLabel("Location settings")
@@ -270,21 +270,21 @@ struct QiblaCompassView: View {
         ZStack {
             // Multi-layer glow effect - more prominent when aligned
             Circle()
-                .stroke(themeManager.currentTheme.accentSecondary, lineWidth: 5)
+                .stroke(themeManager.currentTheme.accentMuted, lineWidth: 5)
                 .frame(width: 250, height: 250)
                 .blur(radius: 24)
                 .opacity(viewModel.isAlignedWithQibla ? 0.6 : 0.2)
                 .animation(.easeInOut(duration: 0.4), value: viewModel.isAlignedWithQibla)
 
             Circle()
-                .stroke(themeManager.currentTheme.accentSecondary, lineWidth: 5)
+                .stroke(themeManager.currentTheme.accentMuted, lineWidth: 5)
                 .frame(width: 250, height: 250)
                 .blur(radius: 16)
                 .opacity(viewModel.isAlignedWithQibla ? 0.7 : 0.25)
                 .animation(.easeInOut(duration: 0.4), value: viewModel.isAlignedWithQibla)
 
             Circle()
-                .stroke(themeManager.currentTheme.accentInteractive, lineWidth: 5)
+                .stroke(themeManager.currentTheme.accent, lineWidth: 5)
                 .frame(width: 250, height: 250)
                 .blur(radius: 8)
                 .opacity(viewModel.isAlignedWithQibla ? 0.8 : 0.15)
@@ -304,14 +304,14 @@ struct QiblaCompassView: View {
                     )
                 )
                 .frame(width: 240, height: 240)
-                .shadow(color: themeManager.currentTheme.accentPrimary.opacity(0.3), radius: 20)
+                .shadow(color: themeManager.currentTheme.accent.opacity(0.3), radius: 20)
 
             // Outer ring - thicker and more visible - FIXED SIZE
             Circle()
                 .stroke(
                     viewModel.isAlignedWithQibla ?
-                        themeManager.currentTheme.accentInteractive.opacity(0.8) :
-                        themeManager.currentTheme.accentSecondary.opacity(0.6),
+                        themeManager.currentTheme.accent.opacity(0.8) :
+                        themeManager.currentTheme.accentMuted.opacity(0.6),
                     lineWidth: 5
                 )
                 .frame(width: 240, height: 240)
@@ -321,7 +321,7 @@ struct QiblaCompassView: View {
             ForEach([("N", 0.0), ("E", 90.0), ("S", 180.0), ("W", 270.0)], id: \.0) { direction in
                 Text(direction.0)
                     .font(.system(size: 18, weight: .bold))
-                    .foregroundColor(direction.0 == "N" ? themeManager.currentTheme.accentSecondary : .secondary)
+                    .foregroundColor(direction.0 == "N" ? themeManager.currentTheme.accentMuted : .secondary)
                     .offset(y: -105)
                     .rotationEffect(.degrees(-normalizedCompassRotation))
                     .rotationEffect(.degrees(direction.1))
@@ -346,14 +346,15 @@ struct QiblaCompassView: View {
     /// Qibla marker on ring edge - shows direction to Kaaba
     private var qiblaMarker: some View {
         VStack(spacing: 2) {
-            Text("🕋")
+            Image(systemName: "building.2.fill")
                 .font(.system(size: 20))
-                .shadow(color: themeManager.currentTheme.accentInteractive.opacity(0.6), radius: 8)
-                .shadow(color: themeManager.currentTheme.accentInteractive.opacity(0.8), radius: 16)
+                .foregroundColor(themeManager.currentTheme.accent)
+                .shadow(color: themeManager.currentTheme.accent.opacity(0.6), radius: 8)
+                .shadow(color: themeManager.currentTheme.accent.opacity(0.8), radius: 16)
 
             Text("QIBLA")
                 .font(.system(size: 8, weight: .bold))
-                .foregroundColor(themeManager.currentTheme.accentInteractive)
+                .foregroundColor(themeManager.currentTheme.accent)
                 .rotationEffect(.degrees(-viewModel.qiblaDirection - normalizedCompassRotation))
         }
         .offset(y: -135) // Position just outside the ring edge (120px radius + ~15px margin)
@@ -372,22 +373,22 @@ struct QiblaCompassView: View {
                 Triangle()
                     .fill(
                         LinearGradient(
-                            colors: [themeManager.currentTheme.accentSecondary, themeManager.currentTheme.accentSecondary.opacity(0.8)],
+                            colors: [themeManager.currentTheme.accentMuted, themeManager.currentTheme.accentMuted.opacity(0.8)],
                             startPoint: .top,
                             endPoint: .bottom
                         )
                     )
                     .frame(width: 12, height: 80)
-                    .shadow(color: themeManager.currentTheme.accentSecondary.opacity(0.4), radius: 4)
+                    .shadow(color: themeManager.currentTheme.accentMuted.opacity(0.4), radius: 4)
                     .shadow(color: .black.opacity(0.3), radius: 2)
             }
             .offset(y: -30)
 
             // Center dot
             Circle()
-                .fill(themeManager.currentTheme.accentPrimary)
+                .fill(themeManager.currentTheme.accent)
                 .frame(width: 12, height: 12)
-                .shadow(color: themeManager.currentTheme.accentPrimary.opacity(0.5), radius: 4)
+                .shadow(color: themeManager.currentTheme.accent.opacity(0.5), radius: 4)
         }
     }
 
@@ -398,23 +399,23 @@ struct QiblaCompassView: View {
             HStack(spacing: 12) {
                 Image(systemName: viewModel.isAlignedWithQibla ? "checkmark.circle.fill" : "arrow.clockwise")
                     .font(.system(size: 26))
-                    .foregroundColor(viewModel.isAlignedWithQibla ? themeManager.currentTheme.accentPrimary : themeManager.currentTheme.accentSecondary)
+                    .foregroundColor(viewModel.isAlignedWithQibla ? themeManager.currentTheme.accent : themeManager.currentTheme.accentMuted)
                     .symbolEffect(.bounce, value: viewModel.isAlignedWithQibla)
 
                 if viewModel.isAlignedWithQibla {
                     Text("Aligned with Qibla!")
                         .font(.headline.monospacedDigit())
-                        .foregroundColor(themeManager.currentTheme.accentPrimary)
+                        .foregroundColor(themeManager.currentTheme.accent)
                         .fontWeight(.bold)
                 } else {
                     HStack(spacing: 6) {
                         Text("\(abs(degreeOffset))°")
                             .font(.title3.monospacedDigit().weight(.bold))
-                            .foregroundColor(themeManager.currentTheme.accentSecondary)
+                            .foregroundColor(themeManager.currentTheme.accentMuted)
 
                         Text("off")
                             .font(.headline.weight(.semibold))
-                            .foregroundColor(themeManager.currentTheme.textColor)
+                            .foregroundColor(themeManager.currentTheme.textPrimary)
                     }
                 }
             }
@@ -430,8 +431,8 @@ struct QiblaCompassView: View {
                     RoundedRectangle(cornerRadius: 16)
                         .fill(
                             viewModel.isAlignedWithQibla ?
-                                themeManager.currentTheme.accentPrimary.opacity(0.15) :
-                                themeManager.currentTheme.accentSecondary.opacity(0.08)
+                                themeManager.currentTheme.accent.opacity(0.15) :
+                                themeManager.currentTheme.accentMuted.opacity(0.08)
                         )
                 }
             )
@@ -439,15 +440,15 @@ struct QiblaCompassView: View {
                 RoundedRectangle(cornerRadius: 16)
                     .stroke(
                         viewModel.isAlignedWithQibla ?
-                            themeManager.currentTheme.accentInteractive.opacity(0.8) :
-                            themeManager.currentTheme.accentSecondary.opacity(0.4),
+                            themeManager.currentTheme.accent.opacity(0.8) :
+                            themeManager.currentTheme.accentMuted.opacity(0.4),
                         lineWidth: viewModel.isAlignedWithQibla ? 2 : 1
                     )
             )
             .shadow(
                 color: viewModel.isAlignedWithQibla ?
-                    themeManager.currentTheme.accentInteractive.opacity(0.4) :
-                    themeManager.currentTheme.accentSecondary.opacity(0.2),
+                    themeManager.currentTheme.accent.opacity(0.4) :
+                    themeManager.currentTheme.accentMuted.opacity(0.2),
                 radius: 12,
                 x: 0,
                 y: 4
@@ -457,7 +458,7 @@ struct QiblaCompassView: View {
             // Helper text with fixed frame to prevent layout shift
             Text(viewModel.isAlignedWithQibla ? "✓ You are facing the Kaaba" : "Turn your device to align with Qibla")
                 .font(.subheadline.weight(.medium))
-                .foregroundColor(viewModel.isAlignedWithQibla ? themeManager.currentTheme.accentPrimary : .secondary)
+                .foregroundColor(viewModel.isAlignedWithQibla ? themeManager.currentTheme.accent : .secondary)
                 .multilineTextAlignment(.center)
                 .frame(height: 20) // Fixed height prevents jumping
                 .animation(.easeInOut(duration: 0.3), value: viewModel.isAlignedWithQibla)
@@ -496,7 +497,7 @@ struct QiblaCompassView: View {
                 VStack(spacing: 10) {
                     Image(systemName: "safari")
                         .font(.system(size: 26))
-                        .foregroundColor(themeManager.currentTheme.accentPrimary)
+                        .foregroundColor(themeManager.currentTheme.accent)
 
                     VStack(spacing: 4) {
                         Text("\(Int(viewModel.qiblaDirection))°")
@@ -511,7 +512,7 @@ struct QiblaCompassView: View {
 
                         Text("To Qibla")
                             .font(.caption.weight(.medium))
-                            .foregroundStyle(themeManager.currentTheme.accentSecondary)
+                            .foregroundStyle(themeManager.currentTheme.accentMuted)
                             .padding(.top, 2)
                     }
                 }
@@ -544,7 +545,7 @@ struct QiblaCompassView: View {
                 VStack(spacing: 10) {
                     Image(systemName: "location.north.line.fill")
                         .font(.system(size: 26))
-                        .foregroundColor(themeManager.currentTheme.accentSecondary)
+                        .foregroundColor(themeManager.currentTheme.accentMuted)
 
                     VStack(spacing: 4) {
                         Text("\(Int(viewModel.deviceHeading))°")
@@ -602,7 +603,7 @@ struct QiblaCompassView: View {
                 HStack(spacing: 4) {
                     Text(String(format: "%.0f", viewModel.distanceToKaaba))
                         .font(.title.weight(.bold).monospacedDigit())
-                        .foregroundColor(themeManager.currentTheme.accentPrimary)
+                        .foregroundColor(themeManager.currentTheme.accent)
                         .contentTransition(.numericText())
                         .animation(.spring(response: 0.4, dampingFraction: 0.8), value: viewModel.distanceToKaaba)
 
@@ -624,7 +625,7 @@ struct QiblaCompassView: View {
                 HStack {
                     Image(systemName: viewModel.isUsingManualLocation ? "mappin.circle.fill" : "location.circle.fill")
                         .font(.system(size: 24))
-                        .foregroundColor(themeManager.currentTheme.accentSecondary)
+                        .foregroundColor(themeManager.currentTheme.accentMuted)
 
                     Text(viewModel.isUsingManualLocation ? "Manual Location" : "Current Location")
                         .font(.subheadline.weight(.semibold))
@@ -642,7 +643,7 @@ struct QiblaCompassView: View {
                     HStack {
                         Image(systemName: "info.circle.fill")
                             .font(.caption)
-                            .foregroundStyle(themeManager.currentTheme.accentSecondary)
+                            .foregroundStyle(themeManager.currentTheme.accentMuted)
 
                         Text("Tap menu to change location")
                             .font(.caption)

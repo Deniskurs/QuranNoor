@@ -18,6 +18,7 @@ enum DeepLinkDestination: String, Hashable {
     case settings = "settings"
 
     /// Map to tab index in ContentView
+    /// Tabs: Home(0), Quran(1), Prayer(2), More(3)
     var tabIndex: Int {
         switch self {
         case .home:
@@ -26,10 +27,8 @@ enum DeepLinkDestination: String, Hashable {
             return 1
         case .prayer, .nextPrayer:
             return 2
-        case .qibla:
-            return 3
-        case .settings:
-            return 4
+        case .qibla, .settings:
+            return 3  // Both navigate to More tab
         }
     }
 
@@ -67,7 +66,9 @@ class DeepLinkHandler {
     /// Handle UIApplicationShortcutItem from 3D Touch
     func handle(shortcutItem: UIApplicationShortcutItem) {
         guard let action = shortcutItem.userInfo?["action"] as? String else {
-            print("⚠️ No action found in shortcut item")
+            #if DEBUG
+            print("No action found in shortcut item")
+            #endif
             return
         }
 
@@ -90,7 +91,7 @@ class DeepLinkHandler {
     func handle(url: URL) -> Bool {
         guard url.scheme == "qurannoor" else { return false }
 
-        let action = url.host ?? ""
+        let action = url.host() ?? ""
 
         if let destination = DeepLinkDestination(rawValue: action) {
             navigate(to: destination)

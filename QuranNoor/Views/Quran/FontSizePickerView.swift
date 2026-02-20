@@ -32,11 +32,11 @@ struct FontSizePickerView: View {
                 } header: {
                     Text("Font Size")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(themeManager.currentTheme.textSecondary)
                 } footer: {
                     Text("Choose your preferred Quran text size for comfortable reading.")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(themeManager.currentTheme.textSecondary)
                 }
 
                 Section {
@@ -44,13 +44,13 @@ struct FontSizePickerView: View {
                     VStack(alignment: .leading, spacing: 16) {
                         Text("Preview")
                             .font(.headline)
-                            .foregroundColor(themeManager.currentTheme.textColor)
+                            .foregroundColor(themeManager.currentTheme.textPrimary)
 
                         // Arabic preview
                         Text("بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ")
                             .font(AppTypography.arabicScalable(size: settings.fontSize.arabicSize))
                             .lineSpacing(settings.fontSize.lineSpacing)
-                            .foregroundColor(themeManager.currentTheme.textColor)
+                            .foregroundColor(themeManager.currentTheme.textPrimary)
                             .multilineTextAlignment(.center)
                             .frame(maxWidth: .infinity)
                             .padding()
@@ -58,7 +58,7 @@ struct FontSizePickerView: View {
                         // Translation preview
                         Text("In the name of Allah, the Most Gracious, the Most Merciful")
                             .font(.system(size: settings.fontSize.translationSize))
-                            .foregroundColor(themeManager.currentTheme.textColor.opacity(0.8))
+                            .foregroundColor(themeManager.currentTheme.textPrimary.opacity(0.8))
                             .multilineTextAlignment(.center)
                             .frame(maxWidth: .infinity)
                     }
@@ -66,7 +66,7 @@ struct FontSizePickerView: View {
                 } header: {
                     Text("Preview")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(themeManager.currentTheme.textSecondary)
                 }
 
                 Section {
@@ -83,7 +83,7 @@ struct FontSizePickerView: View {
                 } header: {
                     Text("Display Options")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(themeManager.currentTheme.textSecondary)
                 }
 
                 Section {
@@ -115,6 +115,7 @@ struct FontSizePickerView: View {
 
 // MARK: - Font Size Row
 struct FontSizeRow: View {
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
     let fontSize: QuranFontSize
     let isSelected: Bool
 
@@ -123,7 +124,7 @@ struct FontSizeRow: View {
             // Selection indicator
             Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                 .font(.system(size: 22))
-                .foregroundColor(isSelected ? AppColors.primary.green : .secondary.opacity(0.3))
+                .foregroundColor(isSelected ? themeManager.currentTheme.accent : themeManager.currentTheme.textSecondary.opacity(0.3))
                 .frame(width: 24, height: 24)
 
             // Font size info
@@ -134,7 +135,7 @@ struct FontSizeRow: View {
 
                 Text("Arabic: \(Int(fontSize.arabicSize))pt | Translation: \(Int(fontSize.translationSize))pt")
                     .font(.system(size: 13))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(themeManager.currentTheme.textSecondary)
             }
 
             Spacer()
@@ -142,7 +143,7 @@ struct FontSizeRow: View {
             // Preview icon size
             Text("أ")
                 .font(AppTypography.arabicScalable(size: fontSize.arabicSize * 0.7))
-                .foregroundColor(.secondary.opacity(0.5))
+                .foregroundColor(themeManager.currentTheme.textSecondary.opacity(0.5))
         }
         .padding(.vertical, 8)
     }

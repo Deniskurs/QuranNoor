@@ -46,7 +46,7 @@ struct AdhanSettingsView: View {
                 .padding(.horizontal, 20)
                 .padding(.vertical, 16)
             }
-            .background(themeManager.backgroundColor.ignoresSafeArea())
+            .background(themeManager.currentTheme.backgroundColor.ignoresSafeArea())
             .navigationTitle("Adhan Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -62,19 +62,19 @@ struct AdhanSettingsView: View {
     // MARK: - Components
 
     private var enableToggleCard: some View {
-        LiquidGlassCardView {
+        CardView {
             Toggle(isOn: $isEnabled) {
                 VStack(alignment: .leading, spacing: 4) {
                     Label("Enable Adhan", systemImage: "speaker.wave.3.fill")
                         .font(.headline)
-                        .foregroundStyle(themeManager.primaryTextColor)
+                        .foregroundStyle(themeManager.currentTheme.textPrimary)
 
                     Text("Play beautiful call to prayer at prayer times")
                         .font(.caption)
-                        .foregroundStyle(themeManager.secondaryTextColor)
+                        .foregroundStyle(themeManager.currentTheme.textSecondary)
                 }
             }
-            .tint(themeManager.accentColor)
+            .tint(themeManager.currentTheme.accent)
             .padding(16)
             .onChange(of: isEnabled) { _, newValue in
                 adhanService.setEnabled(newValue)
@@ -84,34 +84,34 @@ struct AdhanSettingsView: View {
     }
 
     private var volumeControlCard: some View {
-        LiquidGlassCardView {
+        CardView {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
                     Label("Volume", systemImage: "speaker.wave.2.fill")
                         .font(.headline)
-                        .foregroundStyle(themeManager.primaryTextColor)
+                        .foregroundStyle(themeManager.currentTheme.textPrimary)
 
                     Spacer()
 
                     Text("\(Int(volume * 100))%")
                         .font(.subheadline.weight(.medium))
-                        .foregroundStyle(themeManager.secondaryTextColor)
+                        .foregroundStyle(themeManager.currentTheme.textSecondary)
                 }
 
                 HStack(spacing: 12) {
                     Image(systemName: "speaker.fill")
                         .font(.caption)
-                        .foregroundStyle(themeManager.secondaryTextColor)
+                        .foregroundStyle(themeManager.currentTheme.textSecondary)
 
                     Slider(value: $volume, in: 0...1, step: 0.1)
-                        .tint(themeManager.accentColor)
+                        .tint(themeManager.currentTheme.accent)
                         .onChange(of: volume) { _, newValue in
                             adhanService.setVolume(newValue)
                         }
 
                     Image(systemName: "speaker.wave.3.fill")
                         .font(.caption)
-                        .foregroundStyle(themeManager.secondaryTextColor)
+                        .foregroundStyle(themeManager.currentTheme.textSecondary)
                 }
             }
             .padding(16)
@@ -122,7 +122,7 @@ struct AdhanSettingsView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Select Adhan Audio")
                 .font(.headline)
-                .foregroundStyle(themeManager.primaryTextColor)
+                .foregroundStyle(themeManager.currentTheme.textPrimary)
                 .padding(.horizontal, 4)
 
             ForEach(AdhanAudio.allCases) { adhan in
@@ -145,15 +145,15 @@ struct AdhanSettingsView: View {
     }
 
     private var infoCard: some View {
-        LiquidGlassCardView {
+        CardView {
             VStack(alignment: .leading, spacing: 12) {
                 Label("About Adhan", systemImage: "info.circle.fill")
                     .font(.headline)
-                    .foregroundStyle(themeManager.accentColor)
+                    .foregroundStyle(themeManager.currentTheme.accent)
 
                 Text("The Adhan will play at each prayer time if notifications are enabled. You can stop it at any time by opening the app.")
                     .font(.caption)
-                    .foregroundStyle(themeManager.secondaryTextColor)
+                    .foregroundStyle(themeManager.currentTheme.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
 
                 Divider()
@@ -174,12 +174,12 @@ struct AdhanSettingsView: View {
         HStack(spacing: 8) {
             Image(systemName: icon)
                 .font(.caption)
-                .foregroundStyle(themeManager.accentColor)
+                .foregroundStyle(themeManager.currentTheme.accent)
                 .frame(width: 20)
 
             Text(text)
                 .font(.caption2)
-                .foregroundStyle(themeManager.secondaryTextColor)
+                .foregroundStyle(themeManager.currentTheme.textSecondary)
         }
     }
 
@@ -216,7 +216,7 @@ struct AdhanOptionRow: View {
     let onStopPreview: () -> Void
 
     var body: some View {
-        LiquidGlassCardView {
+        CardView {
             VStack(spacing: 0) {
                 // Main content
                 Button {
@@ -226,17 +226,17 @@ struct AdhanOptionRow: View {
                         // Selection indicator
                         Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                             .font(.title3)
-                            .foregroundStyle(isSelected ? themeManager.accentColor : themeManager.secondaryTextColor)
+                            .foregroundStyle(isSelected ? themeManager.currentTheme.accent : themeManager.currentTheme.textSecondary)
 
                         // Adhan info
                         VStack(alignment: .leading, spacing: 4) {
                             Text(adhan.displayName)
                                 .font(.headline)
-                                .foregroundStyle(themeManager.primaryTextColor)
+                                .foregroundStyle(themeManager.currentTheme.textPrimary)
 
                             Text(adhan.description)
                                 .font(.caption)
-                                .foregroundStyle(themeManager.secondaryTextColor)
+                                .foregroundStyle(themeManager.currentTheme.textSecondary)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
 
@@ -267,7 +267,7 @@ struct AdhanOptionRow: View {
 
                         Spacer()
                     }
-                    .foregroundStyle(themeManager.accentColor)
+                    .foregroundStyle(themeManager.currentTheme.accent)
                     .padding(.vertical, 12)
                 }
             }

@@ -13,13 +13,22 @@ struct SpiritualNourishmentCarousel: View {
     let verseOfDay: IslamicQuote?
     let hadithOfDay: IslamicQuote?
 
+    @State private var currentPage: Int? = 0
+
+    private var totalPages: Int {
+        var count = 0
+        if verseOfDay != nil { count += 1 }
+        if hadithOfDay != nil { count += 1 }
+        return max(count, 2) // Show 2 dots for loading state
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.xs) { // Enhanced from 12
             // Section header
             HStack(spacing: Spacing.xs) { // Add spacing
                 Image(systemName: "book.closed.fill")
                     .font(.system(size: 18)) // More consistent sizing
-                    .foregroundColor(themeManager.currentTheme.featureAccent)
+                    .foregroundColor(themeManager.currentTheme.accent)
 
                 Text("Daily Inspiration")
                     .font(.system(size: 20, weight: .bold)) // Enhanced from headline
@@ -38,7 +47,7 @@ struct SpiritualNourishmentCarousel: View {
                             icon: "book.fill",
                             title: "Verse of the Day",
                             content: verse,
-                            accentColor: themeManager.currentTheme.featureAccent
+                            accentColor: themeManager.currentTheme.accent
                         )
                     }
 
@@ -48,7 +57,7 @@ struct SpiritualNourishmentCarousel: View {
                             icon: "text.quote",
                             title: "Hadith of the Day",
                             content: hadith,
-                            accentColor: AppColors.primary.gold
+                            accentColor: themeManager.currentTheme.accentMuted
                         )
                     }
 
@@ -59,9 +68,25 @@ struct SpiritualNourishmentCarousel: View {
                         }
                     }
                 }
+                .scrollTargetLayout()
                 .padding(.vertical, 20) // Give space for card shadows (radius 12 + offset 6 = 18pt needed)
             }
             .scrollTargetBehavior(.viewAligned)
+            .scrollPosition(id: $currentPage)
+
+            // Page indicator
+            if totalPages > 1 {
+                HStack(spacing: 8) {
+                    ForEach(0..<totalPages, id: \.self) { index in
+                        Circle()
+                            .fill(index == currentPage ? themeManager.currentTheme.accent : themeManager.currentTheme.textTertiary.opacity(0.3))
+                            .frame(width: 8, height: 8)
+                            .animation(.easeInOut(duration: 0.3), value: currentPage)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.top, 8)
+            }
         }
     }
 }
@@ -70,7 +95,7 @@ struct SpiritualNourishmentCarousel: View {
 
 struct SpiritualContentCard: View {
     @Environment(ThemeManager.self) var themeManager: ThemeManager
-    @ObservedObject private var bookmarkService = SpiritualBookmarkService.shared
+    var bookmarkService = SpiritualBookmarkService.shared
     @Environment(\.dynamicTypeSize) var dynamicTypeSize
 
     let icon: String
@@ -89,7 +114,7 @@ struct SpiritualContentCard: View {
     @ScaledMetric(relativeTo: .body) private var contentAreaHeight: CGFloat = 220
 
     var body: some View {
-        LiquidGlassCardView(intensity: .moderate) {
+        CardView(intensity: .moderate) {
             VStack(alignment: .leading, spacing: 14) {
                 // Header - refined with reduced emphasis
                 HStack(spacing: Spacing.xs) {
@@ -182,7 +207,7 @@ struct SpiritualContentCard: View {
                         VStack(spacing: 6) {
                             Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
                                 .font(.system(size: 20)) // Increased from 18pt
-                                .foregroundColor(isBookmarked ? AppColors.primary.gold : accentColor)
+                                .foregroundColor(isBookmarked ? themeManager.currentTheme.accentMuted : accentColor)
                                 .symbolEffect(.bounce, value: isBookmarked) // iOS 17+ bounce effect
                             Text("Save")
                                 .font(.system(size: 11, weight: .medium)) // Increased from 10pt
@@ -336,7 +361,7 @@ struct LoadingContentCard: View {
     @State private var isViewVisible = false
 
     var body: some View {
-        LiquidGlassCardView(intensity: .moderate) {
+        CardView(intensity: .moderate) {
             VStack(alignment: .leading, spacing: 16) {
                 // Header skeleton
                 RoundedRectangle(cornerRadius: 6)

@@ -98,13 +98,13 @@ struct SubtleCelebrationView: View {
     private var glowColor: Color {
         switch themeManager.currentTheme {
         case .light:
-            return AppColors.primary.gold
+            return themeManager.currentTheme.accentMuted
         case .dark:
-            return themeManager.currentTheme.accentSecondary
+            return themeManager.currentTheme.accentMuted
         case .night:
-            return AppColors.primary.gold
+            return themeManager.currentTheme.accentMuted
         case .sepia:
-            return themeManager.currentTheme.featureAccent
+            return themeManager.currentTheme.accent
         }
     }
 }
@@ -127,7 +127,7 @@ struct CelebrationCompletionCard: View {
             SubtleCelebrationView(isAllCompleted: stats.isAllCompleted)
 
             // Card content
-            LiquidGlassCardView(intensity: .moderate) {
+            CardView(intensity: .moderate) {
                 VStack(spacing: 16) {
                     // Header
                     HStack {
@@ -139,7 +139,7 @@ struct CelebrationCompletionCard: View {
 
                             Text("Prayer Completion")
                                 .font(.system(size: 20, weight: .semibold))
-                                .foregroundColor(themeManager.currentTheme.accentPrimary)
+                                .foregroundColor(themeManager.currentTheme.accent)
                         }
 
                         Spacer()
@@ -154,7 +154,7 @@ struct CelebrationCompletionCard: View {
                             Circle()
                                 .trim(from: 0, to: CGFloat(stats.completedCount) / CGFloat(stats.totalCount))
                                 .stroke(
-                                    stats.isAllCompleted ? AppColors.primary.gold : themeManager.currentTheme.accentPrimary,
+                                    stats.isAllCompleted ? themeManager.currentTheme.accentMuted : themeManager.currentTheme.accent,
                                     style: StrokeStyle(lineWidth: 6, lineCap: .round)
                                 )
                                 .rotationEffect(.degrees(-90))
@@ -176,7 +176,7 @@ struct CelebrationCompletionCard: View {
                             icon: "checkmark.circle.fill",
                             value: "\(stats.completedCount)",
                             label: "Completed",
-                            color: themeManager.currentTheme.accentPrimary
+                            color: themeManager.currentTheme.accent
                         )
 
                         Spacer()
@@ -185,7 +185,7 @@ struct CelebrationCompletionCard: View {
                             icon: "circle.dashed",
                             value: "\(stats.totalCount - stats.completedCount)",
                             label: "Remaining",
-                            color: themeManager.currentTheme.accentInteractive
+                            color: themeManager.currentTheme.accent
                         )
 
                         Spacer()
@@ -194,7 +194,7 @@ struct CelebrationCompletionCard: View {
                             icon: "flame.fill",
                             value: "\(stats.percentage)",
                             label: "Progress",
-                            color: themeManager.currentTheme.accentSecondary
+                            color: themeManager.currentTheme.accentMuted
                         )
                     }
 
@@ -230,7 +230,7 @@ struct CelebrationCompletionCard: View {
         HStack(spacing: 8) {
             Image(systemName: "star.fill")
                 .font(.system(size: 14))
-                .foregroundColor(AppColors.primary.gold)
+                .foregroundColor(themeManager.currentTheme.accentMuted)
 
             Text("All prayers completed!")
                 .font(.system(size: 14, weight: .semibold))
@@ -238,13 +238,13 @@ struct CelebrationCompletionCard: View {
 
             Image(systemName: "star.fill")
                 .font(.system(size: 14))
-                .foregroundColor(AppColors.primary.gold)
+                .foregroundColor(themeManager.currentTheme.accentMuted)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
         .background(
             Capsule()
-                .fill(AppColors.primary.gold.opacity(0.15))
+                .fill(themeManager.currentTheme.accentMuted.opacity(0.15))
         )
         .accessibilityLabel("Congratulations! All five daily prayers completed")
     }

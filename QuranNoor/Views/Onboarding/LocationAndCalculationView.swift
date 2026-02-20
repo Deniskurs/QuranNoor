@@ -13,10 +13,10 @@ import MapKit
 struct LocationAndCalculationView: View {
     // MARK: - Properties
     @Environment(ThemeManager.self) var themeManager: ThemeManager
-    @StateObject private var locationService = LocationService.shared
+    @State private var locationService = LocationService.shared
 
     let coordinator: OnboardingCoordinator
-    @ObservedObject var permissionManager: PermissionManager
+    var permissionManager: PermissionManager
 
     @State private var hasRequestedPermission = false
     @State private var isRequesting = false
@@ -28,14 +28,26 @@ struct LocationAndCalculationView: View {
     @State private var manualCity: String = ""
     @State private var hasAutoAdvanced = false  // Prevent double-advance
 
-    // Calculation methods with detailed info
-    private let methods: [(id: String, name: String, description: String, regions: String)] = [
-        ("ISNA", "ISNA", "Islamic Society of North America", "North America"),
-        ("MWL", "Muslim World League", "Global standard calculation", "Europe, Far East, Parts of US"),
-        ("Egypt", "Egyptian General Authority", "Egyptian authority standard", "Egypt, Sudan, Africa"),
-        ("Makkah", "Umm al-Qura", "Used in Saudi Arabia", "Saudi Arabia, Middle East"),
-        ("Karachi", "University of Islamic Sciences", "Standard for South Asia", "Pakistan, India, Bangladesh, Afghanistan"),
-        ("Tehran", "Institute of Geophysics", "Standard for Iran", "Iran, Azerbaijan, parts of Russia")
+    // Calculation methods with detailed info and human-readable explanations
+    private let methods: [(id: String, name: String, description: String, explanation: String, regions: String)] = [
+        ("ISNA", "ISNA", "Islamic Society of North America",
+         "Fajr at 15\u{00B0} / Isha at 15\u{00B0}. Standard in North America. Moderate timing \u{2014} good balance between early Fajr and late Isha.",
+         "North America"),
+        ("MWL", "Muslim World League", "Global standard calculation",
+         "Fajr at 18\u{00B0} / Isha at 17\u{00B0}. Used across Europe and Asia. Earlier Fajr, slightly later Isha than ISNA.",
+         "Europe, Far East, Parts of US"),
+        ("Egypt", "Egyptian General Authority", "Egyptian authority standard",
+         "Fajr at 19.5\u{00B0} / Isha at 17.5\u{00B0}. Common in Africa and the Middle East. Earliest Fajr times.",
+         "Egypt, Sudan, Africa"),
+        ("Makkah", "Umm al-Qura", "Used in Saudi Arabia",
+         "Fajr at 18.5\u{00B0} / Isha 90 min after Maghrib. Official method of Saudi Arabia.",
+         "Saudi Arabia, Middle East"),
+        ("Karachi", "University of Islamic Sciences", "Standard for South Asia",
+         "Fajr at 18\u{00B0} / Isha at 18\u{00B0}. Standard in South Asia (Pakistan, India, Bangladesh).",
+         "Pakistan, India, Bangladesh, Afghanistan"),
+        ("Tehran", "Institute of Geophysics", "Standard for Iran",
+         "Fajr at 17.7\u{00B0} / Isha at 14\u{00B0}. Based on Institute of Geophysics, University of Tehran.",
+         "Iran, Azerbaijan, parts of Russia")
     ]
 
     // MARK: - Body
@@ -46,14 +58,14 @@ struct LocationAndCalculationView: View {
                 VStack(spacing: 12) {
                     Image(systemName: permissionManager.locationStatus.isGranted ? "checkmark.circle.fill" : "location.fill")
                         .font(.system(size: 50))
-                        .foregroundColor(permissionManager.locationStatus.isGranted ? themeManager.currentTheme.accentPrimary : themeManager.currentTheme.accentSecondary)
+                        .foregroundColor(permissionManager.locationStatus.isGranted ? themeManager.currentTheme.accent : themeManager.currentTheme.accentMuted)
                         .symbolEffect(.bounce, value: permissionManager.locationStatus.isGranted)
 
                     ThemedText(
                         permissionManager.locationStatus.isGranted ? "Location Enabled" : "Prayer Times Setup",
                         style: .title
                     )
-                    .foregroundColor(themeManager.currentTheme.accentPrimary)
+                    .foregroundColor(themeManager.currentTheme.accent)
 
                     ThemedText.body(
                         permissionManager.locationStatus.isGranted ?
@@ -61,7 +73,7 @@ struct LocationAndCalculationView: View {
                         "We need your location to provide accurate prayer times for your area"
                     )
                     .multilineTextAlignment(.center)
-                    .opacity(0.8)
+                    .foregroundColor(themeManager.currentTheme.textSecondary)
                     .padding(.horizontal, 32)
                 }
                 .padding(.top, 20)
@@ -175,7 +187,7 @@ struct LocationAndCalculationView: View {
                             }
                             .buttonStyle(.borderedProminent)
                             .controlSize(.large)
-                            .tint(themeManager.currentTheme.accentSecondary)
+                            .tint(themeManager.currentTheme.accentMuted)
                             .disabled(isRequesting)
                         }
 
@@ -189,7 +201,7 @@ struct LocationAndCalculationView: View {
                             }
                             .buttonStyle(.bordered)
                             .controlSize(.large)
-                            .tint(themeManager.currentTheme.accentSecondary)
+                            .tint(themeManager.currentTheme.accentMuted)
                         }
 
                         // Manual entry option (only after denial)
@@ -200,7 +212,7 @@ struct LocationAndCalculationView: View {
                                 Text("Enter City Manually")
                             }
                             .buttonStyle(.borderless)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(themeManager.currentTheme.textSecondary)
                         }
                     }
                 }
@@ -216,13 +228,13 @@ struct LocationAndCalculationView: View {
             if let country = detectedCountry {
                 HStack(spacing: 12) {
                     Image(systemName: "mappin.circle.fill")
-                        .foregroundColor(themeManager.currentTheme.accentPrimary)
+                        .foregroundColor(themeManager.currentTheme.accent)
 
                     VStack(alignment: .leading, spacing: 4) {
                         ThemedText("Detected Location", style: .body)
                             .fontWeight(.semibold)
                         ThemedText.caption(country)
-                            .opacity(0.7)
+                            .foregroundColor(themeManager.currentTheme.textSecondary)
                     }
 
                     Spacer()
@@ -243,7 +255,7 @@ struct LocationAndCalculationView: View {
                     Spacer()
 
                     Image(systemName: "info.circle")
-                        .foregroundColor(.secondary)
+                        .foregroundColor(themeManager.currentTheme.textTertiary)
                         .onTapGesture {
                             // Show explanation
                         }
@@ -255,6 +267,7 @@ struct LocationAndCalculationView: View {
                         methodId: method.id,
                         name: method.name,
                         description: method.description,
+                        explanation: method.explanation,
                         regions: method.regions,
                         isRecommended: true,
                         isSelected: coordinator.selectedCalculationMethod == method.id,
@@ -277,12 +290,12 @@ struct LocationAndCalculationView: View {
                 } label: {
                     HStack {
                         ThemedText(showMethodSelection ? "Hide Other Methods" : "Use a Different Method", style: .body)
-                            .foregroundColor(themeManager.currentTheme.accentInteractive)
+                            .foregroundColor(themeManager.currentTheme.accent)
 
                         Spacer()
 
                         Image(systemName: showMethodSelection ? "chevron.up" : "chevron.down")
-                            .foregroundColor(themeManager.currentTheme.accentInteractive)
+                            .foregroundColor(themeManager.currentTheme.accent)
                             .font(.caption.weight(.semibold))
                     }
                 }
@@ -298,6 +311,7 @@ struct LocationAndCalculationView: View {
                                 methodId: method.id,
                                 name: method.name,
                                 description: method.description,
+                                explanation: method.explanation,
                                 regions: method.regions,
                                 isRecommended: false,
                                 isSelected: coordinator.selectedCalculationMethod == method.id,
@@ -321,7 +335,7 @@ struct LocationAndCalculationView: View {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 8) {
                     Image(systemName: "questionmark.circle.fill")
-                        .foregroundColor(themeManager.currentTheme.accentSecondary)
+                        .foregroundColor(themeManager.currentTheme.accentMuted)
                     ThemedText("Why does this matter?", style: .body)
                         .fontWeight(.semibold)
                 }
@@ -329,12 +343,12 @@ struct LocationAndCalculationView: View {
                 ThemedText.body(
                     "Different Islamic organizations use slightly different astronomical calculations for prayer times, especially Fajr and Isha. The differences are usually 2-5 minutes. We recommend the method most commonly used in your region, but you can always change this in Settings."
                 )
-                .opacity(0.8)
+                .foregroundColor(themeManager.currentTheme.textSecondary)
             }
             .padding(16)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(themeManager.currentTheme.accentSecondary.opacity(0.15))
+                    .fill(themeManager.currentTheme.accentMuted.opacity(0.15))
             )
 
             // Continue button (only shown after calculation method selected)
@@ -353,7 +367,7 @@ struct LocationAndCalculationView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
-                .tint(themeManager.currentTheme.accentPrimary)
+                .tint(themeManager.currentTheme.accent)
             }
         }
     }
@@ -425,25 +439,53 @@ struct LocationAndCalculationView: View {
                 }
             }
         } catch {
-            print("⚠️ MapKit search error: \(error)")
+            #if DEBUG
+            print("MapKit search error: \(error)")
+            #endif
         }
     }
 
     private func handleManualCityEntry() {
         guard !manualCity.isEmpty else { return }
 
-        // In a real implementation, you would:
-        // 1. Geocode the city name to get coordinates
-        // 2. Store those coordinates
-        // 3. Detect country from coordinates
-        // For now, just advance with default method
-
         coordinator.updateLocationPermission(.denied)
         AudioHapticCoordinator.shared.playConfirm()
 
-        // Set a default method
+        // Set a default method if none selected
         if coordinator.selectedCalculationMethod.isEmpty {
             coordinator.selectedCalculationMethod = "MWL"
+        }
+
+        // Geocode city name to get coordinates (using MapKit -- CLGeocoder is deprecated in iOS 26)
+        Task {
+            if let geocodingRequest = MKGeocodingRequest(addressString: manualCity) {
+                do {
+                    let results = try await geocodingRequest.mapItems
+                    if let mapItem = results.first {
+                        let location = mapItem.location
+                        await MainActor.run {
+                            UserDefaults.standard.set(location.coordinate.latitude, forKey: "manualLatitude")
+                            UserDefaults.standard.set(location.coordinate.longitude, forKey: "manualLongitude")
+                            UserDefaults.standard.set(manualCity, forKey: "manualCityName")
+
+                            // Detect country for calculation method recommendation
+                            if let countryCode = mapItem.addressRepresentations?.region?.identifier {
+                                let recommended = coordinator.recommendedCalculationMethod(for: countryCode)
+                                coordinator.selectedCalculationMethod = recommended
+                            }
+                        }
+                    }
+                } catch {
+                    #if DEBUG
+                    print("Geocoding failed for '\(manualCity)': \(error)")
+                    #endif
+                }
+            }
+
+            // Always advance -- don't leave user stuck even if geocoding fails
+            await MainActor.run {
+                coordinator.advance()
+            }
         }
     }
 }
@@ -454,6 +496,7 @@ struct MethodCard: View {
     let methodId: String
     let name: String
     let description: String
+    let explanation: String
     let regions: String
     let isRecommended: Bool
     let isSelected: Bool
@@ -470,14 +513,14 @@ struct MethodCard: View {
                 ZStack {
                     Circle()
                         .stroke(
-                            isSelected ? themeManager.currentTheme.accentPrimary : themeManager.currentTheme.textColor.opacity(0.3),
+                            isSelected ? themeManager.currentTheme.accent : themeManager.currentTheme.textTertiary,
                             lineWidth: 2
                         )
                         .frame(width: 24, height: 24)
 
                     if isSelected {
                         Circle()
-                            .fill(themeManager.currentTheme.accentPrimary)
+                            .fill(themeManager.currentTheme.accent)
                             .frame(width: 14, height: 14)
                             .transition(.scale.combined(with: .opacity))
                     }
@@ -490,7 +533,7 @@ struct MethodCard: View {
                         ThemedText(name, style: .body)
                             .fontWeight(.semibold)
                             .foregroundColor(
-                                isSelected ? themeManager.currentTheme.accentPrimary : themeManager.currentTheme.textColor
+                                isSelected ? themeManager.currentTheme.accent : themeManager.currentTheme.textPrimary
                             )
 
                         if isRecommended {
@@ -501,21 +544,28 @@ struct MethodCard: View {
                                 .padding(.vertical, 4)
                                 .background(
                                     Capsule()
-                                        .fill(themeManager.currentTheme.accentPrimary)
+                                        .fill(themeManager.currentTheme.accent)
                                 )
                         }
                     }
 
                     ThemedText.caption(description)
-                        .opacity(0.7)
+                        .foregroundColor(themeManager.currentTheme.textSecondary)
                         .multilineTextAlignment(.leading)
+
+                    // Human-readable explanation of the calculation angles
+                    Text(explanation)
+                        .font(.caption)
+                        .foregroundColor(themeManager.currentTheme.textSecondary)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
 
                     HStack(spacing: 4) {
                         Image(systemName: "globe.americas.fill")
                             .font(.caption2)
                         ThemedText(regions, style: .caption)
                     }
-                    .opacity(0.6)
+                    .foregroundColor(themeManager.currentTheme.textTertiary)
                 }
 
                 Spacer()
@@ -527,7 +577,7 @@ struct MethodCard: View {
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
                             .stroke(
-                                isSelected ? themeManager.currentTheme.accentPrimary : Color.clear,
+                                isSelected ? themeManager.currentTheme.accent : Color.clear,
                                 lineWidth: 2
                             )
                     )

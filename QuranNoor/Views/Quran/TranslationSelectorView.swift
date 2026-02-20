@@ -10,6 +10,7 @@ import SwiftUI
 struct TranslationSelectorView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
 
     @State private var preferences: TranslationPreferences
     private let onSelect: (TranslationEdition) -> Void
@@ -49,11 +50,11 @@ struct TranslationSelectorView: View {
                 } header: {
                     Text("Select Translation")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(themeManager.currentTheme.textSecondary)
                 } footer: {
                     Text("Choose your preferred English translation of the Quran. You can change this anytime in settings.")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(themeManager.currentTheme.textSecondary)
                 }
             }
             .navigationTitle("Translations")
@@ -72,6 +73,7 @@ struct TranslationSelectorView: View {
 
 // MARK: - Translation Row
 struct TranslationRow: View {
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
     let edition: TranslationEdition
     let isSelected: Bool
     let isRecommended: Bool
@@ -81,7 +83,7 @@ struct TranslationRow: View {
             // Selection indicator
             Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                 .font(.system(size: 22))
-                .foregroundColor(isSelected ? AppColors.primary.green : .secondary.opacity(0.3))
+                .foregroundColor(isSelected ? themeManager.currentTheme.accent : themeManager.currentTheme.textSecondary.opacity(0.3))
                 .frame(width: 24, height: 24)
 
             VStack(alignment: .leading, spacing: 6) {
@@ -98,7 +100,7 @@ struct TranslationRow: View {
                             .padding(.vertical, 2)
                             .background(
                                 Capsule()
-                                    .fill(AppColors.primary.green)
+                                    .fill(themeManager.currentTheme.accent)
                             )
                     }
 
@@ -106,18 +108,18 @@ struct TranslationRow: View {
 
                     Text("\(edition.year)")
                         .font(.system(size: 13))
-                        .foregroundColor(.secondary)
+                        .foregroundColor(themeManager.currentTheme.textSecondary)
                 }
 
                 Text(edition.description)
                     .font(.system(size: 14))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(themeManager.currentTheme.textSecondary)
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
 
                 Text("by \(edition.author)")
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(.secondary.opacity(0.8))
+                    .foregroundColor(themeManager.currentTheme.textSecondary.opacity(0.8))
             }
         }
         .padding(.vertical, 8)
@@ -126,6 +128,7 @@ struct TranslationRow: View {
 
 // MARK: - Compact Translation Picker
 struct CompactTranslationPicker: View {
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
     @Binding var selectedTranslation: TranslationEdition
     @State private var showingSelector = false
 
@@ -141,12 +144,12 @@ struct CompactTranslationPicker: View {
                 Image(systemName: "chevron.down")
                     .font(.system(size: 12, weight: .semibold))
             }
-            .foregroundColor(AppColors.primary.green)
+            .foregroundColor(themeManager.currentTheme.accent)
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
             .background(
                 Capsule()
-                    .fill(AppColors.primary.green.opacity(0.1))
+                    .fill(themeManager.currentTheme.accent.opacity(0.1))
             )
         }
         .sheet(isPresented: $showingSelector) {
@@ -166,7 +169,9 @@ struct CompactTranslationPicker: View {
     TranslationSelectorView(
         currentPreferences: TranslationPreferences()
     ) { edition in
+        #if DEBUG
         print("Selected: \(edition.displayName)")
+        #endif
     }
 }
 

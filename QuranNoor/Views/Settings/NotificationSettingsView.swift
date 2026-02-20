@@ -45,7 +45,7 @@ struct NotificationSettingsView: View {
                 .padding(.horizontal, 20)
                 .padding(.vertical, 16)
             }
-            .background(themeManager.backgroundColor.ignoresSafeArea())
+            .background(themeManager.currentTheme.backgroundColor.ignoresSafeArea())
             .navigationTitle("Notification Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -96,21 +96,21 @@ struct NotificationSettingsView: View {
     // MARK: - Components
 
     private var summaryCard: some View {
-        LiquidGlassCardView {
+        CardView {
             VStack(spacing: 16) {
                 HStack {
                     Image(systemName: "bell.badge.fill")
                         .font(.system(size: 32))
-                        .foregroundStyle(themeManager.accentColor)
+                        .foregroundStyle(themeManager.currentTheme.accent)
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Active Notifications")
                             .font(.headline)
-                            .foregroundStyle(themeManager.primaryTextColor)
+                            .foregroundStyle(themeManager.currentTheme.textPrimary)
 
                         Text("\(preferencesService.getEnabledNotificationCount()) of 5 prayers")
                             .font(.subheadline)
-                            .foregroundStyle(themeManager.secondaryTextColor)
+                            .foregroundStyle(themeManager.currentTheme.textSecondary)
                     }
 
                     Spacer()
@@ -126,7 +126,7 @@ struct NotificationSettingsView: View {
 
                         Text("\(preferencesService.getEnabledReminderCount()) reminder\(preferencesService.getEnabledReminderCount() != 1 ? "s" : "") active")
                             .font(.subheadline)
-                            .foregroundStyle(themeManager.secondaryTextColor)
+                            .foregroundStyle(themeManager.currentTheme.textSecondary)
 
                         Spacer()
                     }
@@ -146,7 +146,7 @@ struct NotificationSettingsView: View {
                     .font(.subheadline.weight(.medium))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
-                    .background(themeManager.accentColor)
+                    .background(themeManager.currentTheme.accent)
                     .foregroundStyle(.white)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
             }
@@ -159,19 +159,19 @@ struct NotificationSettingsView: View {
                     .font(.subheadline.weight(.medium))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
-                    .background(themeManager.cardBackground)
-                    .foregroundStyle(themeManager.primaryTextColor)
+                    .background(themeManager.currentTheme.cardColor)
+                    .foregroundStyle(themeManager.currentTheme.textPrimary)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
             }
         }
     }
 
     private var infoCard: some View {
-        LiquidGlassCardView {
+        CardView {
             VStack(alignment: .leading, spacing: 12) {
                 Label("About Notifications", systemImage: "info.circle.fill")
                     .font(.headline)
-                    .foregroundStyle(themeManager.accentColor)
+                    .foregroundStyle(themeManager.currentTheme.accent)
 
                 VStack(alignment: .leading, spacing: 8) {
                     bulletPoint(icon: "bell.fill", text: "Main notification at prayer time")
@@ -184,7 +184,7 @@ struct NotificationSettingsView: View {
 
                 Text("Customize each prayer independently to match your schedule and preferences.")
                     .font(.caption)
-                    .foregroundStyle(themeManager.secondaryTextColor)
+                    .foregroundStyle(themeManager.currentTheme.textSecondary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(16)
@@ -195,12 +195,12 @@ struct NotificationSettingsView: View {
         HStack(spacing: 8) {
             Image(systemName: icon)
                 .font(.caption)
-                .foregroundStyle(themeManager.accentColor)
+                .foregroundStyle(themeManager.currentTheme.accent)
                 .frame(width: 20)
 
             Text(text)
                 .font(.caption2)
-                .foregroundStyle(themeManager.secondaryTextColor)
+                .foregroundStyle(themeManager.currentTheme.textSecondary)
         }
     }
 
@@ -233,7 +233,7 @@ struct PrayerNotificationRow: View {
     @State private var reminderMinutes: Int = 0
 
     var body: some View {
-        LiquidGlassCardView {
+        CardView {
             VStack(spacing: 0) {
                 // Main Row
                 Button {
@@ -243,14 +243,14 @@ struct PrayerNotificationRow: View {
                         // Prayer Icon
                         Image(systemName: prayer.icon)
                             .font(.title3)
-                            .foregroundStyle(themeManager.accentColor)
+                            .foregroundStyle(themeManager.currentTheme.accent)
                             .frame(width: 32)
 
                         // Prayer Name and Status
                         VStack(alignment: .leading, spacing: 4) {
                             Text(prayer.displayName)
                                 .font(.headline)
-                                .foregroundStyle(themeManager.primaryTextColor)
+                                .foregroundStyle(themeManager.currentTheme.textPrimary)
 
                             HStack(spacing: 6) {
                                 if !isNotificationEnabled {
@@ -272,7 +272,7 @@ struct PrayerNotificationRow: View {
                         // Expand/Collapse Icon
                         Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
                             .font(.caption)
-                            .foregroundStyle(themeManager.secondaryTextColor)
+                            .foregroundStyle(themeManager.currentTheme.textSecondary)
                     }
                     .padding(16)
                 }
@@ -287,12 +287,12 @@ struct PrayerNotificationRow: View {
                         Toggle(isOn: $isNotificationEnabled) {
                             HStack {
                                 Image(systemName: "bell.fill")
-                                    .foregroundStyle(themeManager.accentColor)
+                                    .foregroundStyle(themeManager.currentTheme.accent)
                                 Text("Prayer Time Notification")
                                     .font(.subheadline)
                             }
                         }
-                        .tint(themeManager.accentColor)
+                        .tint(themeManager.currentTheme.accent)
                         .onChange(of: isNotificationEnabled) { _, newValue in
                             preferencesService.setNotificationEnabled(for: prayer, enabled: newValue)
                             AudioHapticCoordinator.shared.playButtonPress()
@@ -319,7 +319,7 @@ struct PrayerNotificationRow: View {
                         VStack(alignment: .leading, spacing: 8) {
                             HStack {
                                 Image(systemName: "clock.fill")
-                                    .foregroundStyle(themeManager.accentColor)
+                                    .foregroundStyle(themeManager.currentTheme.accent)
                                 Text("Reminder Before Prayer")
                                     .font(.subheadline)
                             }

@@ -25,14 +25,14 @@ struct SpecialTimeCard: View {
         HStack(spacing: 16) {
             // Icon
             Image(systemName: specialTime.type.icon)
-                .font(.system(size: 28))
+                .font(.title2)
                 .foregroundColor(iconColor)
                 .frame(width: 44)
 
             // Time info
             VStack(alignment: .leading, spacing: 4) {
                 ThemedText(specialTime.type.displayName, style: .body)
-                    .foregroundColor(highlight ? AppColors.primary.green : themeManager.currentTheme.textColor)
+                    .foregroundColor(highlight ? themeManager.currentTheme.accent : themeManager.currentTheme.textPrimary)
 
                 ThemedText.caption(specialTime.type.description)
                     .opacity(0.7)
@@ -42,15 +42,15 @@ struct SpecialTimeCard: View {
 
             // Time display
             Text(specialTime.displayTime)
-                .font(.system(size: 20, weight: highlight ? .semibold : .regular))
-                .foregroundColor(highlight ? themeManager.currentTheme.featureAccent : themeManager.currentTheme.textColor)
+                .font(.title3.weight(highlight ? .semibold : .regular))
+                .foregroundColor(highlight ? themeManager.currentTheme.accent : themeManager.currentTheme.textPrimary)
         }
         .padding()
         .background(
             RoundedRectangle(cornerRadius: 12)
                 .fill(
                     highlight
-                        ? AppColors.primary.green.opacity(0.1)
+                        ? themeManager.currentTheme.accent.opacity(0.1)
                         : themeManager.currentTheme.cardColor.opacity(0.5)
                 )
         )
@@ -60,17 +60,17 @@ struct SpecialTimeCard: View {
     private var iconColor: Color {
         switch specialTime.type {
         case .imsak:
-            return AppColors.primary.midnight
+            return themeManager.currentTheme.textPrimary
         case .sunrise:
             return Color.orange
         case .sunset:
             return Color.orange.opacity(0.8)
         case .midnight:
-            return themeManager.currentTheme.featureAccent
+            return themeManager.currentTheme.accent
         case .firstThird:
-            return AppColors.primary.gold
+            return themeManager.currentTheme.accentMuted
         case .lastThird:
-            return AppColors.primary.green
+            return themeManager.currentTheme.accent
         }
     }
 }
@@ -87,7 +87,7 @@ struct CompactSpecialTimeCard: View {
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: icon)
-                .font(.system(size: 18))
+                .font(.body)
                 .foregroundColor(color)
                 .frame(width: 28)
 
@@ -96,7 +96,7 @@ struct CompactSpecialTimeCard: View {
             Spacer()
 
             Text(time)
-                .font(.system(size: 16, weight: .medium))
+                .font(.body.weight(.medium))
                 .foregroundColor(color)
         }
         .padding(.vertical, 8)
@@ -159,7 +159,7 @@ struct CompactSpecialTimeCard: View {
                     icon: "moon.stars",
                     title: "Midnight",
                     time: "12:37 AM",
-                    color: ThemeMode.light.featureAccent  // Theme-aware preview color
+                    color: ThemeMode.light.accent  // Theme-aware preview color
                 )
             }
             .padding()

@@ -12,7 +12,7 @@ import MapKit
 struct MosqueFinderView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(ThemeManager.self) var themeManager: ThemeManager
-    @EnvironmentObject private var locationService: LocationService
+    @Environment(LocationService.self) private var locationService: LocationService
 
     @State private var mosqueService = MosqueFinderService.shared
     @State private var mosques: [Mosque] = []
@@ -26,7 +26,7 @@ struct MosqueFinderView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                themeManager.backgroundColor
+                themeManager.currentTheme.backgroundColor
                     .ignoresSafeArea()
 
                 if isLoading {
@@ -123,11 +123,11 @@ struct MosqueFinderView: View {
                 )) {
                     ZStack {
                         Circle()
-                            .fill(themeManager.accentColor.opacity(0.3))
+                            .fill(themeManager.currentTheme.accent.opacity(0.3))
                             .frame(width: 40, height: 40)
 
                         Circle()
-                            .fill(themeManager.accentColor)
+                            .fill(themeManager.currentTheme.accent)
                             .frame(width: 16, height: 16)
                     }
                 }
@@ -142,7 +142,7 @@ struct MosqueFinderView: View {
                         longitude: mosque.coordinates.longitude
                     )
                 )
-                .tint(selectedMosque?.id == mosque.id ? themeManager.accentColor : .orange)
+                .tint(selectedMosque?.id == mosque.id ? themeManager.currentTheme.accent : .orange)
                 .tag(mosque)
             }
         }
@@ -175,17 +175,17 @@ struct MosqueFinderView: View {
         VStack(spacing: 8) {
             HStack {
                 Image(systemName: "slider.horizontal.3")
-                    .foregroundStyle(themeManager.accentColor)
+                    .foregroundStyle(themeManager.currentTheme.accent)
 
                 Text("Search Radius")
                     .font(.subheadline.weight(.medium))
-                    .foregroundStyle(themeManager.primaryTextColor)
+                    .foregroundStyle(themeManager.currentTheme.textPrimary)
 
                 Spacer()
 
                 Text("\(mosques.count) found")
                     .font(.caption)
-                    .foregroundStyle(themeManager.secondaryTextColor)
+                    .foregroundStyle(themeManager.currentTheme.textSecondary)
             }
 
             Picker("Distance", selection: $selectedDistanceFilter) {
@@ -202,7 +202,7 @@ struct MosqueFinderView: View {
         .padding(12)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(themeManager.cardBackground)
+                .fill(themeManager.currentTheme.cardColor)
         )
     }
 
@@ -212,15 +212,15 @@ struct MosqueFinderView: View {
         VStack(spacing: 20) {
             Image(systemName: "building.2.crop.circle")
                 .font(.system(size: 64))
-                .foregroundStyle(themeManager.secondaryTextColor)
+                .foregroundStyle(themeManager.currentTheme.textSecondary)
 
             Text("No Mosques Found")
                 .font(.title3.weight(.semibold))
-                .foregroundStyle(themeManager.primaryTextColor)
+                .foregroundStyle(themeManager.currentTheme.textPrimary)
 
             Text("Try increasing the search radius or check your location settings.")
                 .font(.subheadline)
-                .foregroundStyle(themeManager.secondaryTextColor)
+                .foregroundStyle(themeManager.currentTheme.textSecondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
 
@@ -234,7 +234,7 @@ struct MosqueFinderView: View {
                     .padding(.vertical, 12)
                     .background(
                         Capsule()
-                            .fill(themeManager.accentColor)
+                            .fill(themeManager.currentTheme.accent)
                     )
             }
         }
@@ -246,11 +246,11 @@ struct MosqueFinderView: View {
         VStack(spacing: 16) {
             ProgressView()
                 .scaleEffect(1.5)
-                .tint(themeManager.accentColor)
+                .tint(themeManager.currentTheme.accent)
 
             Text("Finding nearby mosques...")
                 .font(.subheadline)
-                .foregroundStyle(themeManager.secondaryTextColor)
+                .foregroundStyle(themeManager.currentTheme.textSecondary)
         }
     }
 
@@ -326,7 +326,7 @@ struct MosqueCard: View {
     let onSelect: () -> Void
 
     var body: some View {
-        LiquidGlassCardView {
+        CardView {
             VStack(alignment: .leading, spacing: 12) {
                 // Header
                 Button {
@@ -335,24 +335,24 @@ struct MosqueCard: View {
                     HStack {
                         Image(systemName: "building.2.fill")
                             .font(.title2)
-                            .foregroundStyle(themeManager.accentColor)
+                            .foregroundStyle(themeManager.currentTheme.accent)
 
                         VStack(alignment: .leading, spacing: 4) {
                             Text(mosque.name)
                                 .font(.headline)
-                                .foregroundStyle(themeManager.primaryTextColor)
+                                .foregroundStyle(themeManager.currentTheme.textPrimary)
                                 .multilineTextAlignment(.leading)
 
                             Text(mosque.formattedDistance)
                                 .font(.caption)
-                                .foregroundStyle(themeManager.secondaryTextColor)
+                                .foregroundStyle(themeManager.currentTheme.textSecondary)
                         }
 
                         Spacer()
 
                         Image(systemName: isSelected ? "chevron.up" : "chevron.down")
                             .font(.caption)
-                            .foregroundStyle(themeManager.secondaryTextColor)
+                            .foregroundStyle(themeManager.currentTheme.textSecondary)
                     }
                 }
                 .buttonStyle(.plain)
@@ -365,11 +365,11 @@ struct MosqueCard: View {
                         // Address
                         HStack(alignment: .top, spacing: 8) {
                             Image(systemName: "mappin.circle.fill")
-                                .foregroundStyle(themeManager.accentColor)
+                                .foregroundStyle(themeManager.currentTheme.accent)
 
                             Text(mosque.address)
                                 .font(.subheadline)
-                                .foregroundStyle(themeManager.secondaryTextColor)
+                                .foregroundStyle(themeManager.currentTheme.textSecondary)
                         }
 
                         // Action Buttons
@@ -382,7 +382,7 @@ struct MosqueCard: View {
                                     .font(.subheadline.weight(.medium))
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 12)
-                                    .background(themeManager.accentColor)
+                                    .background(themeManager.currentTheme.accent)
                                     .foregroundStyle(.white)
                                     .clipShape(RoundedRectangle(cornerRadius: 10))
                             }
@@ -427,7 +427,6 @@ struct MosqueCard: View {
         ])
 
         AudioHapticCoordinator.shared.playButtonPress()
-        print("📍 Opening \(mosque.name) in Maps")
     }
 
     private func callMosque(_ phoneNumber: String) {
@@ -437,7 +436,9 @@ struct MosqueCard: View {
         if let url = URL(string: "tel://\(cleanNumber)") {
             UIApplication.shared.open(url)
             AudioHapticCoordinator.shared.playButtonPress()
+            #if DEBUG
             print("📞 Calling mosque: \(phoneNumber)")
+            #endif
         }
     }
 }
@@ -447,5 +448,5 @@ struct MosqueCard: View {
 #Preview {
     MosqueFinderView()
         .environment(ThemeManager())
-        .environmentObject(LocationService.shared)
+        .environment(LocationService.shared)
 }

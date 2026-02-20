@@ -15,11 +15,11 @@ struct DuaDetailView: View {
     @Environment(\.dismiss) private var dismiss
 
     private var isFavorite: Bool {
-        duaService.progress.isFavorite(duaId: dua.id)
+        duaService.isFavorite(dua: dua)
     }
 
     private var usageCount: Int {
-        duaService.progress.getUsageCount(duaId: dua.id)
+        duaService.progress.getUsageCount(duaKey: DuaProgress.stableKey(for: dua))
     }
 
     var body: some View {
@@ -71,7 +71,7 @@ struct DuaDetailView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         withAnimation {
-                            duaService.toggleFavorite(duaId: dua.id)
+                            duaService.toggleFavorite(dua: dua)
                         }
                     } label: {
                         Image(systemName: isFavorite ? "heart.fill" : "heart")
@@ -159,7 +159,7 @@ struct DuaDetailView: View {
         VStack(spacing: 12) {
             HStack {
                 Image(systemName: "text.word.spacing")
-                    .foregroundStyle(themeManager.currentTheme.featureAccent)
+                    .foregroundStyle(themeManager.currentTheme.accent)
                 Text("Transliteration")
                     .font(.headline)
                 Spacer()
@@ -174,7 +174,7 @@ struct DuaDetailView: View {
         .padding()
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(themeManager.currentTheme.featureBackgroundTint)
+                .fill(themeManager.currentTheme.accentTint)
         )
     }
 
@@ -277,7 +277,7 @@ struct DuaDetailView: View {
             // Mark as Recited Button
             Button {
                 withAnimation {
-                    duaService.incrementUsage(duaId: dua.id)
+                    duaService.incrementUsage(dua: dua)
                 }
             } label: {
                 HStack {

@@ -11,7 +11,7 @@ struct PersonalizationView: View {
     // MARK: - Properties
     @Environment(ThemeManager.self) var themeManager: ThemeManager
     @Environment(\.dynamicTypeSize) var dynamicTypeSize
-    @ObservedObject private var accessibilityHelper = AccessibilityHelper.shared
+    var accessibilityHelper = AccessibilityHelper.shared
 
     let coordinator: OnboardingCoordinator
 
@@ -35,11 +35,11 @@ struct PersonalizationView: View {
                 VStack(spacing: 12) {
                     Image(systemName: "person.crop.circle.fill")
                         .font(.system(size: 50))
-                        .foregroundColor(themeManager.currentTheme.accentSecondary)
+                        .foregroundColor(themeManager.currentTheme.accentMuted)
                         .accessibilityHidden(true)
 
                     ThemedText("What's Your Name?", style: .title)
-                        .foregroundColor(themeManager.currentTheme.accentPrimary)
+                        .foregroundColor(themeManager.currentTheme.accent)
                         .accessibilityAddTraits(.isHeader)
 
                     ThemedText.body("We'll use this to personalize your experience")
@@ -51,15 +51,15 @@ struct PersonalizationView: View {
 
                 // MARK: - Name Input
                 VStack(spacing: 16) {
-                    LiquidGlassCardView(showPattern: false, intensity: .moderate) {
+                    CardView(showPattern: false, intensity: .moderate) {
                         VStack(alignment: .leading, spacing: 12) {
                             ThemedText.caption("YOUR NAME (OPTIONAL)")
-                                .foregroundColor(themeManager.currentTheme.accentSecondary)
+                                .foregroundColor(themeManager.currentTheme.accentMuted)
 
                             TextField("Enter your name", text: $userName)
                                 .textFieldStyle(.plain)
                                 .font(.system(size: 18))
-                                .foregroundColor(themeManager.currentTheme.textColor)
+                                .foregroundColor(themeManager.currentTheme.textPrimary)
                                 .padding(16)
                                 .background(
                                     RoundedRectangle(cornerRadius: 12)
@@ -68,7 +68,7 @@ struct PersonalizationView: View {
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 12)
                                         .stroke(
-                                            isTextFieldFocused ? themeManager.currentTheme.accentPrimary : themeManager.currentTheme.borderColor,
+                                            isTextFieldFocused ? themeManager.currentTheme.accent : themeManager.currentTheme.borderColor,
                                             lineWidth: isTextFieldFocused ? 2 : 1
                                         )
                                 )
@@ -89,7 +89,7 @@ struct PersonalizationView: View {
                     VStack(spacing: 12) {
                         HStack {
                             ThemedText("Preview", style: .heading)
-                                .foregroundColor(themeManager.currentTheme.textColor)
+                                .foregroundColor(themeManager.currentTheme.textPrimary)
                             Spacer()
                         }
                         .padding(.horizontal, 24)
@@ -101,11 +101,11 @@ struct PersonalizationView: View {
                 }
 
                 // MARK: - Why Ask Section
-                LiquidGlassCardView(showPattern: true, intensity: .subtle) {
+                CardView(showPattern: true, intensity: .subtle) {
                     VStack(alignment: .leading, spacing: 16) {
                         HStack(spacing: 8) {
                             Image(systemName: "info.circle.fill")
-                                .foregroundColor(themeManager.currentTheme.accentSecondary)
+                                .foregroundColor(themeManager.currentTheme.accentMuted)
                             ThemedText("Why we ask", style: .heading)
                         }
 
@@ -115,19 +115,19 @@ struct PersonalizationView: View {
                             BenefitRow(
                                 icon: "heart.fill",
                                 text: "Creates a personal connection with the app",
-                                color: themeManager.currentTheme.accentPrimary
+                                color: themeManager.currentTheme.accent
                             )
 
                             BenefitRow(
                                 icon: "person.2.fill",
                                 text: "Addressing by name is a Sunnah practice",
-                                color: themeManager.currentTheme.accentSecondary
+                                color: themeManager.currentTheme.accentMuted
                             )
 
                             BenefitRow(
                                 icon: "lock.fill",
                                 text: "Your name stays private on your device",
-                                color: themeManager.currentTheme.accentInteractive
+                                color: themeManager.currentTheme.accent
                             )
                         }
                     }
@@ -146,7 +146,7 @@ struct PersonalizationView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
-                .tint(userName.isEmpty ? themeManager.currentTheme.accentSecondary : themeManager.currentTheme.accentPrimary)
+                .tint(userName.isEmpty ? themeManager.currentTheme.accentMuted : themeManager.currentTheme.accent)
                 .padding(.horizontal, 32)
                 .padding(.bottom, 40)
                 .accessibleElement(
@@ -156,7 +156,7 @@ struct PersonalizationView: View {
                 )
             }
         }
-        .accessibilityPageAnnouncement("Personalization. Step 5 of 6. Enter your name for a personalized experience, or skip to continue.")
+        .accessibilityPageAnnouncement("Personalization. Step \(coordinator.currentStep.rawValue + 1) of \(OnboardingCoordinator.OnboardingStep.allCases.count). Enter your name for a personalized experience, or skip to continue.")
         .onAppear {
             // Delay focus to allow view to settle
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
@@ -185,13 +185,13 @@ struct GreetingPreviewCard: View {
     @Environment(ThemeManager.self) var themeManager: ThemeManager
 
     var body: some View {
-        LiquidGlassCardView(showPattern: true, intensity: .prominent) {
+        CardView(showPattern: true, intensity: .prominent) {
             VStack(spacing: 16) {
                 HStack {
                     Image(systemName: "sparkles")
-                        .foregroundColor(themeManager.currentTheme.accentSecondary)
+                        .foregroundColor(themeManager.currentTheme.accentMuted)
                     ThemedText("How it will look", style: .caption)
-                        .foregroundColor(themeManager.currentTheme.accentSecondary)
+                        .foregroundColor(themeManager.currentTheme.accentMuted)
                     Spacer()
                 }
 

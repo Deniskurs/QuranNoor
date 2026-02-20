@@ -10,6 +10,11 @@ import SwiftData
 
 /// SwiftData model for tracking individual verse reading progress
 /// Replaces the UserDefaults-based readVerses dictionary
+///
+// MARK: - Usage with @Query
+// In SwiftUI views, use @Query for automatic updates:
+// @Query(sort: \ReadingProgressRecord.lastReadDate, order: .reverse) var recentProgress: [ReadingProgressRecord]
+// @Query(filter: #Predicate<ReadingProgressRecord> { $0.surahNumber == 2 }) var surahProgress: [ReadingProgressRecord]
 @Model
 final class ReadingProgressRecord {
     // MARK: - Properties
@@ -34,6 +39,12 @@ final class ReadingProgressRecord {
 
     /// How the verse was marked as read
     var source: String  // "autoTracked", "manualMark", "imported"
+
+    // MARK: - Indexes
+    // Compound indexes for optimized queries:
+    // - surahNumber for filtering by surah
+    // - lastReadDate for sorting by recency
+    #Index<ReadingProgressRecord>([\.surahNumber], [\.lastReadDate])
 
     // MARK: - Initialization
 

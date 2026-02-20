@@ -27,17 +27,17 @@ struct VerseReadIndicator: View {
                     Circle()
                         .fill(
                             isRead
-                                ? AppColors.primary.green.opacity(0.15)
-                                : themeManager.currentTheme.textColor.opacity(0.05)
+                                ? themeManager.currentTheme.accent.opacity(0.15)
+                                : themeManager.currentTheme.textPrimary.opacity(0.05)
                         )
                         .frame(width: 24, height: 24)
 
                     Image(systemName: isRead ? "checkmark.circle.fill" : "circle")
-                        .font(.system(size: 18, weight: .medium))
+                        .font(.body.weight(.medium))
                         .foregroundColor(
                             isRead
-                                ? AppColors.primary.green
-                                : themeManager.currentTheme.textColor.opacity(0.3)
+                                ? themeManager.currentTheme.accent
+                                : themeManager.currentTheme.textPrimary.opacity(0.3)
                         )
                 }
                 .scaleEffect(isPressed ? 0.85 : 1.0)
@@ -46,8 +46,8 @@ struct VerseReadIndicator: View {
                 // Relative date (if read)
                 if let date = readDate, isRead {
                     Text(relativeDate(date))
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(themeManager.currentTheme.textColor.opacity(0.5))
+                        .font(.caption2.weight(.medium))
+                        .foregroundColor(themeManager.currentTheme.textPrimary.opacity(0.5))
                 }
             }
         }

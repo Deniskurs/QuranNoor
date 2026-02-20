@@ -49,6 +49,7 @@ struct IslamicDivider: View {
                 CrescentDivider(color: dividerColor)
             }
         }
+        .accessibilityHidden(true)  // Decorative elements don't need VoiceOver
     }
 
     // MARK: - Theme-Aware Color
@@ -275,7 +276,7 @@ struct SectionDivider: View {
                 ThemedText.body("Fajr - 5:30 AM")
                 ThemedText.body("Dhuhr - 12:45 PM")
 
-                IslamicDivider(style: .crescent, color: AppColors.primary.gold)
+                IslamicDivider(style: .crescent, color: ThemeMode.light.accentMuted)
 
                 ThemedText.heading("Evening Prayers")
 
@@ -293,9 +294,9 @@ struct SectionDivider: View {
 
             // Different colors
             VStack(spacing: 16) {
-                IslamicDivider(style: .ornamental, color: AppColors.primary.green)
-                IslamicDivider(style: .crescent, color: AppColors.primary.gold)
-                IslamicDivider(style: .geometric, color: ThemeMode.light.featureAccent)
+                IslamicDivider(style: .ornamental, color: ThemeMode.light.accent)
+                IslamicDivider(style: .crescent, color: ThemeMode.light.accentMuted)
+                IslamicDivider(style: .geometric, color: ThemeMode.light.accent)
             }
         }
         .padding()

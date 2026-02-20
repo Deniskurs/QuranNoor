@@ -8,7 +8,7 @@
 import Foundation
 import CoreLocation
 import MapKit
-import Combine
+import Observation
 
 // Using MapKit (MKReverseGeocodingRequest) for reverse geocoding to obtain city and country
 
@@ -31,20 +31,21 @@ enum LocationServiceError: LocalizedError {
 }
 
 // MARK: - Location Service
+@Observable
 @MainActor
-class LocationService: NSObject, ObservableObject {
+class LocationService: NSObject {
     // MARK: - Singleton
     static let shared = LocationService()
 
-    // MARK: - Published Properties
-    @Published var authorizationStatus: CLAuthorizationStatus = .notDetermined
-    @Published var currentLocation: LocationCoordinates?
-    @Published var cityName: String?
-    @Published var countryName: String?
+    // MARK: - Observable Properties
+    var authorizationStatus: CLAuthorizationStatus = .notDetermined
+    var currentLocation: LocationCoordinates?
+    var cityName: String?
+    var countryName: String?
 
     // Compass heading
-    @Published var heading: Double = 0
-    @Published var headingAccuracy: CLLocationDirection = -1
+    var heading: Double = 0
+    var headingAccuracy: CLLocationDirection = -1
 
     // MARK: - Cached Codecs (Performance: avoid repeated allocation)
     private static let decoder = JSONDecoder()
@@ -100,6 +101,7 @@ class LocationService: NSObject, ObservableObject {
 
         // Request location
         let location: CLLocation = try await withCheckedThrowingContinuation { continuation in
+            self.locationContinuation?.resume(throwing: CancellationError())
             self.locationContinuation = continuation
             locationManager.requestLocation()
         }
@@ -140,7 +142,9 @@ class LocationService: NSObject, ObservableObject {
             }
         } catch {
             // Geocoding failed, but we still have coordinates
+            #if DEBUG
             print("⚠️ Reverse geocoding failed: \(error.localizedDescription)")
+            #endif
         }
 
         // If geocoding failed, return cached city if available
@@ -174,7 +178,9 @@ class LocationService: NSObject, ObservableObject {
     /// Start receiving compass heading updates
     func startHeadingUpdates() {
         guard CLLocationManager.headingAvailable() else {
+            #if DEBUG
             print("⚠️ Heading not available on this device")
+            #endif
             return
         }
         locationManager.startUpdatingHeading()

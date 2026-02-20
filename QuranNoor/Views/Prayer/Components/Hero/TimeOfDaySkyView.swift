@@ -7,7 +7,6 @@
 //
 
 import SwiftUI
-import Combine
 
 /// Time of day periods for sky gradient calculation
 enum TimeOfDayPeriod: CaseIterable {
@@ -77,7 +76,6 @@ struct TimeOfDaySkyView: View {
 
     @State private var currentPeriod: TimeOfDayPeriod = .current()
     @State private var periodProgress: Double = TimeOfDayPeriod.progress()
-    @State private var timerCancellable: AnyCancellable?
 
     // MARK: - Body
 
@@ -85,11 +83,11 @@ struct TimeOfDaySkyView: View {
         GeometryReader { geometry in
             ZStack {
                 // Base gradient layer
-                if themeManager.currentTheme.supportsGradients {
+                if themeManager.currentTheme != .sepia {
                     Canvas { context, size in
                         drawSkyGradient(context: context, size: size)
                     }
-                    .drawingGroup() // Metal acceleration for 60fps
+                    .drawingGroup() // Metal acceleration for gradient rendering
                 } else {
                     // Solid color for sepia/non-gradient themes
                     Rectangle()
@@ -106,19 +104,13 @@ struct TimeOfDaySkyView: View {
         .ignoresSafeArea()
         .onAppear {
             updateTimeOfDay()
-            // Start timer with proper lifecycle management
-            timerCancellable = Timer.publish(every: reduceMotion ? 300 : 60, on: .main, in: .common)
-                .autoconnect()
-                .sink { _ in
-                    withAnimation(.easeInOut(duration: reduceMotion ? 0 : 2.0)) {
-                        updateTimeOfDay()
-                    }
-                }
         }
-        .onDisappear {
-            // Cancel timer to prevent memory leak
-            timerCancellable?.cancel()
-            timerCancellable = nil
+        .task {
+            // Periodically refresh time-of-day calculation every 60 seconds
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(60))
+                updateTimeOfDay()
+            }
         }
     }
 

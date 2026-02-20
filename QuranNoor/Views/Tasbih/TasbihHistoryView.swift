@@ -126,7 +126,7 @@ struct TasbihHistoryView: View {
                 Text("\(totalCount)")
                     .font(.title)
                     .fontWeight(.bold)
-                    .foregroundStyle(themeManager.currentTheme.featureAccent)
+                    .foregroundStyle(themeManager.currentTheme.accent)
 
                 Text("Total Count")
                     .font(.caption)
@@ -221,7 +221,7 @@ struct HistoryCard: View {
                 // Count
                 HStack(spacing: 6) {
                     Image(systemName: "hand.tap.fill")
-                        .foregroundStyle(themeManager.currentTheme.featureAccent)
+                        .foregroundStyle(themeManager.currentTheme.accent)
                     Text("\(entry.session.currentCount) / \(entry.session.targetCount)")
                         .font(.subheadline)
                 }
@@ -247,7 +247,7 @@ struct HistoryCard: View {
 
             // Progress Bar
             ProgressView(value: entry.session.progress)
-                .tint(entry.session.isCompleted ? .green : themeManager.currentTheme.featureAccent)
+                .tint(entry.session.isCompleted ? .green : themeManager.currentTheme.accent)
         }
         .padding()
         .background(

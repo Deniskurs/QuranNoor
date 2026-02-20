@@ -8,7 +8,7 @@
 
 import SwiftUI
 import Foundation
-import Combine
+import Observation
 
 // MARK: - Supported Languages
 
@@ -55,18 +55,19 @@ enum AppLanguage: String, CaseIterable, Identifiable {
 
 // MARK: - Localization Manager
 
+@Observable
 @MainActor
-final class LocalizationManager: ObservableObject {
+final class LocalizationManager {
     static let shared = LocalizationManager()
 
-    @Published var currentLanguage: AppLanguage {
+    var currentLanguage: AppLanguage {
         didSet {
             UserDefaults.standard.set(currentLanguage.rawValue, forKey: "app_language")
             updateLayoutDirection()
         }
     }
 
-    @Published var layoutDirection: LayoutDirection
+    var layoutDirection: LayoutDirection
 
     private init() {
         // Load saved language or use device language

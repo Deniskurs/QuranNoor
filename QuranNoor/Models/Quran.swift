@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import Combine
+
 
 // MARK: - Surah
 struct Surah: Identifiable, Codable, Sendable {
@@ -25,7 +25,7 @@ struct Surah: Identifiable, Codable, Sendable {
 
 // MARK: - Verse
 struct Verse: Identifiable, Codable, Sendable, Equatable {
-    let id: UUID
+    let id: String
     let number: Int  // Absolute verse number (1-6236)
     let surahNumber: Int
     let verseNumber: Int  // Verse number within surah
@@ -33,7 +33,7 @@ struct Verse: Identifiable, Codable, Sendable, Equatable {
     let juz: Int  // Juz number (1-30)
 
     init(number: Int, surahNumber: Int, verseNumber: Int, text: String, juz: Int) {
-        self.id = UUID()
+        self.id = "\(surahNumber):\(verseNumber)"
         self.number = number
         self.surahNumber = surahNumber
         self.verseNumber = verseNumber
@@ -44,18 +44,36 @@ struct Verse: Identifiable, Codable, Sendable, Equatable {
 
 // MARK: - Translation
 struct Translation: Identifiable, Codable, Sendable {
-    let id: UUID
+    let id: String
     let verseNumber: Int
     let language: String
     let text: String
     let author: String
 
     init(verseNumber: Int, language: String, text: String, author: String) {
-        self.id = UUID()
+        self.id = "\(verseNumber):\(language):\(author)"
         self.verseNumber = verseNumber
         self.language = language
         self.text = text
         self.author = author
+    }
+}
+
+// MARK: - Bookmark Category
+/// Default bookmark categories available in the app
+enum BookmarkCategory {
+    static let allBookmarks = "All Bookmarks"
+    static let favorites = "Favorites"
+    static let study = "Study"
+    static let memorization = "Memorization"
+
+    /// All predefined categories (excluding "All Bookmarks" which is a filter, not a stored value)
+    static let predefined: [String] = [allBookmarks, favorites, study, memorization]
+
+    /// Display-friendly short label for filter pills (strips "All Bookmarks" to "All")
+    static func shortLabel(for category: String) -> String {
+        if category == allBookmarks { return "All" }
+        return category
     }
 }
 
@@ -66,13 +84,24 @@ struct Bookmark: Identifiable, Codable, Sendable {
     let verseNumber: Int
     let timestamp: Date
     let note: String?
+    let category: String
 
-    init(surahNumber: Int, verseNumber: Int, note: String? = nil) {
+    init(surahNumber: Int, verseNumber: Int, note: String? = nil, category: String = "All Bookmarks") {
         self.id = UUID()
         self.surahNumber = surahNumber
         self.verseNumber = verseNumber
         self.timestamp = Date()
         self.note = note
+        self.category = category
+    }
+
+    init(id: UUID, surahNumber: Int, verseNumber: Int, note: String?, category: String, timestamp: Date) {
+        self.id = id
+        self.surahNumber = surahNumber
+        self.verseNumber = verseNumber
+        self.note = note
+        self.category = category
+        self.timestamp = timestamp
     }
 }
 
@@ -140,6 +169,9 @@ struct SurahProgressStats: Identifiable {
 }
 
 // MARK: - Reading Progress
+// FIXME: M28 - readVerses dictionary is stored in UserDefaults and can grow large (up to 6236 entries).
+// This should be fully migrated to SwiftData (ReadingProgressRecord) in a future version.
+// The SwiftData migration is partially complete — see DataMigrationService.
 struct ReadingProgress: Codable, Equatable, Sendable {
     var lastReadSurah: Int
     var lastReadVerse: Int
@@ -175,16 +207,66 @@ struct ReadingProgress: Codable, Equatable, Sendable {
 
     // MARK: - Helper Methods
 
-    /// Get progress statistics for a specific surah
+    /// Build a per-surah index in a single pass over readVerses.
+    /// Returns [surahNumber: [(verseId, VerseReadData)]] — O(n) where n = total read verses.
+    /// Call once and reuse the result when you need stats for multiple surahs.
+    func buildSurahIndex() -> [Int: [(String, VerseReadData)]] {
+        var index: [Int: [(String, VerseReadData)]] = [:]
+        for (key, data) in readVerses {
+            // Keys are "surahNumber:verseNumber" — parse surah number from prefix
+            if let colonIndex = key.firstIndex(of: ":"),
+               let surahNumber = Int(key[key.startIndex..<colonIndex]) {
+                index[surahNumber, default: []].append((key, data))
+            }
+        }
+        return index
+    }
+
+    /// Get progress statistics for a specific surah.
+    /// For single-surah lookups this parses the surah number from each key (O(n) over readVerses).
+    /// When computing stats for many surahs, prefer `buildSurahIndex()` + `surahProgressFromIndex()`.
     func surahProgress(surahNumber: Int, totalVerses: Int) -> SurahProgressStats {
-        let surahVerses = readVerses.filter { $0.key.starts(with: "\(surahNumber):") }
+        let prefix = "\(surahNumber):"
+        var count = 0
+        var latestDate: Date?
+        var earliestDate: Date?
+
+        for (key, data) in readVerses {
+            guard key.hasPrefix(prefix) else { continue }
+            // Verify it's an exact surah match (e.g., "1:" shouldn't match "11:")
+            // hasPrefix handles this correctly since "11:1".hasPrefix("1:") is false
+            count += 1
+            if latestDate == nil || data.timestamp > latestDate! {
+                latestDate = data.timestamp
+            }
+            if earliestDate == nil || data.timestamp < earliestDate! {
+                earliestDate = data.timestamp
+            }
+        }
+
         return SurahProgressStats(
             surahNumber: surahNumber,
             totalVerses: totalVerses,
-            readVerses: surahVerses.count,
-            completionPercentage: Double(surahVerses.count) / Double(totalVerses) * 100,
-            lastReadDate: surahVerses.values.map(\.timestamp).max(),
-            firstReadDate: surahVerses.values.map(\.timestamp).min()
+            readVerses: count,
+            completionPercentage: Double(count) / Double(totalVerses) * 100,
+            lastReadDate: latestDate,
+            firstReadDate: earliestDate
+        )
+    }
+
+    /// Build SurahProgressStats from a pre-built index entry (O(m) where m = verses in that surah).
+    func surahProgressFromIndex(surahNumber: Int, totalVerses: Int, indexEntry: [(String, VerseReadData)]) -> SurahProgressStats {
+        let count = indexEntry.count
+        let latestDate = indexEntry.map(\.1.timestamp).max()
+        let earliestDate = indexEntry.map(\.1.timestamp).min()
+
+        return SurahProgressStats(
+            surahNumber: surahNumber,
+            totalVerses: totalVerses,
+            readVerses: count,
+            completionPercentage: Double(count) / Double(totalVerses) * 100,
+            lastReadDate: latestDate,
+            firstReadDate: earliestDate
         )
     }
 
@@ -222,7 +304,9 @@ struct ReadingProgress: Codable, Equatable, Sendable {
 
         // Migration: Extract progressHistory and move to ProgressHistoryManager
         if let oldHistory = try? container.decodeIfPresent([ProgressSnapshot].self, forKey: .progressHistory), !oldHistory.isEmpty {
+            #if DEBUG
             print("⚠️ Found \(oldHistory.count) snapshots in old format - will migrate to ProgressHistoryManager")
+            #endif
             // ProgressHistoryManager will handle this migration in QuranService
         }
 
@@ -230,7 +314,9 @@ struct ReadingProgress: Codable, Equatable, Sendable {
         if let newFormat = try? container.decode([String: VerseReadData].self, forKey: .readVerses) {
             // New format with metadata - use as is
             readVerses = newFormat
+            #if DEBUG
             print("✅ Loaded reading progress: \(newFormat.count) verses (enhanced format)")
+            #endif
         } else if let oldFormat = try? container.decode(Set<String>.self, forKey: .readVerses) {
             // Old format (Set<String>) - migrate to new format
             readVerses = [:]
@@ -242,15 +328,21 @@ struct ReadingProgress: Codable, Equatable, Sendable {
                     source: .autoTracked
                 )
             }
+            #if DEBUG
             print("✅ Migrated \(oldFormat.count) verses from Set to Dictionary format")
+            #endif
         } else if (try? container.decode(Int.self, forKey: .totalVersesRead)) != nil {
             // Very old format - reset progress
             readVerses = [:]
+            #if DEBUG
             print("⚠️ Legacy format detected, resetting progress (streak preserved: \(streakDays) days)")
+            #endif
         } else {
             // No data - start fresh
             readVerses = [:]
+            #if DEBUG
             print("ℹ️ No progress data, starting fresh")
+            #endif
         }
     }
 

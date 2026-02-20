@@ -9,20 +9,20 @@
 import SwiftUI
 
 /// Stores drag offsets outside of SwiftUI view lifecycle
+/// Note: Not a singleton anymore - each row has its own instance
 private final class SwipeDragState {
-    static let shared = SwipeDragState()
-    private var offsets: [PrayerName: CGFloat] = [:]
+    private var offset: CGFloat = 0
 
-    func getOffset(_ prayer: PrayerName) -> CGFloat {
-        offsets[prayer] ?? 0
+    func getOffset() -> CGFloat {
+        offset
     }
 
-    func setOffset(_ prayer: PrayerName, _ value: CGFloat) {
-        offsets[prayer] = value
+    func setOffset(_ value: CGFloat) {
+        offset = value
     }
 
-    func reset(_ prayer: PrayerName) {
-        offsets[prayer] = 0
+    func reset() {
+        offset = 0
     }
 }
 
@@ -41,15 +41,20 @@ struct SwipeablePrayerRow: View {
     @State private var hasTriggeredThresholdHaptic: Bool = false
     @State private var displayOffset: CGFloat = 0
 
+    // Directional lock to avoid fighting with ScrollView vertical scrolling
+    @State private var isDragDirectionLocked: Bool = false
+    @State private var isHorizontalDrag: Bool = false
+
     // Thresholds
     private let threshold: CGFloat = 80
     private let maxSwipe: CGFloat = 140
     private let velocityThreshold: CGFloat = -400
 
-    private var dragState: SwipeDragState { .shared }
+    // Instance-level drag state to avoid cross-row interference
+    private let dragState = SwipeDragState()
 
     private var currentOffset: CGFloat {
-        dragState.getOffset(prayer.name)
+        dragState.getOffset()
     }
 
     private var swipeProgress: CGFloat {
@@ -121,9 +126,25 @@ struct SwipeablePrayerRow: View {
     // MARK: - Swipe Gesture
 
     private var swipeGesture: some Gesture {
-        DragGesture(minimumDistance: 15, coordinateSpace: .local)
+        DragGesture(minimumDistance: 20, coordinateSpace: .local)
             .onChanged { value in
                 guard canCheckOff && !isCompleted else { return }
+
+                // Directional lock: determine if this is a horizontal or vertical drag
+                if !isDragDirectionLocked {
+                    let absW = abs(value.translation.width)
+                    let absH = abs(value.translation.height)
+                    let totalMovement = absW + absH
+
+                    // Wait until we have enough movement to decide direction
+                    guard totalMovement > 10 else { return }
+
+                    isDragDirectionLocked = true
+                    isHorizontalDrag = absW > absH
+                }
+
+                // If this is a vertical drag, bail out completely — let ScrollView handle it
+                guard isHorizontalDrag else { return }
 
                 let translation = value.translation.width
 
@@ -143,7 +164,7 @@ struct SwipeablePrayerRow: View {
                     offset = translation
                 }
 
-                dragState.setOffset(prayer.name, offset)
+                dragState.setOffset(offset)
                 dragTick += 1
 
                 // Haptic feedback when crossing threshold
@@ -156,7 +177,16 @@ struct SwipeablePrayerRow: View {
                 }
             }
             .onEnded { value in
+                let wasHorizontalDrag = isHorizontalDrag
+
+                // Reset directional lock for next gesture
+                isDragDirectionLocked = false
+                isHorizontalDrag = false
+
                 guard canCheckOff && !isCompleted else { return }
+
+                // Only process completion/snap-back if this was a confirmed horizontal swipe
+                guard wasHorizontalDrag else { return }
 
                 let translation = value.translation.width
                 let velocity = value.velocity.width
@@ -175,7 +205,7 @@ struct SwipeablePrayerRow: View {
 
                 // Animated snap-back
                 hasTriggeredThresholdHaptic = false
-                dragState.reset(prayer.name)
+                dragState.reset()
                 dragTick += 1
 
                 withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {

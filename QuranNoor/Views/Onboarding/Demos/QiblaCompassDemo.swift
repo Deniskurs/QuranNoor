@@ -7,7 +7,7 @@
 //
 
 import SwiftUI
-import Combine
+
 
 struct QiblaCompassDemo: View {
     // MARK: - Properties
@@ -29,9 +29,9 @@ struct QiblaCompassDemo: View {
             VStack(spacing: 8) {
                 HStack(spacing: 8) {
                     Image(systemName: "location.north.circle.fill")
-                        .foregroundColor(themeManager.currentTheme.featureAccent)
+                        .foregroundColor(themeManager.currentTheme.accent)
                     ThemedText("Qibla Direction", style: .heading)
-                        .foregroundColor(themeManager.currentTheme.accentPrimary)
+                        .foregroundColor(themeManager.currentTheme.accent)
                 }
 
                 HStack(spacing: 4) {
@@ -62,17 +62,17 @@ struct QiblaCompassDemo: View {
                         HStack(spacing: 8) {
                             Image(systemName: "building.2.crop.circle.fill")
                                 .font(.title3)
-                                .foregroundColor(themeManager.currentTheme.accentSecondary)
+                                .foregroundColor(themeManager.currentTheme.accentMuted)
 
                             Text("Holy Kaaba, Makkah")
                                 .font(.headline)
-                                .foregroundColor(themeManager.currentTheme.textColor)
+                                .foregroundColor(themeManager.currentTheme.textPrimary)
                         }
 
                         HStack(spacing: 4) {
                             Text(distanceToMakkah)
                                 .font(.title.weight(.bold).monospacedDigit())
-                                .foregroundColor(themeManager.currentTheme.accentPrimary)
+                                .foregroundColor(themeManager.currentTheme.accent)
 
                             Text("km away")
                                 .font(.caption)
@@ -93,7 +93,7 @@ struct QiblaCompassDemo: View {
                         if showAccuracyRing {
                             Circle()
                                 .stroke(
-                                    themeManager.currentTheme.featureAccent.opacity(0.3),
+                                    themeManager.currentTheme.accent.opacity(0.3),
                                     style: StrokeStyle(lineWidth: 2, dash: [5, 5])
                                 )
                                 .frame(width: 260, height: 260)
@@ -117,17 +117,17 @@ struct QiblaCompassDemo: View {
                                         endRadius: 120
                                     )
                                 )
-                                .shadow(color: themeManager.currentTheme.featureAccent.opacity(0.3), radius: 20)
+                                .shadow(color: themeManager.currentTheme.accent.opacity(0.3), radius: 20)
 
                             // Outer ring
                             Circle()
-                                .stroke(themeManager.currentTheme.featureAccent.opacity(0.3), lineWidth: 3)
+                                .stroke(themeManager.currentTheme.accent.opacity(0.3), lineWidth: 3)
 
                             // Cardinal directions
                             ForEach([("N", 0.0), ("E", 90.0), ("S", 180.0), ("W", 270.0)], id: \.0) { direction in
                                 Text(direction.0)
                                     .font(.caption.weight(.bold))
-                                    .foregroundColor(direction.0 == "N" ? themeManager.currentTheme.featureAccent : .secondary)
+                                    .foregroundColor(direction.0 == "N" ? themeManager.currentTheme.accent : themeManager.currentTheme.textTertiary)
                                     .offset(y: -100)
                                     .rotationEffect(.degrees(-compassRotation))
                                     .rotationEffect(.degrees(direction.1))
@@ -136,7 +136,7 @@ struct QiblaCompassDemo: View {
                             // Degree markers
                             ForEach(0..<36) { index in
                                 Rectangle()
-                                    .fill(index % 3 == 0 ? Color.secondary : Color.secondary.opacity(0.3))
+                                    .fill(index % 3 == 0 ? themeManager.currentTheme.textTertiary : themeManager.currentTheme.textTertiary.opacity(0.3))
                                     .frame(width: 1, height: index % 3 == 0 ? 12 : 6)
                                     .offset(y: -105)
                                     .rotationEffect(.degrees(Double(index) * 10))
@@ -146,26 +146,26 @@ struct QiblaCompassDemo: View {
                             VStack(spacing: 4) {
                                 Image(systemName: "house.fill")
                                     .font(.system(size: 32))
-                                    .foregroundColor(themeManager.currentTheme.accentSecondary)
-                                    .shadow(color: themeManager.currentTheme.accentSecondary.opacity(0.5), radius: 8)
+                                    .foregroundColor(themeManager.currentTheme.accentMuted)
+                                    .shadow(color: themeManager.currentTheme.accentMuted.opacity(0.5), radius: 8)
 
                                 Text("QIBLA")
                                     .font(.caption2.weight(.bold))
-                                    .foregroundColor(themeManager.currentTheme.accentSecondary)
+                                    .foregroundColor(themeManager.currentTheme.accentMuted)
                             }
                             .offset(y: -70)
                             .rotationEffect(.degrees(-compassRotation))
 
                             // Center dot
                             Circle()
-                                .fill(themeManager.currentTheme.featureAccent)
+                                .fill(themeManager.currentTheme.accent)
                                 .frame(width: 12, height: 12)
-                                .shadow(color: themeManager.currentTheme.featureAccent.opacity(0.5), radius: 4)
+                                .shadow(color: themeManager.currentTheme.accent.opacity(0.5), radius: 4)
 
                             // Direction arrow (device heading)
                             Image(systemName: "location.north.fill")
                                 .font(.system(size: 40))
-                                .foregroundColor(themeManager.currentTheme.featureAccent)
+                                .foregroundColor(themeManager.currentTheme.accent)
                                 .offset(y: 60)
                                 .rotationEffect(.degrees(-compassRotation))
                         }
@@ -179,16 +179,16 @@ struct QiblaCompassDemo: View {
                     VStack(spacing: 8) {
                         HStack(spacing: 8) {
                             Image(systemName: "arrow.up.circle.fill")
-                                .foregroundColor(themeManager.currentTheme.featureAccent)
+                                .foregroundColor(themeManager.currentTheme.accent)
 
                             Text("\(Int(qiblaDirection))° North-East")
                                 .font(.headline.monospacedDigit())
-                                .foregroundColor(themeManager.currentTheme.textColor)
+                                .foregroundColor(themeManager.currentTheme.textPrimary)
                         }
 
                         Text("Turn your device to align the arrow with Qibla")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(themeManager.currentTheme.textSecondary)
                             .multilineTextAlignment(.center)
                     }
                     .padding(.horizontal, 24)
@@ -206,7 +206,7 @@ struct QiblaCompassDemo: View {
                         }
                         .buttonStyle(.bordered)
                         .controlSize(.large)
-                        .tint(themeManager.currentTheme.featureAccent)
+                        .tint(themeManager.currentTheme.accent)
                         .disabled(isCalibrating)
 
                         // Demo hint
@@ -216,7 +216,7 @@ struct QiblaCompassDemo: View {
                             Text("Live compass uses device sensors in real app")
                                 .font(.caption2)
                         }
-                        .foregroundColor(.secondary)
+                        .foregroundColor(themeManager.currentTheme.textTertiary)
                     }
                     .padding(.horizontal, 24)
 

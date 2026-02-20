@@ -7,7 +7,7 @@
 
 import Foundation
 import MapKit
-import Combine
+
 import Observation
 
 // MARK: - Distance Filter Options
@@ -90,13 +90,11 @@ final class MosqueFinderService {
     /// - Parameter filter: The distance filter to apply
     func setDistanceFilter(_ filter: DistanceFilter) {
         selectedDistanceFilter = filter
-        print("📍 Distance filter set to: \(filter.displayName)")
     }
 
     /// Clear cached results
     func clearCache() {
         cachedSearch = nil
-        print("🗑️ Mosque search cache cleared")
     }
 
     /// Find mosques near a location with caching
@@ -117,15 +115,12 @@ final class MosqueFinderService {
            let cached = cachedSearch,
            !cached.isExpired,
            cached.matches(location: coordinates, radius: radius) {
-            print("📦 Using cached mosque search results")
             nearbyMosques = cached.mosques
             return cached.mosques
         }
 
         isSearching = true
         defer { isSearching = false }
-
-        print("🔍 Searching for mosques within \(radius / 1000)km...")
 
         // Create search request
         let request = MKLocalSearch.Request()
@@ -170,8 +165,6 @@ final class MosqueFinderService {
                 timestamp: Date()
             )
 
-            print("✅ Found \(sortedMosques.count) mosques within \(radius / 1000)km")
-
             guard !sortedMosques.isEmpty else {
                 throw MosqueFinderError.noResults
             }
@@ -181,7 +174,6 @@ final class MosqueFinderService {
         } catch is MosqueFinderError {
             throw MosqueFinderError.noResults
         } catch {
-            print("❌ Mosque search failed: \(error.localizedDescription)")
             throw MosqueFinderError.searchFailed
         }
     }

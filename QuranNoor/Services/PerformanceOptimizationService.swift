@@ -33,8 +33,9 @@ final class PerformanceOptimizationService {
 
     // MARK: - Constants
     private let defaultUpdateInterval: TimeInterval = 1.0
-    private let lowPowerUpdateInterval: TimeInterval = 10.0
-    private let urgentUpdateInterval: TimeInterval = 0.5
+    private let relaxedUpdateInterval: TimeInterval = 5.0
+    private let lowPowerUpdateInterval: TimeInterval = 15.0
+    private let urgentUpdateInterval: TimeInterval = 1.0
     private let cacheCleanupInterval: TimeInterval = 86400 * 7 // 7 days
 
     private init() {
@@ -58,22 +59,34 @@ final class PerformanceOptimizationService {
         }
 
         switch state {
-        case .inProgress(_, _):
-            // Check if urgent (less than 30 minutes remaining)
-            let period = calculatePeriodInfo(for: state)
-            if period.isUrgent {
-                // Update more frequently when urgent
-                return urgentUpdateInterval
+        case .inProgress(_, let deadline):
+            // Check urgency based on time remaining
+            let remaining = deadline.timeIntervalSince(Date())
+            if remaining <= 5 * 60 {
+                return urgentUpdateInterval      // 1s when < 5 min (critical)
+            } else if remaining <= 30 * 60 {
+                return defaultUpdateInterval      // 1s when < 30 min (elevated)
             }
-            return defaultUpdateInterval
+            return relaxedUpdateInterval          // 5s when plenty of time
 
-        case .betweenPrayers(_, _, _):
-            // Update every second for smooth countdown display
-            return defaultUpdateInterval
+        case .betweenPrayers(_, _, let nextStart):
+            let remaining = nextStart.timeIntervalSince(Date())
+            if remaining <= 5 * 60 {
+                return urgentUpdateInterval        // 1s when next prayer imminent
+            } else if remaining <= 30 * 60 {
+                return defaultUpdateInterval        // 1s when < 30 min
+            }
+            return relaxedUpdateInterval            // 5s when plenty of time
 
-        case .beforeFajr(_), .afterIsha(_):
-            // Update every second for smooth countdown display
-            return defaultUpdateInterval
+        case .beforeFajr(let fajrTime):
+            let remaining = fajrTime.timeIntervalSince(Date())
+            if remaining <= 30 * 60 {
+                return defaultUpdateInterval
+            }
+            return relaxedUpdateInterval
+
+        case .afterIsha(_):
+            return relaxedUpdateInterval            // 5s after Isha - no urgency
         }
     }
 
@@ -82,7 +95,6 @@ final class PerformanceOptimizationService {
         let newInterval = getOptimalUpdateInterval(for: state)
         if newInterval != timelineUpdateInterval {
             timelineUpdateInterval = newInterval
-            print("⚡ TimelineView interval updated to \(newInterval)s")
         }
     }
 
@@ -99,18 +111,13 @@ final class PerformanceOptimizationService {
             shouldCleanup = true
         }
 
-        guard shouldCleanup else {
-            print("🧹 Cache cleanup not needed yet")
-            return
-        }
+        guard shouldCleanup else { return }
 
         await cleanupOldCaches()
     }
 
     /// Clean up old prayer time caches
     func cleanupOldCaches() async {
-        print("🧹 Starting cache cleanup...")
-
         let userDefaults = UserDefaults.standard
         let calendar = Calendar.current
         let today = Date()
@@ -130,8 +137,9 @@ final class PerformanceOptimizationService {
 
                     if daysDifference > 7 {
                         // Calculate approximate size
-                        if let cacheData = userDefaults.dictionary(forKey: key) {
-                            totalSize += MemoryLayout.size(ofValue: cacheData)
+                        if let cacheData = userDefaults.dictionary(forKey: key),
+                           let data = try? JSONSerialization.data(withJSONObject: cacheData) {
+                            totalSize += data.count
                         }
 
                         userDefaults.removeObject(forKey: key)
@@ -146,7 +154,7 @@ final class PerformanceOptimizationService {
         lastCacheCleanup = Date()
         saveLastCleanupDate()
 
-        print("✅ Cache cleanup complete: Removed \(removedCount) old caches (~\(totalSize / 1024)KB)")
+    
     }
 
     /// Force cleanup all caches
@@ -164,7 +172,7 @@ final class PerformanceOptimizationService {
         lastCacheCleanup = Date()
         saveLastCleanupDate()
 
-        print("🗑️ Force cleaned \(removedCount) cache entries")
+    
     }
 
     /// Calculate current cache size
@@ -174,8 +182,9 @@ final class PerformanceOptimizationService {
         var size = 0
 
         for key in allKeys where key.hasPrefix("cachedPrayerTimes") {
-            if let cacheData = userDefaults.dictionary(forKey: key) {
-                size += MemoryLayout.size(ofValue: cacheData)
+            if let cacheData = userDefaults.dictionary(forKey: key),
+               let data = try? JSONSerialization.data(withJSONObject: cacheData) {
+                size += data.count
             }
         }
 
@@ -209,7 +218,6 @@ final class PerformanceOptimizationService {
             Task { @MainActor [weak self] in
                 guard let self = self else { return }
                 self.isLowPowerModeEnabled = ProcessInfo.processInfo.isLowPowerModeEnabled
-                print("🔋 Low power mode: \(self.isLowPowerModeEnabled ? "ON" : "OFF")")
             }
         }
     }
@@ -232,7 +240,9 @@ final class PerformanceOptimizationService {
 
         if result == KERN_SUCCESS {
             let usedMB = Double(info.resident_size) / 1024.0 / 1024.0
+            #if DEBUG
             print("💾 Memory usage: \(String(format: "%.2f MB", usedMB))")
+            #endif
         }
     }
 
@@ -268,7 +278,9 @@ extension PerformanceOptimizationService {
         try await block()
 
         let timeElapsed = CFAbsoluteTimeGetCurrent() - startTime
+        #if DEBUG
         print("⏱️ \(label): \(String(format: "%.4f", timeElapsed))s")
+        #endif
     }
 
     /// Check if performance optimizations should be more aggressive

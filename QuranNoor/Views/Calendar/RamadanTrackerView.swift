@@ -63,7 +63,7 @@ struct RamadanTrackerView: View {
             Image(systemName: "moon.stars.fill")
                 .font(.system(size: 50))
                 .foregroundStyle(.linearGradient(
-                    colors: [themeManager.currentTheme.featureAccentSecondary, themeManager.currentTheme.featureAccent],
+                    colors: [themeManager.currentTheme.accentMuted, themeManager.currentTheme.accent],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 ))

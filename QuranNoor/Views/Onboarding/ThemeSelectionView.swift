@@ -12,7 +12,7 @@ struct ThemeSelectionView: View {
     // MARK: - Properties
     @Environment(ThemeManager.self) var themeManager: ThemeManager
     @Environment(\.dynamicTypeSize) var dynamicTypeSize
-    @ObservedObject private var accessibilityHelper = AccessibilityHelper.shared
+    var accessibilityHelper = AccessibilityHelper.shared
 
     let coordinator: OnboardingCoordinator
 
@@ -35,11 +35,11 @@ struct ThemeSelectionView: View {
                 VStack(spacing: 12) {
                     Image(systemName: "paintbrush.fill")
                         .font(.system(size: 50))
-                        .foregroundColor(themeManager.currentTheme.accentSecondary)
+                        .foregroundColor(themeManager.currentTheme.accentMuted)
                         .accessibilityHidden(true)
 
                     ThemedText("Choose Your Theme", style: .title)
-                        .foregroundColor(themeManager.currentTheme.accentPrimary)
+                        .foregroundColor(themeManager.currentTheme.accent)
                         .accessibilityAddTraits(.isHeader)
 
                     ThemedText.body("Select your preferred reading mode. You can change this anytime in Settings")
@@ -54,7 +54,7 @@ struct ThemeSelectionView: View {
                     VStack(spacing: 12) {
                         HStack {
                             ThemedText("Preview", style: .heading)
-                                .foregroundColor(themeManager.currentTheme.textColor)
+                                .foregroundColor(themeManager.currentTheme.textPrimary)
                             Spacer()
                         }
                         .padding(.horizontal, 24)
@@ -91,7 +91,7 @@ struct ThemeSelectionView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
-                .tint(themeManager.currentTheme.accentPrimary)
+                .tint(themeManager.currentTheme.accent)
                 .padding(.horizontal, 32)
                 .padding(.bottom, 40)
                 .accessibleElement(
@@ -101,7 +101,7 @@ struct ThemeSelectionView: View {
                 )
             }
         }
-        .accessibilityPageAnnouncement("Theme Selection. Step 5 of 5. Choose your preferred theme for reading the Quran and viewing prayer times.")
+        .accessibilityPageAnnouncement("Theme Selection. Step \(coordinator.currentStep.rawValue + 1) of \(OnboardingCoordinator.OnboardingStep.allCases.count). Choose your preferred theme for reading the Quran and viewing prayer times.")
     }
 
     // MARK: - Methods
@@ -109,8 +109,8 @@ struct ThemeSelectionView: View {
     private func selectTheme(_ theme: ThemeMode) {
         withAnimation(accessibilityHelper.shouldAnimate ? .spring(response: 0.3) : nil) {
             selectedTheme = theme
-            themeManager.setTheme(theme)
             coordinator.selectedTheme = theme.rawValue
+            // Don't change the entire app theme during selection — only update the preview
         }
 
         AudioHapticCoordinator.shared.playSelection()
@@ -126,6 +126,8 @@ struct ThemeSelectionView: View {
 
     private func completeOnboarding() {
         coordinator.selectedTheme = selectedTheme.rawValue
+        // Apply the selected theme to the app now (on completion, not during browsing)
+        themeManager.setTheme(selectedTheme)
         coordinator.complete()
     }
 
@@ -155,7 +157,7 @@ struct ThemeOptionCard: View {
     let onSelect: () -> Void
 
     @Environment(ThemeManager.self) var themeManager: ThemeManager
-    @ObservedObject private var accessibilityHelper = AccessibilityHelper.shared
+    var accessibilityHelper = AccessibilityHelper.shared
 
     var body: some View {
         Button {
@@ -170,14 +172,14 @@ struct ThemeOptionCard: View {
                             .frame(width: 50, height: 50)
                             .overlay(
                                 Circle()
-                                    .stroke(theme.textColor.opacity(AccessibilityHelper.shared.opacity(0.3)), lineWidth: 1)
+                                    .stroke(theme.textPrimary.opacity(AccessibilityHelper.shared.opacity(0.3)), lineWidth: 1)
                             )
 
                         // Checkmark if selected
                         if isSelected {
                             Image(systemName: "checkmark.circle.fill")
                                 .font(.system(size: 24))
-                                .foregroundColor(themeManager.currentTheme.accentPrimary)
+                                .foregroundColor(themeManager.currentTheme.accent)
                                 .transition(AccessibleTransition.scale)
                         }
                     }
@@ -189,7 +191,7 @@ struct ThemeOptionCard: View {
                             ThemedText(theme.displayName, style: .body)
                                 .fontWeight(.semibold)
                                 .foregroundColor(
-                                    isSelected ? themeManager.currentTheme.accentPrimary : themeManager.currentTheme.textColor
+                                    isSelected ? themeManager.currentTheme.accent : themeManager.currentTheme.textPrimary
                                 )
 
                             if isSuggested {
@@ -200,7 +202,7 @@ struct ThemeOptionCard: View {
                                     .padding(.vertical, 4)
                                     .background(
                                         Capsule()
-                                            .fill(themeManager.currentTheme.accentSecondary)
+                                            .fill(themeManager.currentTheme.accentMuted)
                                     )
                                     .transition(AccessibleTransition.scale)
                             }
@@ -215,7 +217,7 @@ struct ThemeOptionCard: View {
                     // Theme icon
                     Image(systemName: theme.icon)
                         .font(.system(size: 24))
-                        .foregroundColor(theme.accentColor)
+                        .foregroundColor(theme.accent)
                         .accessibilityHidden(true)
                 }
 
@@ -227,7 +229,7 @@ struct ThemeOptionCard: View {
                         HStack(spacing: 8) {
                             Image(systemName: "sparkles")
                                 .font(.caption)
-                                .foregroundColor(themeManager.currentTheme.accentSecondary)
+                                .foregroundColor(themeManager.currentTheme.accentMuted)
 
                             ThemedText.caption(theme.personality)
                                 .multilineTextAlignment(.leading)
@@ -250,7 +252,7 @@ struct ThemeOptionCard: View {
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
                             .stroke(
-                                isSelected ? themeManager.currentTheme.accentPrimary : Color.clear,
+                                isSelected ? themeManager.currentTheme.accent : Color.clear,
                                 lineWidth: 2
                             )
                     )
@@ -312,9 +314,9 @@ extension ThemeMode {
         }
     }
 
-    /// Accent color used in theme selection UI - delegates to featureAccent from Colors.swift
+    /// Accent color used in theme selection UI - delegates to accent from Colors.swift
     var accentColor: Color {
-        featureAccent
+        accent
     }
 
     /// Creates a Theme struct for preview purposes, using the canonical color values from Colors.swift
@@ -324,7 +326,7 @@ extension ThemeMode {
             backgroundColor: backgroundColor,  // From Colors.swift
             cardColor: cardColor,              // From Colors.swift
             textColor: textPrimary,            // From Colors.swift
-            accentColor: featureAccent         // From Colors.swift
+            accentColor: accent                // From Colors.swift
         )
     }
 }

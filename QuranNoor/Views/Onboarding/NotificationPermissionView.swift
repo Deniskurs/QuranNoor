@@ -13,7 +13,7 @@ struct NotificationPermissionView: View {
     @Environment(ThemeManager.self) var themeManager: ThemeManager
 
     let coordinator: OnboardingCoordinator
-    @ObservedObject var permissionManager: PermissionManager
+    var permissionManager: PermissionManager
 
     @State private var hasRequestedPermission = false
     @State private var isRequesting = false
@@ -49,12 +49,12 @@ struct NotificationPermissionView: View {
                         // Status icon
                         ZStack {
                             Circle()
-                                .fill(themeManager.currentTheme.accentSecondary.opacity(0.15))
+                                .fill(themeManager.currentTheme.accentMuted.opacity(0.15))
                                 .frame(width: 120, height: 120)
 
                             Image(systemName: permissionManager.notificationStatus.isGranted ? "checkmark.circle.fill" : "bell.badge.fill")
                                 .font(.system(size: 60))
-                                .foregroundColor(permissionManager.notificationStatus.isGranted ? themeManager.currentTheme.accentPrimary : themeManager.currentTheme.accentSecondary)
+                                .foregroundColor(permissionManager.notificationStatus.isGranted ? themeManager.currentTheme.accent : themeManager.currentTheme.accentMuted)
                                 .symbolEffect(.bounce, value: permissionManager.notificationStatus.isGranted)
                         }
                         .padding(.top, 60)
@@ -65,7 +65,7 @@ struct NotificationPermissionView: View {
                                 permissionManager.notificationStatus.isGranted ? "Notifications Enabled" : "Prayer Reminders",
                                 style: .title
                             )
-                            .foregroundColor(themeManager.currentTheme.accentPrimary)
+                            .foregroundColor(themeManager.currentTheme.accent)
 
                             ThemedText.body(
                                 permissionManager.notificationStatus.isGranted ?
@@ -93,7 +93,7 @@ struct NotificationPermissionView: View {
                                 }
                                 .buttonStyle(.borderedProminent)
                                 .controlSize(.large)
-                                .tint(themeManager.currentTheme.accentSecondary)
+                                .tint(themeManager.currentTheme.accentMuted)
                                 .disabled(isRequesting)
                             }
 
@@ -107,7 +107,7 @@ struct NotificationPermissionView: View {
                                 }
                                 .buttonStyle(.bordered)
                                 .controlSize(.large)
-                                .tint(themeManager.currentTheme.accentSecondary)
+                                .tint(themeManager.currentTheme.accentMuted)
                             }
                         }
                         .padding(.horizontal, 32)

@@ -18,6 +18,11 @@ struct AdhkarDetailView: View {
     @State private var showBenefits = false
     @Environment(\.dismiss) private var dismiss
 
+    // Toast state
+    @State private var showToast = false
+    @State private var toastMessage = ""
+    @State private var toastStyle: ToastStyle = .spiritual
+
     private var isCompleted: Bool {
         adhkarService.isCompleted(dhikrId: dhikr.id)
     }
@@ -76,6 +81,7 @@ struct AdhkarDetailView: View {
                     }
                 }
             }
+            .toast(message: toastMessage, style: toastStyle, isPresented: $showToast)
         }
     }
 
@@ -94,7 +100,7 @@ struct AdhkarDetailView: View {
                     .trim(from: 0, to: progress)
                     .stroke(
                         .linearGradient(
-                            colors: progress >= 1.0 ? [.green, .green] : [themeManager.currentTheme.featureAccent, themeManager.currentTheme.featureAccentSecondary],
+                            colors: progress >= 1.0 ? [.green, .green] : [themeManager.currentTheme.accent, themeManager.currentTheme.accentMuted],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         ),
@@ -282,7 +288,7 @@ struct AdhkarDetailView: View {
                 RoundedRectangle(cornerRadius: 20)
                     .fill(
                         .linearGradient(
-                            colors: [themeManager.currentTheme.featureAccent, themeManager.currentTheme.featureAccentSecondary],
+                            colors: [themeManager.currentTheme.accent, themeManager.currentTheme.accentMuted],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
@@ -337,6 +343,10 @@ struct AdhkarDetailView: View {
         if currentCount == dhikr.repetitions {
             let notification = UINotificationFeedbackGenerator()
             notification.notificationOccurred(.success)
+
+            toastMessage = "Target reached! Alhamdulillah"
+            toastStyle = .spiritual
+            showToast = true
         }
     }
 
@@ -346,6 +356,10 @@ struct AdhkarDetailView: View {
         // Success feedback
         let notification = UINotificationFeedbackGenerator()
         notification.notificationOccurred(.success)
+
+        toastMessage = "Dhikr completed! Masha'Allah"
+        toastStyle = .spiritual
+        showToast = true
     }
 }
 

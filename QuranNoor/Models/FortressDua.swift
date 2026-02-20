@@ -187,8 +187,8 @@ struct FortressDua: Identifiable, Codable, Hashable {
 
 /// User's progress with Fortress of the Muslim duas
 struct DuaProgress: Codable {
-    var favoriteDuas: Set<UUID>
-    var frequentlyUsed: [UUID: Int]  // Dua ID -> usage count
+    var favoriteDuas: Set<String>  // Stable dua keys (e.g., "waking:Upon Waking Up")
+    var frequentlyUsed: [String: Int]  // Stable dua key -> usage count
     var lastAccessDate: Date?
 
     init() {
@@ -197,26 +197,31 @@ struct DuaProgress: Codable {
         self.lastAccessDate = nil
     }
 
-    mutating func toggleFavorite(duaId: UUID) {
-        if favoriteDuas.contains(duaId) {
-            favoriteDuas.remove(duaId)
+    /// Derive a stable string key from a FortressDua
+    static func stableKey(for dua: FortressDua) -> String {
+        "\(dua.category.rawValue):\(dua.title)"
+    }
+
+    mutating func toggleFavorite(duaKey: String) {
+        if favoriteDuas.contains(duaKey) {
+            favoriteDuas.remove(duaKey)
         } else {
-            favoriteDuas.insert(duaId)
+            favoriteDuas.insert(duaKey)
         }
         lastAccessDate = Date()
     }
 
-    mutating func incrementUsage(duaId: UUID) {
-        frequentlyUsed[duaId, default: 0] += 1
+    mutating func incrementUsage(duaKey: String) {
+        frequentlyUsed[duaKey, default: 0] += 1
         lastAccessDate = Date()
     }
 
-    func isFavorite(duaId: UUID) -> Bool {
-        favoriteDuas.contains(duaId)
+    func isFavorite(duaKey: String) -> Bool {
+        favoriteDuas.contains(duaKey)
     }
 
-    func getUsageCount(duaId: UUID) -> Int {
-        frequentlyUsed[duaId] ?? 0
+    func getUsageCount(duaKey: String) -> Int {
+        frequentlyUsed[duaKey] ?? 0
     }
 
     var totalFavorites: Int {
@@ -227,7 +232,7 @@ struct DuaProgress: Codable {
         frequentlyUsed.values.reduce(0, +)
     }
 
-    func getMostUsed(limit: Int = 5) -> [UUID] {
+    func getMostUsed(limit: Int = 5) -> [String] {
         frequentlyUsed.sorted { $0.value > $1.value }
             .prefix(limit)
             .map { $0.key }

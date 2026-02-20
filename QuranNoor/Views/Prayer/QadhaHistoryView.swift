@@ -39,7 +39,7 @@ struct QadhaHistoryView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                themeManager.backgroundColor.ignoresSafeArea()
+                themeManager.currentTheme.backgroundColor.ignoresSafeArea()
 
                 if filteredHistory.isEmpty {
                     emptyStateView
@@ -104,15 +104,15 @@ struct QadhaHistoryView: View {
         VStack(spacing: 16) {
             Image(systemName: "clock.arrow.circlepath")
                 .font(.system(size: 64))
-                .foregroundStyle(themeManager.secondaryTextColor.opacity(0.5))
+                .foregroundStyle(themeManager.currentTheme.textSecondary.opacity(0.5))
 
             Text("No History Yet")
                 .font(.title2.weight(.bold))
-                .foregroundStyle(themeManager.primaryTextColor)
+                .foregroundStyle(themeManager.currentTheme.textPrimary)
 
             Text("Your qadha prayer adjustments will appear here")
                 .font(.subheadline)
-                .foregroundStyle(themeManager.secondaryTextColor)
+                .foregroundStyle(themeManager.currentTheme.textSecondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
         }
@@ -126,7 +126,7 @@ struct QadhaHistoryView: View {
                     HStack {
                         Text("Showing \(selectedPrayerFilter!.displayName) only")
                             .font(.caption)
-                            .foregroundStyle(themeManager.secondaryTextColor)
+                            .foregroundStyle(themeManager.currentTheme.textSecondary)
 
                         Spacer()
 
@@ -134,7 +134,7 @@ struct QadhaHistoryView: View {
                             selectedPrayerFilter = nil
                         }
                         .font(.caption.weight(.medium))
-                        .foregroundStyle(themeManager.accentColor)
+                        .foregroundStyle(themeManager.currentTheme.accent)
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 8)
@@ -151,7 +151,7 @@ struct QadhaHistoryView: View {
                             HStack {
                                 Text(formatDate(group.date))
                                     .font(.caption.weight(.semibold))
-                                    .foregroundStyle(themeManager.secondaryTextColor)
+                                    .foregroundStyle(themeManager.currentTheme.textSecondary)
                                     .textCase(.uppercase)
 
                                 Spacer()
@@ -197,23 +197,23 @@ struct HistoryEntryRow: View {
     let entry: QadhaHistoryEntry
 
     var body: some View {
-        LiquidGlassCardView {
+        CardView {
             HStack(spacing: 12) {
                 // Prayer Icon
                 Image(systemName: entry.prayer.icon)
                     .font(.title3)
-                    .foregroundStyle(themeManager.accentColor)
+                    .foregroundStyle(themeManager.currentTheme.accent)
                     .frame(width: 32)
 
                 // Description
                 VStack(alignment: .leading, spacing: 4) {
                     Text(entry.description)
                         .font(.subheadline.weight(.medium))
-                        .foregroundStyle(themeManager.primaryTextColor)
+                        .foregroundStyle(themeManager.currentTheme.textPrimary)
 
                     Text(formatTime(entry.timestamp))
                         .font(.caption2)
-                        .foregroundStyle(themeManager.secondaryTextColor)
+                        .foregroundStyle(themeManager.currentTheme.textSecondary)
                 }
 
                 Spacer()
@@ -221,7 +221,7 @@ struct HistoryEntryRow: View {
                 // Change Indicator
                 Text(entry.change >= 0 ? "+\(entry.change)" : "\(entry.change)")
                     .font(.headline)
-                    .foregroundStyle(entry.change >= 0 ? Color.orange : themeManager.accentColor)
+                    .foregroundStyle(entry.change >= 0 ? Color.orange : themeManager.currentTheme.accent)
             }
             .padding(12)
         }

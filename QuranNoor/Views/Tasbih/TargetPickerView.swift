@@ -167,6 +167,8 @@ struct TargetCard: View {
 
 #Preview {
     TargetPickerView(selectedTarget: .constant(33)) {
+        #if DEBUG
         print("Selected")
+        #endif
     }
 }

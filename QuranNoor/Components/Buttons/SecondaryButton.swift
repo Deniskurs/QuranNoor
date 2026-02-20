@@ -62,11 +62,11 @@ struct SecondaryButton: View {
                         .scaleEffect(0.8)
                 } else if let icon = icon {
                     Image(systemName: icon)
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.body.weight(.semibold))
                 }
 
                 Text(title)
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.body.weight(.semibold))
             }
             .foregroundColor(textColor)
             .frame(maxWidth: .infinity)
@@ -84,6 +84,9 @@ struct SecondaryButton: View {
             .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isPressed)
         }
         .disabled(isDisabled || isLoading)
+        .accessibilityLabel(title)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityHint(isLoading ? "Loading" : "")
         .simultaneousGesture(
             DragGesture(minimumDistance: 0)
                 .onChanged { _ in
@@ -101,22 +104,22 @@ struct SecondaryButton: View {
     private var borderColor: Color {
         switch style {
         case .gold:
-            return AppColors.primary.gold
+            return themeManager.currentTheme.accentMuted
         case .green:
-            return AppColors.primary.green
+            return themeManager.currentTheme.accent
         case .neutral:
-            return themeManager.currentTheme.textColor.opacity(0.3)
+            return themeManager.currentTheme.textPrimary.opacity(0.3)
         }
     }
 
     private var textColor: Color {
         switch style {
         case .gold:
-            return AppColors.primary.gold
+            return themeManager.currentTheme.accentMuted
         case .green:
-            return AppColors.primary.green
+            return themeManager.currentTheme.accent
         case .neutral:
-            return themeManager.currentTheme.textColor
+            return themeManager.currentTheme.textPrimary
         }
     }
 
@@ -139,9 +142,11 @@ struct SecondaryButton: View {
 // MARK: - Tertiary Button (Text-Only)
 struct TertiaryButton: View {
     // MARK: - Properties
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
+
     let title: String
     let icon: String?
-    let color: Color
+    let overrideColor: Color?
     let action: () -> Void
     let playSound: Bool
 
@@ -151,15 +156,20 @@ struct TertiaryButton: View {
     init(
         _ title: String,
         icon: String? = nil,
-        color: Color = AppColors.primary.green,
+        color: Color? = nil,
         playSound: Bool = false,
         action: @escaping () -> Void
     ) {
         self.title = title
         self.icon = icon
-        self.color = color
+        self.overrideColor = color
         self.playSound = playSound
         self.action = action
+    }
+
+    /// Resolved color: uses explicit override if provided, otherwise derives from current theme
+    private var resolvedColor: Color {
+        overrideColor ?? themeManager.currentTheme.accent
     }
 
     // MARK: - Body
@@ -168,16 +178,18 @@ struct TertiaryButton: View {
             HStack(spacing: 6) {
                 if let icon = icon {
                     Image(systemName: icon)
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.subheadline.weight(.semibold))
                 }
 
                 Text(title)
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.subheadline.weight(.semibold))
             }
-            .foregroundColor(color)
+            .foregroundColor(resolvedColor)
             .opacity(isPressed ? 0.6 : 1.0)
             .animation(.easeInOut(duration: 0.1), value: isPressed)
         }
+        .accessibilityLabel(title)
+        .accessibilityAddTraits(.isButton)
         .simultaneousGesture(
             DragGesture(minimumDistance: 0)
                 .onChanged { _ in isPressed = true }
@@ -246,11 +258,11 @@ struct TertiaryButton: View {
                     print("Learn more")
                 }
 
-                TertiaryButton("Skip for now", color: .secondary) {
+                TertiaryButton("Skip for now", color: ThemeMode.light.textSecondary) {
                     print("Skip")
                 }
 
-                TertiaryButton("View Details", icon: "chevron.right", color: AppColors.primary.gold) {
+                TertiaryButton("View Details", icon: "chevron.right", color: ThemeMode.light.accentMuted) {
                     print("Details")
                 }
             }
@@ -269,7 +281,7 @@ struct TertiaryButton: View {
                     print("Settings")
                 }
 
-                TertiaryButton("Skip", color: .secondary) {
+                TertiaryButton("Skip", color: ThemeMode.light.textSecondary) {
                     print("Skip")
                 }
             }

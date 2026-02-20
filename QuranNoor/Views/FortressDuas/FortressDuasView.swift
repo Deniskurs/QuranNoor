@@ -131,7 +131,7 @@ struct FortressDuasView: View {
                     title: "Total Usage",
                     value: "\(duaService.progress.totalUsages)",
                     icon: "checkmark.circle.fill",
-                    color: themeManager.currentTheme.featureAccent
+                    color: themeManager.currentTheme.accent
                 )
             }
         }
@@ -282,11 +282,11 @@ struct FortressDuaCard: View {
 
                 Button {
                     withAnimation {
-                        duaService.toggleFavorite(duaId: dua.id)
+                        duaService.toggleFavorite(dua: dua)
                     }
                 } label: {
-                    Image(systemName: duaService.progress.isFavorite(duaId: dua.id) ? "heart.fill" : "heart")
-                        .foregroundStyle(duaService.progress.isFavorite(duaId: dua.id) ? .red : .secondary)
+                    Image(systemName: duaService.isFavorite(dua: dua) ? "heart.fill" : "heart")
+                        .foregroundStyle(duaService.isFavorite(dua: dua) ? .red : .secondary)
                 }
                 .buttonStyle(.plain)
             }

@@ -14,7 +14,7 @@ struct ReadingProgressCard: View {
     let onContinue: () -> Void
 
     var body: some View {
-        LiquidGlassCardView(showPattern: true, intensity: .moderate) {
+        CardView(showPattern: true, intensity: .moderate) {
             if stats.totalVersesRead == 0 {
                 // Encouraging empty state for new users
                 emptyStateView
@@ -25,14 +25,6 @@ struct ReadingProgressCard: View {
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityText)
-        .onAppear {
-            #if DEBUG
-            print("📊 [ReadingProgressCard] Stats loaded:")
-            print("   - Total verses read: \(stats.totalVersesRead)")
-            print("   - Overall completion: \(stats.overallCompletion) (\(stats.progressPercentage))")
-            print("   - Calculated from ring: \(Double(stats.totalVersesRead) / 6236.0 * 100)%")
-            #endif
-        }
     }
 
     // MARK: - Views
@@ -43,11 +35,11 @@ struct ReadingProgressCard: View {
             // Crescent moon icon
             Image(systemName: "moon.stars.fill")
                 .font(.system(size: 48))
-                .foregroundColor(themeManager.currentTheme.accentSecondary)
+                .foregroundColor(themeManager.currentTheme.accentMuted)
                 .padding(.top, 8)
 
             VStack(spacing: 8) {
-                Text("Begin Your Journey 🌙")
+                Text("Begin Your Journey")
                     .font(.title3.bold())
                     .foregroundColor(themeManager.currentTheme.textPrimary)
 
@@ -71,7 +63,7 @@ struct ReadingProgressCard: View {
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
-                .background(themeManager.currentTheme.accentPrimary)
+                .background(themeManager.currentTheme.accent)
                 .cornerRadius(12)
             }
             .padding(.horizontal, 20)
@@ -91,7 +83,7 @@ struct ReadingProgressCard: View {
             HStack {
                 Image(systemName: "book.pages.fill")
                     .font(.title3)
-                    .foregroundColor(themeManager.currentTheme.accentSecondary)
+                    .foregroundColor(themeManager.currentTheme.accentMuted)
 
                 Text("Quran Progress")
                     .font(.headline)
@@ -102,7 +94,7 @@ struct ReadingProgressCard: View {
                 // Overall completion percentage
                 Text(stats.progressPercentage)
                     .font(.title3.bold())
-                    .foregroundColor(themeManager.currentTheme.accentSecondary)
+                    .foregroundColor(themeManager.currentTheme.accentMuted)
             }
 
             // Progress ring
@@ -165,7 +157,7 @@ struct ReadingProgressCard: View {
                             Image(systemName: "arrow.right.circle.fill")
                                 .font(.subheadline)
                         }
-                        .foregroundColor(themeManager.currentTheme.accentSecondary)
+                        .foregroundColor(themeManager.currentTheme.accentMuted)
                     }
                 }
             }
@@ -214,7 +206,9 @@ struct ReadingProgressCard: View {
 
 #Preview("With Progress") {
     ReadingProgressCard(stats: DailyStats.preview, onContinue: {
+        #if DEBUG
         print("Continue tapped")
+        #endif
     })
     .environment(ThemeManager())
     .padding()
@@ -223,7 +217,9 @@ struct ReadingProgressCard: View {
 
 #Preview("Active User") {
     ReadingProgressCard(stats: DailyStats.activeUser, onContinue: {
+        #if DEBUG
         print("Continue tapped")
+        #endif
     })
     .environment(ThemeManager())
     .padding()
@@ -232,7 +228,9 @@ struct ReadingProgressCard: View {
 
 #Preview("Empty State") {
     ReadingProgressCard(stats: DailyStats.emptyState, onContinue: {
+        #if DEBUG
         print("Continue tapped")
+        #endif
     })
     .environment(ThemeManager())
     .padding()
@@ -241,7 +239,9 @@ struct ReadingProgressCard: View {
 
 #Preview("Dark Mode") {
     ReadingProgressCard(stats: DailyStats.preview, onContinue: {
+        #if DEBUG
         print("Continue tapped")
+        #endif
     })
     .environment({
         let manager = ThemeManager()

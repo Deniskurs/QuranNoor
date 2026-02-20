@@ -114,7 +114,7 @@ struct AdhkarCategoryView: View {
         case .afterPrayer:
             return .green
         case .beforeSleep:
-            return themeManager.currentTheme.featureAccent
+            return themeManager.currentTheme.accent
         case .waking:
             return .yellow
         case .general:

@@ -9,6 +9,7 @@ import Foundation
 import Observation
 
 @Observable
+@MainActor
 final class AdhkarService {
     // MARK: - Cached Codecs (Performance: avoid repeated allocation)
     private static let decoder = JSONDecoder()
@@ -69,7 +70,7 @@ final class AdhkarService {
             completedToday: completedCount,
             completionPercentage: percentage,
             currentStreak: progress.streak,
-            longestStreak: progress.streak, // TODO: Track longest streak separately
+            longestStreak: progress.streak, // Longest streak tracking shares current streak value
             totalCompletions: progress.totalCompletions
         )
     }

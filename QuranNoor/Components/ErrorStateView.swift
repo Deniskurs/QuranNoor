@@ -65,11 +65,11 @@ struct ErrorStateView: View {
             VStack(spacing: 12) {
                 Text(title)
                     .font(.title2.weight(.semibold))
-                    .foregroundStyle(themeManager.primaryTextColor)
+                    .foregroundStyle(themeManager.currentTheme.textPrimary)
 
                 Text(message)
                     .font(.body)
-                    .foregroundStyle(themeManager.secondaryTextColor)
+                    .foregroundStyle(themeManager.currentTheme.textSecondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 32)
             }
@@ -88,12 +88,12 @@ struct ErrorStateView: View {
                                 Text(action.title)
                             }
                             .font(.body.weight(.medium))
-                            .foregroundStyle(index == 0 ? .white : themeManager.primaryTextColor)
+                            .foregroundStyle(index == 0 ? .white : themeManager.currentTheme.textPrimary)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 14)
                             .background(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .fill(index == 0 ? themeManager.accentColor : themeManager.cardBackground)
+                                    .fill(index == 0 ? themeManager.currentTheme.accent : themeManager.currentTheme.cardColor)
                             )
                         }
                     }
@@ -139,17 +139,17 @@ struct EmptyStateView: View {
             // Icon
             Image(systemName: icon)
                 .font(.system(size: 64, weight: .light))
-                .foregroundStyle(themeManager.accentColor.opacity(0.6))
+                .foregroundStyle(themeManager.currentTheme.accent.opacity(0.6))
 
             // Title and Message
             VStack(spacing: 12) {
                 Text(title)
                     .font(.title2.weight(.semibold))
-                    .foregroundStyle(themeManager.primaryTextColor)
+                    .foregroundStyle(themeManager.currentTheme.textPrimary)
 
                 Text(message)
                     .font(.body)
-                    .foregroundStyle(themeManager.secondaryTextColor)
+                    .foregroundStyle(themeManager.currentTheme.textSecondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 32)
             }
@@ -167,7 +167,7 @@ struct EmptyStateView: View {
                         .padding(.vertical, 14)
                         .background(
                             Capsule()
-                                .fill(themeManager.accentColor)
+                                .fill(themeManager.currentTheme.accent)
                         )
                 }
             }
@@ -201,11 +201,11 @@ struct LoadingStateView: View {
         VStack(spacing: 24) {
             ProgressView()
                 .scaleEffect(1.5)
-                .tint(themeManager.accentColor)
+                .tint(themeManager.currentTheme.accent)
 
             Text(message)
                 .font(.body)
-                .foregroundStyle(themeManager.secondaryTextColor)
+                .foregroundStyle(themeManager.currentTheme.textSecondary)
 
             if canCancel, let onCancel = onCancel {
                 Button("Cancel") {
@@ -213,7 +213,7 @@ struct LoadingStateView: View {
                     AudioHapticCoordinator.shared.playButtonPress()
                 }
                 .font(.subheadline)
-                .foregroundStyle(themeManager.accentColor)
+                .foregroundStyle(themeManager.currentTheme.accent)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

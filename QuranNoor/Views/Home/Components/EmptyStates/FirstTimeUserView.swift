@@ -14,12 +14,12 @@ struct FirstTimeUserView: View {
     var onDismiss: () -> Void
 
     var body: some View {
-        LiquidGlassCardView(showPattern: true, intensity: .prominent) {
+        CardView(showPattern: true, intensity: .prominent) {
             VStack(spacing: 24) {
                 // Welcome icon
                 Image(systemName: "hand.wave.fill")
                     .font(.system(size: 60))
-                    .foregroundColor(AppColors.primary.gold)
+                    .foregroundColor(themeManager.currentTheme.accentMuted)
                     .symbolEffect(.bounce)
 
                 // Welcome message

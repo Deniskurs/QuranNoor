@@ -2,36 +2,57 @@
 //  VerseReaderView.swift
 //  QuranNoor
 //
-//  Verse reader with Arabic text, translations, and bookmarks
+//  Immersive mushaf-quality verse reader with Uthmanic calligraphy,
+//  verse markers, and sacred reading experience
 //
 
 import SwiftUI
 
 struct VerseReaderView: View {
     // MARK: - Properties
-    let surah: Surah
-    @ObservedObject var viewModel: QuranViewModel
+    let initialSurah: Surah
+    var viewModel: QuranViewModel
 
     @Environment(ThemeManager.self) var themeManager: ThemeManager
     @Environment(\.dismiss) var dismiss
 
+    @State private var surah: Surah
     @State private var verses: [Verse] = []
     @State private var currentVerseIndex: Int = 0
     @State private var isLoading = true
     @State private var loadError: Error?
-    @State private var translations: [Int: Translation] = [:]  // Verse number → Translation
+    @State private var translations: [Int: Translation] = [:]  // Verse number -> Translation
     @State private var isLoadingTranslations = false
-    @State private var trackedVerses: Set<String> = []  // Track verses already marked as read (prevents duplicates)
-    @State private var dwellTimers: [String: Task<Void, Never>] = [:]  // Active dwell timers for each verse
-    @State private var debounceTimers: [String: Task<Void, Never>] = [:]  // Debounce timers for smooth tracking
+    @State private var visibleVerses: Set<String> = []  // Currently visible verse IDs
+    @State private var dwellTask: Task<Void, Never>?  // Single dwell timer for all visible verses
     @State private var showingTranslationSelector = false
     @State private var selectedTranslation: TranslationEdition = .sahihInternational
-    @State private var audioPillExpanded = false
     @State private var audioService = QuranAudioService.shared
+    @State private var showCategoryPicker = false
+    @State private var pendingBookmarkVerse: Verse?
+    @State private var showFullPlayer = false
+
+    // Toast state
+    @State private var showToast = false
+    @State private var toastMessage = ""
+    @State private var toastStyle: ToastStyle = .success
+
+    // Continue to next surah state
+    @State private var isTransitioningToNextSurah = false
+
+    // Share sheet state
+    @State private var showShareSheet = false
+    @State private var shareItems: [Any] = []
 
     // MARK: - Performance Optimization: Cached Read States
-    /// Cached verse read states to prevent querying on every render (120fps = 4,800 queries/sec)
     @State private var verseReadStates: [Int: VerseReadState] = [:]
+
+    // MARK: - Initializer
+    init(surah: Surah, viewModel: QuranViewModel) {
+        self.initialSurah = surah
+        self.viewModel = viewModel
+        self._surah = State(initialValue: surah)
+    }
 
     struct VerseReadState: Equatable {
         let isRead: Bool
@@ -39,136 +60,45 @@ struct VerseReaderView: View {
     }
 
     private let quranService = QuranService.shared
-    private let dwellTime: TimeInterval = 3.0  // How long verse must be visible before marking as read
-    private let debounceDelay: TimeInterval = 0.3  // Wait 300ms before starting dwell timer (reduces jitter)
+    private let dwellTime: TimeInterval = 3.0
 
     // MARK: - Body
     var body: some View {
+        let theme = themeManager.currentTheme
+
         NavigationStack {
             ZStack(alignment: .bottom) {
-                // Background gradient
-                GradientBackground(style: .quran, opacity: 0.2)
+                // Solid theme background -- no gradient, let the text breathe
+                theme.backgroundColor
+                    .ignoresSafeArea()
 
                 if isLoading {
-                    // Loading state
-                    VStack(spacing: 16) {
-                        ProgressView()
-                            .scaleEffect(1.5)
-                            .tint(themeManager.currentTheme.accentSecondary)
-
-                        ThemedText("Loading verses...", style: .body)
-                            .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
-                    }
+                    loadingState
                 } else if let error = loadError {
-                    // Error state
-                    VStack(spacing: 20) {
-                        CardView {
-                            VStack(spacing: 16) {
-                                Image(systemName: "exclamationmark.triangle")
-                                    .font(.system(size: 48))
-                                    .foregroundColor(themeManager.currentTheme.accentInteractive)
-
-                                ThemedText("Failed to Load Surah", style: .heading)
-                                    .foregroundColor(themeManager.currentTheme.textColor)
-
-                                ThemedText(error.localizedDescription, style: .body)
-                                    .multilineTextAlignment(.center)
-                                    .opacity(0.7)
-
-                                Button {
-                                    Task {
-                                        await loadVerses()
-                                    }
-                                } label: {
-                                    HStack {
-                                        Image(systemName: "arrow.clockwise")
-                                        ThemedText("Retry", style: .body)
-                                    }
-                                    .foregroundColor(.white)
-                                    .padding()
-                                    .background(themeManager.currentTheme.accentSecondary)
-                                    .cornerRadius(12)
-                                }
-                            }
-                            .padding()
-                        }
-                        .padding()
-                    }
+                    errorState(error)
                 } else {
-                    // Content loaded
-                    ScrollViewReader { proxy in
-                        ScrollView {
-                            LazyVStack(spacing: 20) {
-                                // Surah Header
-                                surahHeader
-
-                                // Play Surah Button (prominent, easy access)
-                                playSurahButton
-
-                                // Bismillah (except for Surah 9)
-                                if surah.id != 9 && surah.id != 1 {
-                                    bismillahView
-                                }
-
-                                // Verses with native scroll visibility tracking
-                                ForEach(Array(verses.enumerated()), id: \.element.id) { index, verse in
-                                    verseCard(verse: verse, index: index)
-                                        .id(verse.id)
-                                        .onScrollVisibilityChange(threshold: 0.8) { isVisible in
-                                            handleVerseVisibilityChange(
-                                                isVisible: isVisible,
-                                                surahNumber: surah.id,
-                                                verseNumber: verse.verseNumber
-                                            )
-                                        }
-                                }
-
-                                // End ornament
-                                endOrnament
-
-                                // Bottom padding for audio pill
-                                Color.clear.frame(height: 80)
-                            }
-                            .padding()
-                        }
-                        .refreshable {
-                            await loadVerses()
-                        }
-                        .onScrollPhaseChange { oldPhase, newPhase in
-                            // Collapse audio pill when user starts scrolling
-                            if newPhase == .interacting && audioPillExpanded {
-                                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                                    audioPillExpanded = false
-                                }
-                            }
-                        }
-                        .onChange(of: audioService.currentVerse) { oldVerse, newVerse in
-                            // Auto-scroll to currently playing verse
-                            if let verse = newVerse, audioService.playbackState.isPlaying {
-                                withAnimation(.easeInOut(duration: 0.5)) {
-                                    proxy.scrollTo(verse.id, anchor: .center)
-                                }
-                            }
-                        }
-                    }
-
-                    // Inline Audio Pill (floating at bottom)
-                    InlineAudioPill(
-                        audioService: audioService,
-                        isExpanded: $audioPillExpanded,
-                        verses: verses,
-                        onStop: {
-                            audioPillExpanded = false
-                        }
-                    )
+                    contentView
                 }
             }
-            .navigationTitle(surah.englishName)
-            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Done") {
+                    Button {
                         dismiss()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundColor(theme.textSecondary)
+                    }
+                }
+
+                ToolbarItem(placement: .principal) {
+                    VStack(spacing: 1) {
+                        Text(surah.name)
+                            .font(.custom("KFGQPC HAFS Uthmanic Script Regular", size: 18))
+                            .foregroundColor(theme.textPrimary)
+                        Text(surah.englishName)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(theme.textTertiary)
                     }
                 }
 
@@ -180,34 +110,45 @@ struct VerseReaderView: View {
                             Label("Translation: \(selectedTranslation.displayName)", systemImage: "text.book.closed")
                         }
 
-                        Divider()
-
-                        Button {
-                            // Play entire surah with continuous mode
-                            audioService.continuousPlaybackEnabled = true
-                            Task {
-                                do {
-                                    try await audioService.playVerses(verses, startingAt: 0)
-                                } catch {
-                                    print("Failed to start surah playback: \(error)")
+                        // Reciter submenu
+                        Menu {
+                            ForEach(Reciter.allCases) { reciter in
+                                Button {
+                                    audioService.selectedReciter = reciter
+                                    toastMessage = "Reciter: \(reciter.shortName)"
+                                    toastStyle = .info
+                                    showToast = true
+                                } label: {
+                                    HStack {
+                                        Text(reciter.displayName)
+                                        if audioService.selectedReciter == reciter {
+                                            Image(systemName: "checkmark")
+                                        }
+                                    }
                                 }
                             }
                         } label: {
-                            Label("Listen to Surah", systemImage: "play.circle")
+                            Label("Reciter: \(audioService.selectedReciter.shortName)", systemImage: "person.wave.2")
                         }
 
+                        Divider()
+
                         Button {
-                            // Share surah
+                            shareSurah()
                         } label: {
-                            Label("Share", systemImage: "square.and.arrow.up")
+                            Label("Share Surah", systemImage: "square.and.arrow.up")
                         }
                     } label: {
                         Image(systemName: "ellipsis.circle")
+                            .font(.system(size: 17))
+                            .foregroundColor(theme.textSecondary)
                     }
                 }
             }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(theme.backgroundColor.opacity(0.95), for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             .onAppear {
-                // Load saved translation preference
                 selectedTranslation = quranService.getTranslationPreferences().primaryTranslation
                 Task {
                     await loadVerses()
@@ -218,7 +159,6 @@ struct VerseReaderView: View {
                     currentPreferences: quranService.getTranslationPreferences()
                 ) { edition in
                     selectedTranslation = edition
-                    // Reload translations with new edition
                     Task {
                         await loadTranslations(for: verses)
                     }
@@ -226,439 +166,809 @@ struct VerseReaderView: View {
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
             }
-        }
-    }
-
-    // MARK: - Components
-
-    private var surahHeader: some View {
-        LiquidGlassCardView(showPattern: true, intensity: .subtle) {
-            VStack(spacing: 12) {
-                // Arabic name
-                ThemedText.arabic(surah.name)
-                    .font(.system(size: 36))
-                    .foregroundColor(themeManager.currentTheme.accentInteractive)
-
-                // English names
-                VStack(spacing: 4) {
-                    ThemedText(surah.englishName, style: .heading)
-                        .foregroundColor(themeManager.currentTheme.textColor)
-
-                    ThemedText.caption(surah.englishNameTranslation)
-                        .opacity(0.7)
+            .sheet(isPresented: $showCategoryPicker) {
+                BookmarkCategoryPickerSheet { category in
+                    if let verse = pendingBookmarkVerse {
+                        saveBookmark(verse: verse, category: category)
+                        pendingBookmarkVerse = nil
+                    }
                 }
-
-                IslamicDivider(style: .ornamental, color: themeManager.currentTheme.accentInteractive.opacity(0.3))
-
-                // Surah info
-                HStack(spacing: 20) {
-                    infoItem(icon: "doc.text", text: "\(surah.numberOfVerses) Verses")
-                    infoItem(icon: "mappin.and.ellipse", text: surah.revelationType.rawValue)
-                    infoItem(icon: "number", text: "Surah \(surah.id)")
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
+            }
+            .toast(message: toastMessage, style: toastStyle, isPresented: $showToast)
+            .sheet(isPresented: $showFullPlayer) {
+                AudioPlayerView {
+                    showFullPlayer = false
+                }
+                .presentationDragIndicator(.visible)
+                .presentationBackground(themeManager.currentTheme.backgroundColor)
+            }
+            .sheet(isPresented: $showShareSheet) {
+                if #available(iOS 16.0, *) {
+                    ShareSheet(items: shareItems)
                 }
             }
         }
     }
 
-    private func infoItem(icon: String, text: String) -> some View {
-        VStack(spacing: 4) {
-            Image(systemName: icon)
-                .foregroundColor(themeManager.currentTheme.accentSecondary)
-                .font(.system(size: 16))
+    // MARK: - Loading State
 
-            ThemedText.caption(text)
-                .opacity(0.8)
+    private var loadingState: some View {
+        VStack(spacing: 16) {
+            ProgressView()
+                .scaleEffect(1.2)
+                .tint(themeManager.currentTheme.accent)
+
+            Text("Loading verses...")
+                .font(.system(size: 15))
+                .foregroundColor(themeManager.currentTheme.textTertiary)
         }
     }
 
-    // MARK: - Play Surah Button
-    private var playSurahButton: some View {
-        HStack(spacing: 12) {
-            // Main Play Surah button
+    // MARK: - Error State
+
+    private func errorState(_ error: Error) -> some View {
+        let theme = themeManager.currentTheme
+
+        return VStack(spacing: 24) {
+            Image(systemName: "exclamationmark.triangle")
+                .font(.system(size: 44, weight: .light))
+                .foregroundColor(theme.accent)
+
+            VStack(spacing: 8) {
+                Text("Failed to Load Surah")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(theme.textPrimary)
+
+                Text(error.localizedDescription)
+                    .font(.system(size: 14))
+                    .foregroundColor(theme.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 40)
+            }
+
             Button {
-                // Enable continuous playback and start from first verse
-                audioService.continuousPlaybackEnabled = true
                 Task {
-                    do {
-                        try await audioService.playVerses(verses, startingAt: 0)
-                    } catch {
-                        print("Failed to start surah playback: \(error)")
-                    }
+                    await loadVerses()
                 }
-                HapticManager.shared.trigger(.selection)
             } label: {
-                HStack(spacing: 10) {
-                    ZStack {
-                        Circle()
-                            .fill(
-                                LinearGradient(
-                                    colors: [themeManager.currentTheme.featureAccentSecondary, themeManager.currentTheme.featureAccent],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .frame(width: 44, height: 44)
-
-                        Image(systemName: "play.fill")
-                            .font(.system(size: 18))
-                            .foregroundColor(.white)
-                            .offset(x: 2)
-                    }
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Play Entire Surah")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(themeManager.currentTheme.textColor)
-
-                        Text("\(verses.count) verses • \(audioService.selectedReciter.shortName)")
-                            .font(.system(size: 13))
-                            .foregroundColor(themeManager.currentTheme.textColor.opacity(0.6))
-                    }
-
-                    Spacer()
-
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(themeManager.currentTheme.textColor.opacity(0.4))
+                HStack(spacing: 8) {
+                    Image(systemName: "arrow.clockwise")
+                    Text("Retry")
                 }
-                .padding(12)
+                .font(.system(size: 15, weight: .medium))
+                .foregroundColor(.white)
+                .padding(.horizontal, 24)
+                .padding(.vertical, 12)
                 .background(
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(themeManager.currentTheme.cardColor)
-                        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+                    Capsule()
+                        .fill(theme.accent)
                 )
             }
-            .buttonStyle(.plain)
-
-            // Quick reciter change button
-            Menu {
-                ForEach(Reciter.allCases) { reciter in
-                    Button {
-                        audioService.selectedReciter = reciter
-                    } label: {
-                        HStack {
-                            Text(reciter.displayName)
-                            if audioService.selectedReciter == reciter {
-                                Image(systemName: "checkmark")
-                            }
-                        }
-                    }
-                }
-            } label: {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(themeManager.currentTheme.cardColor)
-                        .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
-                        .frame(width: 44, height: 68)
-
-                    VStack(spacing: 4) {
-                        Image(systemName: "person.wave.2.fill")
-                            .font(.system(size: 16))
-                            .foregroundColor(themeManager.currentTheme.featureAccent)
-
-                        Text("Reciter")
-                            .font(.system(size: 9, weight: .medium))
-                            .foregroundColor(themeManager.currentTheme.textColor.opacity(0.6))
-                    }
-                }
-            }
         }
     }
 
-    private var bismillahView: some View {
-        CardView {
-            VStack(spacing: 8) {
-                ThemedText.arabic("بِسۡمِ ٱللَّهِ ٱلرَّحۡمَـٰنِ ٱلرَّحِیمِ")
-                    .font(.system(size: 24))
-                    .foregroundColor(themeManager.currentTheme.accentInteractive)
+    // MARK: - Content View
 
-                ThemedText.caption("In the name of Allah, the Most Gracious, the Most Merciful")
-                    .italic()
-                    .opacity(0.7)
-                    .multilineTextAlignment(.center)
-            }
-        }
-    }
+    private var contentView: some View {
+        let theme = themeManager.currentTheme
 
-    private func verseCard(verse: Verse, index: Int) -> some View {
-        let isCurrentlyPlaying = audioService.currentVerse?.id == verse.id && audioService.playbackState.isPlaying
+        return ZStack(alignment: .bottom) {
+            ScrollViewReader { proxy in
+                ScrollView {
+                    LazyVStack(spacing: 0) {
+                        // Surah Header
+                        surahHeader
+                            .padding(.top, 8)
+                            .padding(.bottom, 24)
+                            .id("surah-header-top")
 
-        return CardView {
-            VStack(alignment: .leading, spacing: 16) {
-                // Verse header
-                HStack {
-                    // Verse number badge (enhanced when playing)
-                    ZStack {
-                        Circle()
-                            .fill(isCurrentlyPlaying ?
-                                  LinearGradient(
-                                    colors: [themeManager.currentTheme.featureAccent, themeManager.currentTheme.featureAccentSecondary],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                  ) :
-                                  LinearGradient(
-                                    colors: [themeManager.currentTheme.accentPrimary.opacity(0.2)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                  )
-                            )
-                            .frame(width: 36, height: 36)
-
-                        ThemedText("\(verse.verseNumber)", style: .body)
-                            .foregroundColor(isCurrentlyPlaying ? .white : themeManager.currentTheme.accentPrimary)
-                    }
-
-                    // "Now Playing" indicator
-                    if isCurrentlyPlaying {
-                        HStack(spacing: 6) {
-                            // Animated playing indicator (simple, not 30 bars)
-                            HStack(spacing: 2) {
-                                ForEach(0..<3, id: \.self) { i in
-                                    RoundedRectangle(cornerRadius: 1)
-                                        .fill(themeManager.currentTheme.featureAccent)
-                                        .frame(width: 3, height: 12)
-                                }
-                            }
-
-                            Text("Now Playing")
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundColor(themeManager.currentTheme.featureAccent)
+                        // Bismillah (except for Surah At-Tawbah and Al-Fatihah)
+                        if surah.id != 9 && surah.id != 1 {
+                            bismillahView
+                                .padding(.bottom, 20)
                         }
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 4)
-                        .background(
-                            Capsule()
-                                .fill(themeManager.currentTheme.featureAccent.opacity(0.15))
-                        )
-                        .transition(.scale.combined(with: .opacity))
-                    }
 
-                    Spacer()
+                        // Prominent play button
+                        surahPlayButton
 
-                    HStack(spacing: 16) {
-                        // Audio play button - starts inline playback
-                        Button {
-                            Task {
-                                do {
-                                    // Play single verse (continuous can be toggled from pill)
-                                    try await audioService.play(verse: verse)
-                                } catch {
-                                    print("Failed to play verse: \(error)")
+                        // Verses
+                        ForEach(Array(verses.enumerated()), id: \.element.id) { index, verse in
+                            VStack(spacing: 0) {
+                                if index > 0 {
+                                    // Subtle divider between verses
+                                    Rectangle()
+                                        .fill(theme.borderColor.opacity(0.5))
+                                        .frame(height: 0.5)
+                                        .padding(.horizontal, 24)
                                 }
+
+                                verseRow(verse: verse, index: index)
                             }
-                            HapticManager.shared.trigger(.selection)
-                        } label: {
-                            Image(systemName: "play.circle")
-                                .foregroundColor(themeManager.currentTheme.featureAccent)
-                                .font(.system(size: 24))
-                        }
-                        .accessibilityLabel("Play audio for this verse")
-
-                        // Read status indicator (using cached state for 120fps performance)
-                        VerseReadIndicator(
-                            isRead: verseReadStates[verse.verseNumber]?.isRead ?? false,
-                            readDate: verseReadStates[verse.verseNumber]?.timestamp,
-                            onToggle: {
-                                // Optimistic update: Update cache immediately for instant UI feedback
-                                let currentState = verseReadStates[verse.verseNumber]
-                                let newIsRead = !(currentState?.isRead ?? false)
-                                verseReadStates[verse.verseNumber] = VerseReadState(
-                                    isRead: newIsRead,
-                                    timestamp: newIsRead ? Date() : nil
-                                )
-
-                                // Async backend update
-                                viewModel.toggleVerseReadStatus(
+                            .id(verse.id)
+                            .onScrollVisibilityChange(threshold: 0.8) { isVisible in
+                                handleVerseVisibilityChange(
+                                    isVisible: isVisible,
                                     surahNumber: surah.id,
                                     verseNumber: verse.verseNumber
                                 )
                             }
-                        )
-
-                        // Bookmark button
-                        Button {
-                            toggleBookmark(verse: verse)
-                        } label: {
-                            Image(systemName: isBookmarked(verse: verse) ? "bookmark.fill" : "bookmark")
-                                .foregroundColor(themeManager.currentTheme.accentInteractive)
-                                .font(.system(size: 20))
                         }
+
+                        // End ornament
+                        endOrnament
+
+                        // Continue to next surah card
+                        nextSurahContinuationCard {
+                            navigateToNextSurah(proxy: proxy)
+                        }
+
+                        // Bottom padding for audio pill
+                        Color.clear.frame(height: 100)
                     }
+                    .padding(.horizontal, 4)
                 }
-
-                IslamicDivider(style: .geometric, color: themeManager.currentTheme.accentInteractive.opacity(0.2))
-
-                // Arabic text
-                ThemedText.arabic(verse.text)
-                    .font(.system(size: 28))
-                    .multilineTextAlignment(.trailing)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
-                    .padding(.vertical, 8)
-
-                IslamicDivider(style: .simple)
-
-                // Translation
-                VStack(alignment: .leading, spacing: 8) {
-                    if let translation = translations[verse.number] {
-                        ThemedText.body(translation.text)
-                            .opacity(0.9)
-                            .lineSpacing(6)
-
-                        ThemedText.caption("— \(translation.author)")
-                            .italic()
-                            .foregroundColor(themeManager.currentTheme.accentSecondary)
-                            .opacity(0.7)
-                    } else if isLoadingTranslations {
-                        HStack {
-                            ProgressView()
-                                .scaleEffect(0.8)
-                            ThemedText.caption("Loading translation...")
-                                .opacity(0.5)
+                .refreshable {
+                    await loadVerses()
+                }
+                .onChange(of: audioService.currentVerse) { oldVerse, newVerse in
+                    if let playingVerse = newVerse, audioService.playbackState.isPlaying {
+                        // Find matching verse in our loaded list (UUIDs differ between loads)
+                        if let match = verses.first(where: {
+                            $0.surahNumber == playingVerse.surahNumber && $0.verseNumber == playingVerse.verseNumber
+                        }) {
+                            // Delay scroll slightly so highlight animates first ("light then scroll")
+                            Task {
+                                try? await Task.sleep(nanoseconds: 150_000_000) // 150ms
+                                withAnimation(.easeInOut(duration: 0.5)) {
+                                    proxy.scrollTo(match.id, anchor: UnitPoint(x: 0.5, y: 0.3))
+                                }
+                            }
                         }
-                    } else {
-                        // Fallback to sample translation
-                        let fallback = quranService.getSampleTranslation(forVerse: verse)
-                        ThemedText.body(fallback.text)
-                            .opacity(0.7)
-                            .italic()
                     }
                 }
             }
+
+            // Now Playing indicator (taps to open full player)
+            MiniAudioPlayerView(
+                showSkipControls: false,
+                showCloseButton: false,
+                onTap: { showFullPlayer = true }
+            )
+            .padding(.bottom, Spacing.xxs)
         }
-        .background(
-            // Subtle background tint when playing - uses theme-aware accent for consistency
-            RoundedRectangle(cornerRadius: 16)
-                .fill(isCurrentlyPlaying ?
-                      themeManager.currentTheme.accentSecondary.opacity(0.12) :
-                      Color.clear
-                )
-                .animation(.easeInOut(duration: 0.3), value: isCurrentlyPlaying)
-        )
-        .overlay(
-            // Highlight border for currently playing verse
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(
-                    LinearGradient(
-                        colors: [themeManager.currentTheme.featureAccent, themeManager.currentTheme.featureAccentSecondary],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: isCurrentlyPlaying ? 3 : 0
-                )
-                .animation(.easeInOut(duration: 0.3), value: isCurrentlyPlaying)
-        )
-        .shadow(
-            color: isCurrentlyPlaying ? themeManager.currentTheme.featureAccent.opacity(0.4) : .clear,
-            radius: isCurrentlyPlaying ? 12 : 0,
-            x: 0,
-            y: isCurrentlyPlaying ? 4 : 0
-        )
-        .animation(.easeInOut(duration: 0.3), value: isCurrentlyPlaying)
     }
+
+    // MARK: - Surah Header
+
+    private var surahHeader: some View {
+        let theme = themeManager.currentTheme
+
+        return VStack(spacing: 16) {
+            // Arabic surah name -- large, calligraphic
+            Text(surah.name)
+                .font(.custom("KFGQPC HAFS Uthmanic Script Regular", size: 40))
+                .foregroundColor(theme.accent)
+
+            // English name and translation
+            VStack(spacing: 4) {
+                Text(surah.englishName)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(theme.textPrimary)
+
+                Text(surah.englishNameTranslation)
+                    .font(.system(size: 14))
+                    .foregroundColor(theme.textTertiary)
+            }
+
+            // Surah metadata
+            HStack(spacing: 16) {
+                metadataLabel(text: "\(surah.numberOfVerses) Verses")
+                Text("·")
+                    .foregroundColor(theme.textTertiary)
+                metadataLabel(text: surah.revelationType.rawValue)
+                Text("·")
+                    .foregroundColor(theme.textTertiary)
+                metadataLabel(text: "Surah \(surah.id)")
+            }
+
+            // Ornamental divider
+            IslamicDivider(
+                style: .ornamental,
+                color: theme.accent.opacity(0.3)
+            )
+            .padding(.horizontal, 40)
+            .padding(.top, 4)
+        }
+        .padding(.horizontal, 20)
+    }
+
+    private func metadataLabel(text: String) -> some View {
+        Text(text)
+            .font(.system(size: 12, weight: .medium))
+            .foregroundColor(themeManager.currentTheme.textTertiary)
+    }
+
+    // MARK: - Bismillah
+
+    private var bismillahView: some View {
+        let theme = themeManager.currentTheme
+
+        return VStack(spacing: 10) {
+            Text("بِسۡمِ ٱللَّهِ ٱلرَّحۡمَـٰنِ ٱلرَّحِیمِ")
+                .font(.custom("KFGQPC HAFS Uthmanic Script Regular", size: 26))
+                .foregroundColor(theme.accent)
+                .multilineTextAlignment(.center)
+
+            Text("In the name of Allah, the Most Gracious, the Most Merciful")
+                .font(.system(size: 13))
+                .italic()
+                .foregroundColor(theme.textTertiary)
+                .multilineTextAlignment(.center)
+        }
+        .padding(.horizontal, 24)
+    }
+
+    // MARK: - Surah Play Button
+
+    private var surahPlayButton: some View {
+        let theme = themeManager.currentTheme
+
+        return Button {
+            audioService.continuousPlaybackEnabled = true
+            Task {
+                try? await audioService.playVerses(verses, startingAt: 0)
+            }
+            HapticManager.shared.trigger(.selection)
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "play.fill")
+                    .font(.system(size: 14))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Listen to Surah")
+                        .font(.system(size: 14, weight: .semibold))
+                    Text(audioService.selectedReciter.shortName)
+                        .font(.system(size: 11))
+                        .opacity(0.8)
+                }
+            }
+            .foregroundColor(theme.accent)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(
+                Capsule()
+                    .fill(theme.accent.opacity(0.12))
+            )
+            .overlay(
+                Capsule()
+                    .stroke(theme.accent.opacity(0.2), lineWidth: 1)
+            )
+        }
+        .padding(.bottom, 16)
+    }
+
+    // MARK: - Verse Row
+
+    private func verseRow(verse: Verse, index: Int) -> some View {
+        let theme = themeManager.currentTheme
+        let isCurrentlyPlaying = audioService.currentVerse?.surahNumber == verse.surahNumber
+            && audioService.currentVerse?.verseNumber == verse.verseNumber
+            && audioService.playbackState.isPlaying
+
+        return VStack(alignment: .leading, spacing: 16) {
+            // Verse header: number circle + action buttons
+            HStack(alignment: .center) {
+                // Verse number in elegant circle
+                verseNumberBadge(number: verse.verseNumber, isPlaying: isCurrentlyPlaying)
+
+                Spacer()
+
+                // Subtle action buttons
+                HStack(spacing: 14) {
+                    // Play menu
+                    Menu {
+                        // Primary: Play from this verse through end of surah
+                        Button {
+                            audioService.continuousPlaybackEnabled = true
+                            Task {
+                                try? await audioService.playVerses(verses, startingAt: index)
+                            }
+                            HapticManager.shared.trigger(.selection)
+                        } label: {
+                            Label("Play from Here", systemImage: "play.fill")
+                        }
+
+                        // Single verse only
+                        Button {
+                            Task {
+                                try? await audioService.play(verse: verse)
+                            }
+                            HapticManager.shared.trigger(.selection)
+                        } label: {
+                            Label("Play This Verse", systemImage: "play.circle")
+                        }
+
+                        // Full surah
+                        Button {
+                            audioService.continuousPlaybackEnabled = true
+                            Task {
+                                try? await audioService.playVerses(verses, startingAt: 0)
+                            }
+                            HapticManager.shared.trigger(.selection)
+                        } label: {
+                            Label("Play Entire Surah", systemImage: "play.rectangle.fill")
+                        }
+                    } label: {
+                        Image(systemName: isCurrentlyPlaying ? "speaker.wave.2.fill" : "play.circle")
+                            .font(.system(size: 20))
+                            .foregroundColor(isCurrentlyPlaying ? theme.accent : theme.textTertiary)
+                    }
+                    .accessibilityLabel("Play options for verse \(verse.verseNumber)")
+
+                    // Read status indicator
+                    VerseReadIndicator(
+                        isRead: verseReadStates[verse.verseNumber]?.isRead ?? false,
+                        readDate: verseReadStates[verse.verseNumber]?.timestamp,
+                        onToggle: {
+                            let currentState = verseReadStates[verse.verseNumber]
+                            let newIsRead = !(currentState?.isRead ?? false)
+                            verseReadStates[verse.verseNumber] = VerseReadState(
+                                isRead: newIsRead,
+                                timestamp: newIsRead ? Date() : nil
+                            )
+                            viewModel.toggleVerseReadStatus(
+                                surahNumber: surah.id,
+                                verseNumber: verse.verseNumber
+                            )
+                            if newIsRead {
+                                toastMessage = "Verse marked as read"
+                                toastStyle = .spiritual
+                                showToast = true
+                            }
+                        }
+                    )
+
+                    // Bookmark button
+                    Button {
+                        toggleBookmark(verse: verse)
+                    } label: {
+                        Image(systemName: isBookmarked(verse: verse) ? "bookmark.fill" : "bookmark")
+                            .font(.system(size: 18))
+                            .foregroundColor(
+                                isBookmarked(verse: verse) ? theme.accent : theme.textTertiary
+                            )
+                    }
+
+                    // Share verse button
+                    Button {
+                        shareVerse(verse)
+                    } label: {
+                        Image(systemName: "square.and.arrow.up")
+                            .font(.system(size: 18))
+                            .foregroundColor(theme.textTertiary)
+                    }
+                }
+            }
+
+            // Arabic text -- the HERO
+            Text(verse.text + " \u{FD3F}\(verse.verseNumber.arabicNumerals)\u{FD3E}")
+                .font(.custom("KFGQPC HAFS Uthmanic Script Regular", size: 28))
+                .foregroundColor(isCurrentlyPlaying ? theme.accent : theme.textPrimary)
+                .animation(.easeInOut(duration: 0.5), value: isCurrentlyPlaying)
+                .lineSpacing(16)
+                .multilineTextAlignment(.trailing)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .environment(\.layoutDirection, .rightToLeft)
+
+            // Translation
+            translationSection(for: verse)
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 20)
+        .playingVerseHighlight(isPlaying: isCurrentlyPlaying, accentColor: theme.accent)
+    }
+
+    // MARK: - Verse Number Badge
+
+    private func verseNumberBadge(number: Int, isPlaying: Bool) -> some View {
+        let theme = themeManager.currentTheme
+
+        return ZStack {
+            Circle()
+                .stroke(
+                    isPlaying ? theme.accent : theme.borderColor,
+                    lineWidth: isPlaying ? 2 : 1
+                )
+                .frame(width: 32, height: 32)
+                .background(
+                    Circle()
+                        .fill(
+                            isPlaying
+                                ? theme.accent.opacity(0.12)
+                                : theme.backgroundColor.opacity(0.5)
+                        )
+                )
+
+            Text("\(number)")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(isPlaying ? theme.accent : theme.textSecondary)
+        }
+        .scaleEffect(isPlaying ? 1.05 : 1.0)
+        .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: isPlaying)
+    }
+
+    // MARK: - Translation Section
+
+    private func translationSection(for verse: Verse) -> some View {
+        let theme = themeManager.currentTheme
+
+        return Group {
+            if let translation = translations[verse.number] {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(translation.text)
+                        .font(.system(size: 15))
+                        .foregroundColor(theme.textSecondary)
+                        .lineSpacing(6)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Text("-- \(translation.author)")
+                        .font(.system(size: 12))
+                        .italic()
+                        .foregroundColor(theme.textTertiary)
+                }
+            } else if isLoadingTranslations {
+                HStack(spacing: 8) {
+                    ProgressView()
+                        .scaleEffect(0.7)
+                    Text("Loading translation...")
+                        .font(.system(size: 13))
+                        .foregroundColor(theme.textTertiary)
+                }
+            } else {
+                // Fallback to sample translation
+                let fallback = quranService.getSampleTranslation(forVerse: verse)
+                Text(fallback.text)
+                    .font(.system(size: 15))
+                    .foregroundColor(theme.textSecondary)
+                    .lineSpacing(6)
+                    .italic()
+                    .opacity(0.7)
+            }
+        }
+    }
+
+    // MARK: - End Ornament
 
     private var endOrnament: some View {
-        VStack(spacing: 12) {
-            IslamicDivider(style: .crescent, color: themeManager.currentTheme.accentInteractive)
+        let theme = themeManager.currentTheme
 
-            ThemedText("End of Surah \(surah.englishName)", style: .caption)
-                .foregroundColor(themeManager.currentTheme.accentInteractive)
-                .opacity(0.7)
+        return VStack(spacing: 12) {
+            IslamicDivider(style: .crescent, color: theme.accent.opacity(0.4))
 
-            IslamicDivider(style: .crescent, color: themeManager.currentTheme.accentInteractive)
+            Text("End of Surah \(surah.englishName)")
+                .font(.system(size: 13))
+                .foregroundColor(theme.textTertiary)
+
+            IslamicDivider(style: .crescent, color: theme.accent.opacity(0.4))
         }
-        .padding(.vertical, 20)
+        .padding(.vertical, 24)
+        .padding(.horizontal, 40)
     }
 
-    // MARK: - Private Methods
+    // MARK: - Next Surah Continuation Card
 
-    /// Handle verse visibility changes from native scroll tracking
+    /// Returns the next surah if the current surah is not the last (114)
+    private var nextSurah: Surah? {
+        guard surah.id < 114 else { return nil }
+        return viewModel.surahs.first(where: { $0.id == surah.id + 1 })
+    }
+
+    @ViewBuilder
+    private func nextSurahContinuationCard(onContinue: @escaping () -> Void) -> some View {
+        let theme = themeManager.currentTheme
+
+        if let next = nextSurah {
+            // -- Next surah available: show continuation card --
+            VStack(spacing: Spacing.md) {
+                // Ornamental divider
+                IslamicDivider(style: .ornamental, color: theme.accent.opacity(0.3))
+                    .padding(.horizontal, 40)
+
+                // Completion summary for current surah
+                VStack(spacing: Spacing.xxxs) {
+                    Text("End of \(surah.name)")
+                        .font(.custom("KFGQPC HAFS Uthmanic Script Regular", size: 22))
+                        .foregroundColor(theme.accent)
+
+                    Text("\(surah.englishName) · \(surah.numberOfVerses) verses")
+                        .font(.system(size: FontSizes.sm))
+                        .foregroundColor(theme.textTertiary)
+                }
+
+                // Next surah preview card
+                VStack(spacing: Spacing.sm) {
+                    // Card header label
+                    Text("CONTINUE TO NEXT SURAH")
+                        .font(.system(size: FontSizes.xs, weight: .semibold))
+                        .foregroundColor(theme.accent)
+                        .tracking(1.0)
+
+                    // Next surah info
+                    VStack(spacing: Spacing.xs) {
+                        Text(next.name)
+                            .font(.custom("KFGQPC HAFS Uthmanic Script Regular", size: 30))
+                            .foregroundColor(theme.textPrimary)
+
+                        Text(next.englishName)
+                            .font(.system(size: FontSizes.lg, weight: .semibold))
+                            .foregroundColor(theme.textPrimary)
+
+                        HStack(spacing: Spacing.xxs) {
+                            Text(next.revelationType.rawValue)
+                                .font(.system(size: FontSizes.xs, weight: .medium))
+                                .foregroundColor(theme.accent)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .background(theme.accent.opacity(0.12))
+                                .cornerRadius(BorderRadius.sm)
+
+                            Text("·")
+                                .foregroundColor(theme.textTertiary)
+
+                            Text("\(next.numberOfVerses) verses")
+                                .font(.system(size: FontSizes.sm))
+                                .foregroundColor(theme.textTertiary)
+
+                            Text("·")
+                                .foregroundColor(theme.textTertiary)
+
+                            Text("Surah \(next.id)")
+                                .font(.system(size: FontSizes.sm))
+                                .foregroundColor(theme.textTertiary)
+                        }
+                    }
+
+                    // Bismillah preview (except for Surah 9 At-Tawbah)
+                    if next.id != 9 {
+                        VStack(spacing: 6) {
+                            Rectangle()
+                                .fill(theme.borderColor.opacity(0.4))
+                                .frame(height: 0.5)
+                                .padding(.horizontal, Spacing.md)
+
+                            Text("\u{0628}\u{0650}\u{0633}\u{0645}\u{0650} \u{0627}\u{0644}\u{0644}\u{0647}\u{0650} \u{0627}\u{0644}\u{0631}\u{0651}\u{064E}\u{062D}\u{0645}\u{0670}\u{0646}\u{0650} \u{0627}\u{0644}\u{0631}\u{0651}\u{064E}\u{062D}\u{0650}\u{064A}\u{0645}\u{0650}")
+                                .font(.custom("KFGQPC HAFS Uthmanic Script Regular", size: 20))
+                                .foregroundColor(theme.accent.opacity(0.7))
+                                .multilineTextAlignment(.center)
+                                .padding(.vertical, Spacing.xxs)
+                        }
+                    }
+
+                    // Continue button
+                    Button {
+                        onContinue()
+                    } label: {
+                        HStack(spacing: Spacing.xxs) {
+                            Text("Continue Reading")
+                                .font(.system(size: FontSizes.base, weight: .semibold))
+
+                            Image(systemName: "arrow.right")
+                                .font(.system(size: 14, weight: .semibold))
+                        }
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, Spacing.xs)
+                        .background(
+                            Capsule()
+                                .fill(theme.accent)
+                        )
+                    }
+                    .disabled(isTransitioningToNextSurah)
+                    .opacity(isTransitioningToNextSurah ? 0.6 : 1.0)
+                    .padding(.horizontal, Spacing.md)
+                    .padding(.top, Spacing.xxs)
+                }
+                .padding(.vertical, Spacing.md)
+                .padding(.horizontal, Spacing.sm)
+                .background(theme.cardColor)
+                .cornerRadius(BorderRadius.xl)
+                .overlay(
+                    RoundedRectangle(cornerRadius: BorderRadius.xl)
+                        .stroke(theme.accent.opacity(0.2), lineWidth: 1)
+                )
+                .padding(.horizontal, Spacing.screenHorizontal)
+
+                // Bottom ornamental divider
+                IslamicDivider(style: .ornamental, color: theme.accent.opacity(0.3))
+                    .padding(.horizontal, 40)
+            }
+            .padding(.vertical, Spacing.sm)
+        } else {
+            // -- Last surah (An-Nas, 114): show Quran completion celebration --
+            quranCompletionView
+        }
+    }
+
+    // MARK: - Quran Completion Celebration
+
+    private var quranCompletionView: some View {
+        let theme = themeManager.currentTheme
+
+        return VStack(spacing: Spacing.md) {
+            IslamicDivider(style: .ornamental, color: theme.accent.opacity(0.4))
+                .padding(.horizontal, 40)
+
+            VStack(spacing: Spacing.sm) {
+                // Celebration icon
+                Image(systemName: "star.fill")
+                    .font(.system(size: 36, weight: .light))
+                    .foregroundColor(theme.accent)
+                    .padding(.bottom, Spacing.xxxs)
+
+                Text("Khatm al-Quran")
+                    .font(.custom("KFGQPC HAFS Uthmanic Script Regular", size: 24))
+                    .foregroundColor(theme.accent)
+
+                Text("Completion of the Noble Quran")
+                    .font(.system(size: FontSizes.lg, weight: .semibold))
+                    .foregroundColor(theme.textPrimary)
+
+                Text("You have reached the end of the Holy Quran.\nMay Allah accept your reading and grant you\nits intercession on the Day of Judgment.")
+                    .font(.system(size: FontSizes.sm))
+                    .foregroundColor(theme.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(4)
+                    .padding(.horizontal, Spacing.md)
+
+                // Dua for completing the Quran
+                VStack(spacing: Spacing.xxs) {
+                    Rectangle()
+                        .fill(theme.borderColor.opacity(0.4))
+                        .frame(height: 0.5)
+                        .padding(.horizontal, Spacing.md)
+
+                    Text("صَدَقَ اللهُ الْعَظِيمُ")
+                        .font(.custom("KFGQPC HAFS Uthmanic Script Regular", size: 22))
+                        .foregroundColor(theme.accent)
+                        .padding(.vertical, Spacing.xxs)
+
+                    Text("Allah the Almighty has spoken the truth")
+                        .font(.system(size: FontSizes.xs))
+                        .italic()
+                        .foregroundColor(theme.textTertiary)
+                }
+
+                // Return to beginning button
+                Button {
+                    navigateToSurah(surahNumber: 1)
+                } label: {
+                    HStack(spacing: Spacing.xxs) {
+                        Image(systemName: "arrow.counterclockwise")
+                            .font(.system(size: 14, weight: .semibold))
+
+                        Text("Start from Al-Fatihah")
+                            .font(.system(size: FontSizes.base, weight: .semibold))
+                    }
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, Spacing.xs)
+                    .background(
+                        Capsule()
+                            .fill(theme.accent)
+                    )
+                }
+                .padding(.horizontal, Spacing.md)
+                .padding(.top, Spacing.xxs)
+            }
+            .padding(.vertical, Spacing.md)
+            .padding(.horizontal, Spacing.sm)
+            .background(theme.cardColor)
+            .cornerRadius(BorderRadius.xl)
+            .overlay(
+                RoundedRectangle(cornerRadius: BorderRadius.xl)
+                    .stroke(theme.accent.opacity(0.2), lineWidth: 1)
+            )
+            .padding(.horizontal, Spacing.screenHorizontal)
+
+            IslamicDivider(style: .ornamental, color: theme.accent.opacity(0.4))
+                .padding(.horizontal, 40)
+        }
+        .padding(.vertical, Spacing.sm)
+    }
+
+    // MARK: - Navigate to Next Surah
+
+    private func navigateToNextSurah(proxy: ScrollViewProxy) {
+        guard let next = nextSurah, !isTransitioningToNextSurah else { return }
+        isTransitioningToNextSurah = true
+
+        // Update the surah
+        surah = next
+        verses = []
+        translations = [:]
+        verseReadStates = [:]
+        visibleVerses = []
+        dwellTask?.cancel()
+        isLoading = true
+        loadError = nil
+
+        // Scroll to top
+        withAnimation(.easeInOut(duration: 0.3)) {
+            proxy.scrollTo("surah-header-top", anchor: .top)
+        }
+
+        // Load new surah data
+        Task {
+            await loadVerses()
+            isTransitioningToNextSurah = false
+        }
+    }
+
+    /// Navigate to a specific surah by number (used for Quran completion -> Al-Fatihah)
+    private func navigateToSurah(surahNumber: Int) {
+        guard let targetSurah = viewModel.surahs.first(where: { $0.id == surahNumber }) else { return }
+        guard !isTransitioningToNextSurah else { return }
+        isTransitioningToNextSurah = true
+
+        // Update the surah
+        surah = targetSurah
+        verses = []
+        translations = [:]
+        verseReadStates = [:]
+        visibleVerses = []
+        dwellTask?.cancel()
+        isLoading = true
+        loadError = nil
+
+        // Load new surah data
+        Task {
+            await loadVerses()
+            isTransitioningToNextSurah = false
+        }
+    }
+
+    // MARK: - Dwell-Based Progress Tracking
+
     private func handleVerseVisibilityChange(isVisible: Bool, surahNumber: Int, verseNumber: Int) {
         let verseId = "\(surahNumber):\(verseNumber)"
 
         if isVisible {
-            // Verse became visible
-            guard !trackedVerses.contains(verseId) else { return }
-
-            // Cancel any existing timers for this verse
-            debounceTimers[verseId]?.cancel()
-            dwellTimers[verseId]?.cancel()
-
-            // Start debounce timer (wait 300ms before starting dwell timer)
-            // This smooths out jittery scroll behavior
-            debounceTimers[verseId] = Task {
-                try? await Task.sleep(nanoseconds: UInt64(debounceDelay * 1_000_000_000))
-
-                // Check if debounce wasn't cancelled
-                guard !Task.isCancelled else { return }
-
-                #if DEBUG
-                await MainActor.run {
-                    print("👁️ Verse became visible: \(verseId) - starting \(dwellTime)s dwell timer")
-                }
-                #endif
-
-                // Now start the actual dwell timer
-                await MainActor.run {
-                    dwellTimers[verseId] = Task {
-                        // Wait for dwell time (realistic reading duration)
-                        try? await Task.sleep(nanoseconds: UInt64(dwellTime * 1_000_000_000))
-
-                        // Check if task wasn't cancelled
-                        guard !Task.isCancelled else { return }
-
-                        // Mark verse as read
-                        await MainActor.run {
-                            markVerseAsRead(surahNumber: surahNumber, verseNumber: verseNumber)
-                        }
-                    }
-                }
-            }
-
+            guard visibleVerses.insert(verseId).inserted else { return }
         } else {
-            // Verse is no longer visible - cancel all timers
-            debounceTimers[verseId]?.cancel()
-            debounceTimers[verseId] = nil
-            dwellTimers[verseId]?.cancel()
-            dwellTimers[verseId] = nil
+            guard visibleVerses.remove(verseId) != nil else { return }
+        }
 
-            #if DEBUG
-            if !trackedVerses.contains(verseId) {
-                print("👋 Verse left viewport: \(verseId) - timers cancelled")
+        restartDwellTimer()
+    }
+
+    private func restartDwellTimer() {
+        dwellTask?.cancel()
+        dwellTask = Task { [visibleVerses] in
+            try? await Task.sleep(nanoseconds: UInt64(dwellTime * 1_000_000_000))
+            guard !Task.isCancelled else { return }
+
+            await MainActor.run {
+                markVisibleVersesAsRead(snapshot: visibleVerses)
             }
-            #endif
         }
     }
 
-    /// Mark a verse as read with duplicate prevention
-    private func markVerseAsRead(surahNumber: Int, verseNumber: Int) {
-        let verseId = "\(surahNumber):\(verseNumber)"
+    private func markVisibleVersesAsRead(snapshot: Set<String>) {
+        for verseId in snapshot {
+            let parts = verseId.split(separator: ":")
+            guard parts.count == 2,
+                  let surahNumber = Int(parts[0]),
+                  let verseNumber = Int(parts[1]) else { continue }
 
-        // Prevent duplicate tracking in this session
-        guard !trackedVerses.contains(verseId) else {
-            return
+            guard verseReadStates[verseNumber]?.isRead != true else { continue }
+
+            verseReadStates[verseNumber] = VerseReadState(isRead: true, timestamp: Date())
+            viewModel.updateProgress(surahNumber: surahNumber, verseNumber: verseNumber)
         }
-
-        // Mark as tracked in this session
-        trackedVerses.insert(verseId)
-
-        // Clean up all timers for this verse
-        debounceTimers[verseId]?.cancel()
-        debounceTimers[verseId] = nil
-        dwellTimers[verseId]?.cancel()
-        dwellTimers[verseId] = nil
-
-        // Optimistic update: Update cache immediately for instant UI feedback
-        verseReadStates[verseNumber] = VerseReadState(isRead: true, timestamp: Date())
-
-        // Update progress in view model (which calls the service) - async backend update
-        viewModel.updateProgress(surahNumber: surahNumber, verseNumber: verseNumber)
-
-        #if DEBUG
-        print("📖 Marked verse as read: \(verseId) (80% visible, 3s dwell, 0.3s debounce)")
-        #endif
     }
 
-    /// Load all verse read states at once (called once per surah load)
     private func loadVerseReadStates() {
         var states: [Int: VerseReadState] = [:]
 
@@ -678,12 +988,9 @@ struct VerseReaderView: View {
         }
 
         verseReadStates = states
-
-        #if DEBUG
-        let readCount = states.values.filter { $0.isRead }.count
-        print("🔄 Loaded \(verses.count) verse read states (\(readCount) read)")
-        #endif
     }
+
+    // MARK: - Data Loading
 
     private func loadVerses() async {
         isLoading = true
@@ -693,19 +1000,15 @@ struct VerseReaderView: View {
             verses = try await quranService.getVerses(forSurah: surah.id)
             isLoading = false
 
-            // Load verse read states immediately after verses load (performance optimization)
             loadVerseReadStates()
-
-            // Load translations after verses are loaded
             await loadTranslations()
         } catch {
             loadError = error
             isLoading = false
+            #if DEBUG
             print("Failed to load verses for Surah \(surah.id): \(error)")
-            // Fallback to sample data
+            #endif
             verses = quranService.getSampleVerses(forSurah: surah.id)
-
-            // Load read states even for fallback data
             loadVerseReadStates()
         }
     }
@@ -714,51 +1017,28 @@ struct VerseReaderView: View {
         isLoadingTranslations = true
         let targetVerses = versesToLoad ?? verses
 
-        // Load translations for all verses concurrently (in batches to avoid overwhelming API)
-        // Reduced batch size from 10 to 5 to prevent rate limiting (429 errors)
-        let batchSize = 5
-        let batches = stride(from: 0, to: targetVerses.count, by: batchSize).map {
-            Array(targetVerses[$0..<min($0 + batchSize, targetVerses.count)])
-        }
-
-        for (index, batch) in batches.enumerated() {
-            await withTaskGroup(of: (Int, Translation?).self) { group in
-                for verse in batch {
-                    group.addTask {
-                        do {
-                            // Use selected translation edition
-                            let translation = try await self.quranService.getTranslation(
-                                forVerse: verse,
-                                edition: self.selectedTranslation
-                            )
-                            return (verse.number, translation)
-                        } catch {
-                            // Silently fail for translations - fallback will be used
-                            // Only log non-rate-limit errors
-                            if case APIError.serverError(let code) = error, code != 429 {
-                                print("Failed to load translation for verse \(verse.number): \(error)")
-                            }
-                            return (verse.number, nil)
-                        }
-                    }
+        // Load translations sequentially to avoid API rate limiting.
+        // The APIClient's concurrency throttle + cache handles efficiency.
+        for verse in targetVerses {
+            do {
+                let translation = try await self.quranService.getTranslation(
+                    forVerse: verse,
+                    edition: self.selectedTranslation
+                )
+                translations[verse.number] = translation
+            } catch {
+                #if DEBUG
+                if case APIError.serverError(let code) = error, code != 429 {
+                    print("Failed to load translation for verse \(verse.number): \(error)")
                 }
-
-                for await (verseNumber, translation) in group {
-                    if let translation = translation {
-                        translations[verseNumber] = translation
-                    }
-                }
-            }
-
-            // Add 200ms delay between batches to respect API rate limits
-            // Skip delay after the last batch
-            if index < batches.count - 1 {
-                try? await Task.sleep(nanoseconds: 200_000_000)  // 200ms
+                #endif
             }
         }
 
         isLoadingTranslations = false
     }
+
+    // MARK: - Bookmarks
 
     private func isBookmarked(verse: Verse) -> Bool {
         return quranService.isBookmarked(surahNumber: surah.id, verseNumber: verse.verseNumber)
@@ -766,16 +1046,171 @@ struct VerseReaderView: View {
 
     private func toggleBookmark(verse: Verse) {
         if isBookmarked(verse: verse) {
-            // Find and remove bookmark
             if let bookmark = viewModel.bookmarks.first(where: { $0.surahNumber == surah.id && $0.verseNumber == verse.verseNumber }) {
                 quranService.removeBookmark(id: bookmark.id)
                 HapticManager.shared.triggerPattern(.bookmarkRemoved)
+                toastMessage = "Bookmark removed"
+                toastStyle = .success
+                showToast = true
             }
         } else {
-            quranService.addBookmark(surahNumber: surah.id, verseNumber: verse.verseNumber)
-            HapticManager.shared.triggerPattern(.bookmarkAdded)
+            // Show category picker for new bookmarks
+            pendingBookmarkVerse = verse
+            showCategoryPicker = true
         }
-        viewModel.loadBookmarks()
+    }
+
+    private func saveBookmark(verse: Verse, category: String) {
+        quranService.addBookmark(surahNumber: surah.id, verseNumber: verse.verseNumber, category: category)
+        HapticManager.shared.triggerPattern(.bookmarkAdded)
+        toastMessage = "Saved to \(BookmarkCategory.shortLabel(for: category))"
+        toastStyle = .success
+        showToast = true
+    }
+
+    // MARK: - Share Functionality
+
+    /// Share the entire surah with metadata
+    private func shareSurah() {
+        var shareText = "Surah \(surah.englishName) (\(surah.name))\n"
+        shareText += "\(surah.englishNameTranslation)\n"
+        shareText += "\(surah.revelationType.rawValue) • \(surah.numberOfVerses) verses\n\n"
+
+        // Add first verse or bismillah as preview
+        if let firstVerse = verses.first {
+            shareText += firstVerse.text + "\n"
+            if let translation = translations[firstVerse.number] {
+                shareText += "\n\"\(translation.text)\"\n"
+                shareText += "— \(translation.author)\n"
+            }
+        }
+
+        shareText += "\n📖 Shared from Quran Noor"
+
+        shareItems = [shareText]
+        showShareSheet = true
+        HapticManager.shared.trigger(.selection)
+    }
+
+    /// Share a specific verse with Arabic text and translation
+    private func shareVerse(_ verse: Verse) {
+        var shareText = "Surah \(surah.englishName) (\(surah.name)) - Verse \(verse.verseNumber)\n\n"
+
+        // Arabic text
+        shareText += verse.text + "\n\n"
+
+        // Translation if available
+        if let translation = translations[verse.number] {
+            shareText += "\"\(translation.text)\"\n"
+            shareText += "— \(translation.author)\n"
+        }
+
+        shareText += "\n📖 Shared from Quran Noor"
+
+        shareItems = [shareText]
+        showShareSheet = true
+        HapticManager.shared.trigger(.selection)
+
+        toastMessage = "Verse ready to share"
+        toastStyle = .info
+        showToast = true
+    }
+}
+
+// MARK: - Bookmark Category Picker Sheet
+
+private struct BookmarkCategoryPickerSheet: View {
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
+    @Environment(\.dismiss) var dismiss
+    let onSelect: (String) -> Void
+
+    var body: some View {
+        let theme = themeManager.currentTheme
+
+        NavigationStack {
+            ZStack {
+                theme.backgroundColor.ignoresSafeArea()
+
+                VStack(spacing: Spacing.md) {
+                    Text("Choose a category for this bookmark")
+                        .font(.system(size: FontSizes.sm))
+                        .foregroundColor(theme.textSecondary)
+                        .padding(.top, Spacing.sm)
+
+                    VStack(spacing: Spacing.xs) {
+                        ForEach(BookmarkCategory.predefined, id: \.self) { category in
+                            Button {
+                                onSelect(category)
+                                dismiss()
+                            } label: {
+                                HStack(spacing: Spacing.xs) {
+                                    Image(systemName: iconForCategory(category))
+                                        .font(.system(size: 18))
+                                        .foregroundColor(theme.accent)
+                                        .frame(width: 28)
+
+                                    Text(category)
+                                        .font(.system(size: FontSizes.base, weight: .medium))
+                                        .foregroundColor(theme.textPrimary)
+
+                                    Spacer()
+
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 13, weight: .medium))
+                                        .foregroundColor(theme.textTertiary)
+                                }
+                                .padding(.horizontal, Spacing.sm)
+                                .padding(.vertical, Spacing.xs)
+                                .background(theme.cardColor)
+                                .cornerRadius(BorderRadius.lg)
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                        }
+                    }
+                    .padding(.horizontal, Spacing.screenHorizontal)
+
+                    Spacer()
+                }
+            }
+            .navigationTitle("Bookmark Category")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                    .foregroundColor(theme.accent)
+                }
+            }
+        }
+    }
+
+    private func iconForCategory(_ category: String) -> String {
+        switch category {
+        case BookmarkCategory.allBookmarks:
+            return "bookmark.fill"
+        case BookmarkCategory.favorites:
+            return "heart.fill"
+        case BookmarkCategory.study:
+            return "text.book.closed.fill"
+        case BookmarkCategory.memorization:
+            return "brain.head.profile"
+        default:
+            return "folder.fill"
+        }
+    }
+}
+
+// MARK: - Arabic Numeral Conversion
+
+private extension Int {
+    /// Convert integer to Eastern Arabic numerals used in the Quran
+    var arabicNumerals: String {
+        let arabicDigits: [Character] = ["٠", "١", "٢", "٣", "٤", "٥", "٦", "٧", "٨", "٩"]
+        return String(String(self).compactMap { char -> Character? in
+            guard let digit = Int(String(char)), digit >= 0 && digit <= 9 else { return nil }
+            return arabicDigits[digit]
+        })
     }
 }
 

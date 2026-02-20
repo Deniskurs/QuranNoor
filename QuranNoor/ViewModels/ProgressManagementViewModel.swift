@@ -6,10 +6,11 @@
 //
 
 import Foundation
-import Combine
+import Observation
 
+@Observable
 @MainActor
-class ProgressManagementViewModel: ObservableObject {
+class ProgressManagementViewModel {
     // MARK: - Cached Codecs (Performance: avoid repeated allocation)
     private static let decoder: JSONDecoder = {
         let decoder = JSONDecoder()
@@ -23,29 +24,38 @@ class ProgressManagementViewModel: ObservableObject {
         return encoder
     }()
 
-    // MARK: - Published Properties
-    @Published var readingProgress: ReadingProgress?
-    @Published var surahs: [Surah] = []
-    @Published var surahStats: [SurahProgressStats] = []
-    @Published var filteredSurahStats: [SurahProgressStats] = []
-    @Published var searchQuery: String = ""
-    @Published var filterType: SurahFilterType = .all
-    @Published var sortOrder: SurahSortOrder = .byNumber
-    @Published var showingResetConfirmation = false
-    @Published var resetType: ResetType?
-    @Published var selectedSurahForReset: Int?
-    @Published var isExporting = false
-    @Published var isImporting = false
-    @Published var exportURL: URL?
-    @Published var importError: String?
-    // Toast properties (new API)
-    @Published var toastMessage: String = ""
-    @Published var toastStyle: ToastStyle = .success
-    @Published var showToast = false
+    // MARK: - Observable Properties
+    /// Single source of truth: reads directly from QuranService (no duplicate copy)
+    var readingProgress: ReadingProgress? {
+        quranService.readingProgress
+    }
+    var surahs: [Surah] = []
+    var surahStats: [SurahProgressStats] = []
+    var filteredSurahStats: [SurahProgressStats] = []
+    var searchQuery: String = "" {
+        didSet { debouncedApplyFilters() }
+    }
+    var filterType: SurahFilterType = .all {
+        didSet { applyFiltersAndSorting() }
+    }
+    var sortOrder: SurahSortOrder = .byNumber {
+        didSet { applyFiltersAndSorting() }
+    }
+    var showingResetConfirmation = false
+    var resetType: ResetType?
+    var selectedSurahForReset: Int?
+    var isExporting = false
+    var isImporting = false
+    var exportURL: URL?
+    var importError: String?
+    // Toast properties
+    var toastMessage: String = ""
+    var toastStyle: ToastStyle = .success
+    var showToast = false
 
     // MARK: - Private Properties
     private let quranService = QuranService.shared
-    private var cancellables = Set<AnyCancellable>()
+    private var searchDebounceTask: Task<Void, Never>?
 
     // MARK: - Enums
 
@@ -144,49 +154,72 @@ class ProgressManagementViewModel: ObservableObject {
     // MARK: - Initialization
 
     init() {
-        print("🆕 ProgressManagementViewModel INIT - using shared service")
         loadProgress()
         loadSurahs()
-        setupSearchAndFilter()
-        setupProgressObserver()
     }
 
-    // MARK: - Combine Observers
+    // MARK: - Debounced Search
 
-    private func setupProgressObserver() {
-        // Observe reading progress changes from QuranService
-        quranService.$readingProgress
-            .receive(on: DispatchQueue.main)
-            .debounce(for: .milliseconds(500), scheduler: DispatchQueue.main) // Debounce to prevent cascade
-            .sink { [weak self] newProgress in
-                guard let self = self else { return }
-                self.readingProgress = newProgress
-                // Statistics update happens lazily when ProgressManagementView requests data
-                print("🔄 ProgressManagementViewModel: Progress updated from service - \(newProgress?.totalVersesRead ?? 0) verses")
-            }
-            .store(in: &cancellables)
+    private func debouncedApplyFilters() {
+        searchDebounceTask?.cancel()
+        searchDebounceTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 300_000_000) // 300ms debounce
+            guard !Task.isCancelled else { return }
+            self?.applyFiltersAndSorting()
+        }
     }
 
     // MARK: - Data Loading
 
     func loadProgress() {
-        readingProgress = quranService.getReadingProgress()
+        // readingProgress is a computed property reading from QuranService — no assignment needed
         updateSurahStatistics()
     }
 
     func loadSurahs() {
         surahs = quranService.getSampleSurahs()
+        rebuildSurahLookup()
         updateSurahStatistics()
     }
 
     func updateSurahStatistics() {
         guard !surahs.isEmpty else { return }
+        guard let progress = readingProgress else {
+            surahStats = surahs.map { surah in
+                SurahProgressStats(
+                    surahNumber: surah.id,
+                    totalVerses: surah.numberOfVerses,
+                    readVerses: 0,
+                    completionPercentage: 0,
+                    lastReadDate: nil,
+                    firstReadDate: nil
+                )
+            }
+            applyFiltersAndSorting()
+            return
+        }
+
+        // Single-pass index build: O(n) where n = total read verses
+        // Then O(1) per surah lookup instead of O(n) per surah
+        let index = progress.buildSurahIndex()
 
         surahStats = surahs.map { surah in
-            quranService.getSurahStatistics(
-                surahNumber: surah.id,
-                totalVerses: surah.numberOfVerses
-            )
+            if let entry = index[surah.id] {
+                return progress.surahProgressFromIndex(
+                    surahNumber: surah.id,
+                    totalVerses: surah.numberOfVerses,
+                    indexEntry: entry
+                )
+            } else {
+                return SurahProgressStats(
+                    surahNumber: surah.id,
+                    totalVerses: surah.numberOfVerses,
+                    readVerses: 0,
+                    completionPercentage: 0,
+                    lastReadDate: nil,
+                    firstReadDate: nil
+                )
+            }
         }
 
         applyFiltersAndSorting()
@@ -194,28 +227,12 @@ class ProgressManagementViewModel: ObservableObject {
 
     // MARK: - Search and Filter
 
-    private func setupSearchAndFilter() {
-        // React to search query changes
-        $searchQuery
-            .debounce(for: .milliseconds(300), scheduler: RunLoop.main)
-            .sink { [weak self] _ in
-                self?.applyFiltersAndSorting()
-            }
-            .store(in: &cancellables)
+    // MARK: - Surah Lookup (O(1) instead of O(n) per lookup)
+    private var surahLookup: [Int: Surah] = [:]
 
-        // React to filter changes
-        $filterType
-            .sink { [weak self] _ in
-                self?.applyFiltersAndSorting()
-            }
-            .store(in: &cancellables)
-
-        // React to sort order changes
-        $sortOrder
-            .sink { [weak self] _ in
-                self?.applyFiltersAndSorting()
-            }
-            .store(in: &cancellables)
+    /// Rebuild the lookup dictionary when surahs change
+    private func rebuildSurahLookup() {
+        surahLookup = Dictionary(uniqueKeysWithValues: surahs.map { ($0.id, $0) })
     }
 
     func applyFiltersAndSorting() {
@@ -233,11 +250,11 @@ class ProgressManagementViewModel: ObservableObject {
             filtered = filtered.filter { $0.readVerses == 0 }
         }
 
-        // Apply search
+        // Apply search using O(1) dictionary lookup instead of O(n) .first(where:)
         if !searchQuery.isEmpty {
             let query = searchQuery.lowercased()
             filtered = filtered.filter { stat in
-                guard let surah = surahs.first(where: { $0.id == stat.surahNumber }) else {
+                guard let surah = surahLookup[stat.surahNumber] else {
                     return false
                 }
                 return surah.englishName.lowercased().contains(query) ||
@@ -247,7 +264,7 @@ class ProgressManagementViewModel: ObservableObject {
             }
         }
 
-        // Apply sorting
+        // Apply sorting using O(1) dictionary lookup instead of O(n) .first(where:)
         switch sortOrder {
         case .byNumber:
             filtered.sort { $0.surahNumber < $1.surahNumber }
@@ -262,8 +279,8 @@ class ProgressManagementViewModel: ObservableObject {
             }
         case .byName:
             filtered.sort { a, b in
-                let aName = surahs.first(where: { $0.id == a.surahNumber })?.englishName ?? ""
-                let bName = surahs.first(where: { $0.id == b.surahNumber })?.englishName ?? ""
+                let aName = surahLookup[a.surahNumber]?.englishName ?? ""
+                let bName = surahLookup[b.surahNumber]?.englishName ?? ""
                 return aName < bName
             }
         }
@@ -295,7 +312,9 @@ class ProgressManagementViewModel: ObservableObject {
         }
 
         // Note: No need to call loadProgress() - observers will update automatically
+        #if DEBUG
         print("🔄 Reset completed - observers will update ViewModels")
+        #endif
         showingResetConfirmation = false
         resetType = nil
     }

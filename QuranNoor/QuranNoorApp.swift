@@ -10,36 +10,59 @@ import SwiftUI
 import SwiftData
 import UserNotifications
 
+// TODO: Add crash reporting framework (e.g., Firebase Crashlytics or Sentry) before production release.
+// TODO: NetworkMonitor.swift exists but is not wired to the UI. Add offline indicators in views that require network access.
 @main
 struct QuranNoorApp: App {
     // MARK: - Properties
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @State private var themeManager = ThemeManager()
     @State private var deepLinkHandler = DeepLinkHandler()
-    @StateObject private var localizationManager = LocalizationManager.shared
+    @State private var localizationManager = LocalizationManager.shared
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
+    @Environment(\.scenePhase) private var scenePhase
 
     // SwiftData Model Container
     let modelContainer: ModelContainer
 
     // MARK: - Initializer
     init() {
-        // Initialize SwiftData ModelContainer
+        // Ensure Application Support directory exists before SwiftData init
+        // Prevents CoreData "Failed to stat path" errors on first launch
+        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        if !FileManager.default.fileExists(atPath: appSupport.path) {
+            try? FileManager.default.createDirectory(at: appSupport, withIntermediateDirectories: true)
+        }
+
+        // Initialize SwiftData ModelContainer with versioned schema
         do {
-            let schema = Schema([
-                ReadingProgressRecord.self,
-                ReadingStatsRecord.self,
-                BookmarkRecord.self
-            ])
+            // Use the versioned schema for safe migrations across app updates
+            let schema = Schema(versionedSchema: QuranNoorSchemaV1.self)
             let modelConfiguration = ModelConfiguration(
                 schema: schema,
                 isStoredInMemoryOnly: false,
                 allowsSave: true
             )
-            modelContainer = try ModelContainer(for: schema, configurations: [modelConfiguration])
-            print("✅ SwiftData ModelContainer initialized successfully")
-        } catch {
-            fatalError("❌ Failed to initialize SwiftData ModelContainer: \(error)")
+            do {
+                // Create container with migration plan to handle schema evolution
+                modelContainer = try ModelContainer(
+                    for: schema,
+                    migrationPlan: QuranNoorMigrationPlan.self,
+                    configurations: [modelConfiguration]
+                )
+            } catch {
+                // Fallback to in-memory store if persistent storage fails
+                let fallbackConfig = ModelConfiguration(isStoredInMemoryOnly: true)
+                do {
+                    modelContainer = try ModelContainer(
+                        for: schema,
+                        migrationPlan: QuranNoorMigrationPlan.self,
+                        configurations: [fallbackConfig]
+                    )
+                } catch {
+                    fatalError("Failed to initialize even in-memory ModelContainer: \(error)")
+                }
+            }
         }
 
         // Migrate UserDefaults schema if needed
@@ -48,12 +71,11 @@ struct QuranNoorApp: App {
 
         // Register notification categories at app launch
         // This ensures categories exist before any notifications are scheduled
-        let notificationService = NotificationService()
-        notificationService.registerNotificationCategories()
+        NotificationService.shared.registerNotificationCategories()
 
-        // Initialize AudioService early to preload sound effects
-        // This ensures zero-latency audio playback for UI interactions
-        _ = AudioService.shared
+        // AudioService now uses lazy initialization — sounds are preloaded
+        // on first play() call, not at app startup. This avoids blocking launch
+        // with disk I/O and AVAudioSession activation.
 
         #if DEBUG
         // DEVELOPMENT ONLY: Uncomment the line below to reset onboarding for testing
@@ -77,12 +99,17 @@ struct QuranNoorApp: App {
     var body: some Scene {
         WindowGroup {
             ZStack {
+                // Immediate themed background — fills the window on the very first
+                // frame so there is never a bare black/white system background visible
+                // while child views are still loading.
+                themeManager.currentTheme.backgroundColor
+                    .ignoresSafeArea()
+
                 if hasCompletedOnboarding {
                     // Main app - scales up and fades in
                     ContentView()
                         .environment(themeManager)
                         .environment(deepLinkHandler)
-                        .preferredColorScheme(themeManager.colorScheme)
                         .transition(
                             .asymmetric(
                                 insertion: .scale(scale: 1.05).combined(with: .opacity),
@@ -103,9 +130,10 @@ struct QuranNoorApp: App {
                         .zIndex(2)
                 }
             }
+            .preferredColorScheme(themeManager.colorScheme)
             // Apply RTL layout direction based on current language (Arabic, Urdu)
             .environment(\.layoutDirection, localizationManager.layoutDirection)
-            .environmentObject(localizationManager)
+            .environment(localizationManager)
             // Inject SwiftData model container
             .modelContainer(modelContainer)
             .animation(.easeInOut(duration: 0.6), value: hasCompletedOnboarding)
@@ -116,6 +144,21 @@ struct QuranNoorApp: App {
             // Handle custom URL schemes (e.g., qurannoor://next-prayer)
             .onOpenURL { url in
                 _ = deepLinkHandler.handle(url: url)
+            }
+            // Handle scene phase changes
+            .onChange(of: scenePhase) { _, newPhase in
+                switch newPhase {
+                case .active:
+                    // Clear badge count when app becomes active
+                    UNUserNotificationCenter.current().setBadgeCount(0)
+                case .background:
+                    // Placeholder for future background tasks
+                    break
+                case .inactive:
+                    break
+                @unknown default:
+                    break
+                }
             }
             // Handle 3D Touch Quick Actions
             .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { userActivity in
@@ -154,8 +197,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         if let notificationType = userInfo["type"] as? String, notificationType == "prayer_time" {
             // Play Adhan audio when prayer time arrives (foreground)
             Task { @MainActor in
-                if let prayerName = userInfo["prayer"] as? String {
-                    print("🕌 Prayer time notification received in foreground: \(prayerName)")
+                if let _ = userInfo["prayer"] as? String {
                     await AdhanAudioService.shared.playAdhan()
                 }
             }
@@ -181,20 +223,18 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
                let prayer = PrayerName(rawValue: prayerName) {
                 Task { @MainActor in
                     PrayerCompletionService.shared.toggleCompletion(prayer)
-                    print("✅ Marked \(prayer.displayName) as prayed from notification")
                 }
             }
 
         case "SNOOZE_ACTION":
             // User snoozed the notification (could reschedule for 5 minutes later)
-            print("⏰ Prayer notification snoozed")
+            break
 
         case UNNotificationDefaultActionIdentifier:
             // User tapped the notification (default action)
             // Play Adhan and navigate to prayer tab
             Task { @MainActor in
-                if let prayerName = userInfo["prayer"] as? String {
-                    print("🕌 Opening app from prayer notification: \(prayerName)")
+                if let _ = userInfo["prayer"] as? String {
                     await AdhanAudioService.shared.playAdhan()
 
                     // Post notification to navigate to prayer tab

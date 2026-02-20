@@ -52,11 +52,11 @@ struct PrimaryButton: View {
                         .scaleEffect(0.8)
                 } else if let icon = icon {
                     Image(systemName: icon)
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.body.weight(.semibold))
                 }
 
                 Text(title)
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.body.weight(.semibold))
             }
             .foregroundColor(.white)
             .frame(maxWidth: .infinity)
@@ -64,7 +64,7 @@ struct PrimaryButton: View {
             .background(backgroundGradient)
             .cornerRadius(16)
             .shadow(
-                color: AppColors.primary.green.opacity(0.3),
+                color: themeManager.currentTheme.cardShadow,
                 radius: isPressed ? 5 : 10,
                 x: 0,
                 y: isPressed ? 2 : 4
@@ -74,6 +74,9 @@ struct PrimaryButton: View {
             .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isPressed)
         }
         .disabled(isDisabled || isLoading)
+        .accessibilityLabel(title)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityHint(isLoading ? "Loading" : "")
         .simultaneousGesture(
             DragGesture(minimumDistance: 0)
                 .onChanged { _ in
@@ -91,8 +94,8 @@ struct PrimaryButton: View {
     private var backgroundGradient: LinearGradient {
         LinearGradient(
             gradient: Gradient(colors: [
-                themeManager.currentTheme.featureAccent,
-                themeManager.currentTheme.featureAccentSecondary.opacity(0.8)
+                themeManager.currentTheme.accent,
+                themeManager.currentTheme.accentMuted.opacity(0.8)
             ]),
             startPoint: .leading,
             endPoint: .trailing

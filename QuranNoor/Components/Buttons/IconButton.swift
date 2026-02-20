@@ -7,10 +7,6 @@
 
 import SwiftUI
 
-#if canImport(UIKit)
-import UIKit
-#endif
-
 // MARK: - Icon Button Style
 enum IconButtonStyle {
     case primary    // Green gradient
@@ -28,6 +24,7 @@ struct IconButton: View {
     let size: CGFloat
     let action: () -> Void
     let isDisabled: Bool
+    let label: String?
 
     @State private var isPressed: Bool = false
 
@@ -37,12 +34,14 @@ struct IconButton: View {
         style: IconButtonStyle = .secondary,
         size: CGFloat = 44,
         isDisabled: Bool = false,
+        accessibilityLabel: String? = nil,
         action: @escaping () -> Void
     ) {
         self.icon = icon
         self.style = style
         self.size = size
         self.isDisabled = isDisabled
+        self.label = accessibilityLabel
         self.action = action
     }
 
@@ -81,6 +80,9 @@ struct IconButton: View {
             .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isPressed)
         }
         .disabled(isDisabled)
+        .accessibilityLabel(label ?? accessibilityLabelText)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityHint("Tap to activate")
         .simultaneousGesture(
             DragGesture(minimumDistance: 0)
                 .onChanged { _ in
@@ -94,15 +96,26 @@ struct IconButton: View {
         )
     }
 
+    // MARK: - Accessibility
+
+    private var accessibilityLabelText: String {
+        // Convert system icon name to readable label
+        // e.g., "heart.fill" -> "Heart", "bookmark.fill" -> "Bookmark"
+        let baseName = icon.replacingOccurrences(of: ".fill", with: "")
+            .replacingOccurrences(of: ".circle", with: "")
+            .replacingOccurrences(of: ".", with: " ")
+        return baseName.capitalized
+    }
+
     // MARK: - Style Computed Properties
     private var backgroundColor: Color {
         switch style {
         case .primary:
-            return AppColors.primary.green
+            return themeManager.currentTheme.accent
         case .secondary:
             return themeManager.currentTheme.cardColor
         case .accent:
-            return AppColors.primary.gold
+            return themeManager.currentTheme.accentMuted
         }
     }
 
@@ -111,7 +124,7 @@ struct IconButton: View {
         case .primary, .accent:
             return .white
         case .secondary:
-            return themeManager.currentTheme.textColor
+            return themeManager.currentTheme.textPrimary
         }
     }
 
@@ -123,8 +136,10 @@ struct IconButton: View {
         0
     }
 
+    @ScaledMetric private var iconSizeMultiplier: CGFloat = 0.45
+
     private var iconSize: CGFloat {
-        size * 0.45 // Icon is 45% of button size
+        size * iconSizeMultiplier // Icon is 45% of button size, scales with Dynamic Type
     }
 
     // MARK: - Neumorphic Shadows
@@ -157,11 +172,7 @@ struct IconButton: View {
     }
 
     private func triggerHapticFeedback() {
-        #if canImport(UIKit)
-        let haptic = UIImpactFeedbackGenerator(style: .light)
-        haptic.prepare()
-        haptic.impactOccurred()
-        #endif
+        HapticManager.shared.trigger(.light)
     }
 }
 

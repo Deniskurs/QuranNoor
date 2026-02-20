@@ -11,7 +11,7 @@ import SwiftUI
 struct SpiritualContentDetailSheet: View {
     @Environment(ThemeManager.self) var themeManager: ThemeManager
     @Environment(\.dismiss) var dismiss
-    @ObservedObject private var bookmarkService = SpiritualBookmarkService.shared
+    var bookmarkService = SpiritualBookmarkService.shared
 
     let content: IslamicQuote
     let icon: String
@@ -100,7 +100,7 @@ struct SpiritualContentDetailSheet: View {
                         }) {
                             Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
                                 .font(.system(size: 18))
-                                .foregroundColor(isBookmarked ? AppColors.primary.gold : accentColor)
+                                .foregroundColor(isBookmarked ? themeManager.currentTheme.accentMuted : accentColor)
                         }
 
                         // Share button
@@ -176,7 +176,7 @@ struct SpiritualContentDetailSheet: View {
         ),
         icon: "book.fill",
         title: "Verse of the Day",
-        accentColor: ThemeMode.light.featureAccent  // Theme-aware preview color
+        accentColor: ThemeMode.light.accent  // Theme-aware preview color
     )
     .environment(ThemeManager())
 }
@@ -191,7 +191,7 @@ struct SpiritualContentDetailSheet: View {
         ),
         icon: "text.quote",
         title: "Hadith of the Day",
-        accentColor: AppColors.primary.gold
+        accentColor: ThemeMode.dark.accentMuted
     )
     .environment({
         let manager = ThemeManager()

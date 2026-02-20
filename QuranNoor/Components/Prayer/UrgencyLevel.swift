@@ -55,9 +55,9 @@ enum UrgencyLevel: Int, Comparable, CaseIterable {
     func countdownColor(for theme: ThemeMode) -> Color {
         switch self {
         case .relaxed, .normal:
-            return theme.accentSecondary
+            return theme.accentMuted
         case .elevated:
-            return AppColors.primary.gold // #C7A566
+            return theme.accentMuted
         case .urgent:
             return Color.orange // System orange
         case .critical:
@@ -89,7 +89,7 @@ enum UrgencyLevel: Int, Comparable, CaseIterable {
         case .relaxed, .normal:
             return Color.clear
         case .elevated:
-            return AppColors.primary.gold.opacity(0.12)
+            return theme.accentMuted.opacity(0.12)
         case .urgent:
             return Color.orange.opacity(0.15)
         case .critical:
@@ -103,7 +103,7 @@ enum UrgencyLevel: Int, Comparable, CaseIterable {
         case .relaxed, .normal:
             return theme.textSecondary
         case .elevated:
-            return AppColors.primary.gold
+            return theme.accentMuted
         case .urgent:
             return Color.orange
         case .critical:

@@ -8,11 +8,13 @@
 import Foundation
 import CoreLocation
 import UserNotifications
-import Combine
+import Observation
 import UIKit
 
 /// Manages app permissions with status tracking and persistence
-final class PermissionManager: ObservableObject {
+@Observable
+@MainActor
+final class PermissionManager {
 
     // MARK: - Shared Instance
 
@@ -22,10 +24,10 @@ final class PermissionManager: ObservableObject {
     private static let decoder = JSONDecoder()
     private static let encoder = JSONEncoder()
 
-    // MARK: - Published State
+    // MARK: - Observable State
 
-    @Published var locationStatus: PermissionStatus = .notDetermined
-    @Published var notificationStatus: PermissionStatus = .notDetermined
+    var locationStatus: PermissionStatus = .notDetermined
+    var notificationStatus: PermissionStatus = .notDetermined
 
     // MARK: - Permission Status
 
@@ -56,7 +58,7 @@ final class PermissionManager: ObservableObject {
 
     private let locationService: LocationService
     private let userDefaults: UserDefaults
-    private var cancellables = Set<AnyCancellable>()
+    private var notificationObserver: NSObjectProtocol?
 
     // Persistence keys
     private let locationStatusKey = "permission_location_status"
@@ -79,12 +81,8 @@ final class PermissionManager: ObservableObject {
             // Observe system changes
             self.observeSystemChanges()
 
-            // Monitor location authorization changes
-            self.locationService.$authorizationStatus
-                .map { [weak self] status in
-                    self?.mapCLAuthStatus(status) ?? .notDetermined
-                }
-                .assign(to: &self.$locationStatus)
+            // Sync location status from LocationService
+            self.locationStatus = self.mapCLAuthStatus(self.locationService.authorizationStatus)
         }
     }
 
@@ -104,33 +102,23 @@ final class PermissionManager: ObservableObject {
         // Request permission
         locationService.requestLocationPermission()
 
-        // Wait for authorization change (with timeout)
-        return await withTaskGroup(of: PermissionStatus.self) { group in
-            // Timeout task (10 seconds)
-            group.addTask {
-                try? await Task.sleep(nanoseconds: 10_000_000_000)
-                return await self.checkLocationStatus()
-            }
+        // Wait for authorization to change from notDetermined using polling
+        // This avoids the race condition where withTaskGroup + timeout
+        // could misreport status while the user is still deciding
+        let startTime = Date()
+        let maxWait: TimeInterval = 60 // Give user up to 60s to decide
 
-            // Monitor status changes
-            group.addTask { @MainActor in
-                for await status in self.monitorLocationStatusChanges() {
-                    if status != .notDetermined {
-                        return status
-                    }
-                }
-                return await self.checkLocationStatus()
-            }
+        while Date().timeIntervalSince(startTime) < maxWait {
+            try? await Task.sleep(nanoseconds: 250_000_000) // 250ms intervals
 
-            // Return first result (safely unwrap)
-            guard let result = await group.next() else {
-                // Fallback: check current status if group returns nil
-                group.cancelAll()
-                return await checkLocationStatus()
+            let status = await checkLocationStatus()
+            if status != .notDetermined {
+                return status
             }
-            group.cancelAll()
-            return result
         }
+
+        // User didn't respond within timeout — return current status without forcing
+        return await checkLocationStatus()
     }
 
     /// Check current location permission status
@@ -160,24 +148,6 @@ final class PermissionManager: ObservableObject {
             return .granted
         @unknown default:
             return .notDetermined
-        }
-    }
-
-    /// Monitor location status changes
-    @MainActor
-    private func monitorLocationStatusChanges() -> AsyncStream<PermissionStatus> {
-        AsyncStream { continuation in
-            let cancellable = locationService.$authorizationStatus
-                .map { [weak self] clStatus in
-                    self?.mapCLAuthStatus(clStatus) ?? .notDetermined
-                }
-                .sink { status in
-                    continuation.yield(status)
-                }
-
-            continuation.onTermination = { _ in
-                cancellable.cancel()
-            }
         }
     }
 
@@ -218,7 +188,9 @@ final class PermissionManager: ObservableObject {
 
                     return status
                 } catch {
+                    #if DEBUG
                     print("⚠️ Notification permission error: \(error)")
+                    #endif
                     let status: PermissionStatus = .denied
                     await MainActor.run {
                         self.notificationStatus = status
@@ -231,7 +203,9 @@ final class PermissionManager: ObservableObject {
             // Timeout task (10 seconds - should never hit this, but safety measure)
             group.addTask {
                 try? await Task.sleep(nanoseconds: 10_000_000_000)
+                #if DEBUG
                 print("⚠️ Notification permission request timed out")
+                #endif
                 return await self.checkNotificationStatus()
             }
 
@@ -273,7 +247,9 @@ final class PermissionManager: ObservableObject {
     /// Open iOS Settings app
     func openSettings() {
         guard let settingsURL = URL(string: UIApplication.openSettingsURLString) else {
+            #if DEBUG
             print("⚠️ Unable to create settings URL")
+            #endif
             return
         }
 
@@ -284,7 +260,9 @@ final class PermissionManager: ObservableObject {
                 print("🔧 Opening Settings app")
                 #endif
             } else {
+                #if DEBUG
                 print("⚠️ Cannot open settings URL")
+                #endif
             }
         }
     }
@@ -328,14 +306,16 @@ final class PermissionManager: ObservableObject {
     private func observeSystemChanges() {
         // Re-check permissions when app becomes active
         // (user may have changed settings in iOS Settings app)
-        NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)
-            .sink { [weak self] _ in
-                Task { @MainActor [weak self] in
-                    _ = await self?.checkLocationStatus()
-                    _ = await self?.checkNotificationStatus()
-                }
+        notificationObserver = NotificationCenter.default.addObserver(
+            forName: UIApplication.didBecomeActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                _ = await self?.checkLocationStatus()
+                _ = await self?.checkNotificationStatus()
             }
-            .store(in: &cancellables)
+        }
     }
 
     // MARK: - Diagnostic Methods

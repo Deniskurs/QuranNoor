@@ -7,7 +7,7 @@
 //
 
 import Foundation
-import Combine
+
 
 @MainActor
 class IslamicContentService {
@@ -422,7 +422,9 @@ class IslamicContentService {
             return translation.text
 
         } catch {
+            #if DEBUG
             print("⚠️ Failed to fetch verse \(surah):\(verse) from QuranService: \(error.localizedDescription)")
+            #endif
 
             // Fallback to generic prayer verse
             return "Establish prayer, for prayer has been enjoined upon the believers at fixed times."

@@ -13,15 +13,18 @@ struct HomeView: View {
     @Environment(ThemeManager.self) var themeManager: ThemeManager
     @Binding var selectedTab: Int
 
-    // MARK: - ViewModels
+    // MARK: - Shared ViewModels (injected from ContentView - single source of truth)
+    var prayerVM: PrayerViewModel
+    var quranVM: QuranViewModel
+
+    // MARK: - Local ViewModels (owned by this view)
     @State private var homeVM = HomeViewModel()
-    @State private var prayerVM = PrayerViewModel()
-    @State private var quranVM = QuranViewModel()
 
     // MARK: - State
     @State private var isInitialized = false
     @State private var showFirstTimeExperience = false
     @State private var showWelcomeMoment = false
+    @State private var lastStatsCalculation: Date = .distantPast
 
     // MARK: - Body
     var body: some View {
@@ -70,6 +73,11 @@ struct HomeView: View {
             // Real-time update: recalculate stats when user reads verses
             guard newValue != nil else { return }
 
+            // Throttle: only recalculate if at least 5 seconds since last calculation
+            let now = Date()
+            guard now.timeIntervalSince(lastStatsCalculation) >= 5 else { return }
+            lastStatsCalculation = now
+
             homeVM.dailyStats = homeVM.calculateDailyStats(
                 from: quranVM,
                 prayerVM: prayerVM
@@ -77,10 +85,6 @@ struct HomeView: View {
 
             // Update cache with fresh data
             homeVM.cacheHomeData()
-
-            #if DEBUG
-            print("🔄 [HomeView] Progress updated - recalculated stats")
-            #endif
         }
     }
 
@@ -110,9 +114,9 @@ struct HomeView: View {
                         showFirstTimeExperience = false
                     }
 
-                    // Show welcome moment after brief delay
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                        // Check if welcome moment hasn't been seen
+                    // Show welcome moment after brief delay (lifecycle-safe)
+                    Task { @MainActor in
+                        try? await Task.sleep(for: .milliseconds(500))
                         let hasSeenWelcome = UserDefaults.standard.bool(forKey: "hasSeenWelcomeMoment")
                         if !hasSeenWelcome {
                             withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
@@ -134,115 +138,73 @@ struct HomeView: View {
     // MARK: - Regular Content
     private var regularContent: some View {
         ScrollView {
-            LazyVStack(spacing: Spacing.sectionSpacing) { // Enhanced from 20 to 32
-                // Header with greeting and Hijri date
+            LazyVStack(spacing: Spacing.sectionSpacing) {
+                // Header with greeting and Hijri date (always visible immediately)
                 HomeHeaderView(
                     greeting: homeVM.greeting,
                     hijriDate: homeVM.currentHijriDate
                 )
-                .transition(.move(edge: .top).combined(with: .opacity))
 
-                // Next prayer card (HERO SECTION - enhanced visual hierarchy)
+                // Next prayer card (HERO SECTION — shows loading state internally)
                 NextPrayerCardView(prayerVM: prayerVM, selectedTab: $selectedTab)
-                    .scaleEffect(1.02) // Slightly larger to draw attention
-                    .shadow(color: themeManager.currentTheme.featureAccent.opacity(0.15), radius: 12, x: 0, y: 8)
-                    .transition(.scale.combined(with: .opacity))
 
                 // Spiritual nourishment carousel
                 SpiritualNourishmentCarousel(
                     verseOfDay: homeVM.verseOfDay,
                     hadithOfDay: homeVM.hadithOfDay
                 )
-                .transition(.move(edge: .leading).combined(with: .opacity))
 
-                // Quick actions grid (moved up for easier access)
-                if let stats = homeVM.dailyStats {
-                    QuickActionsGrid(
-                        selectedTab: $selectedTab,
-                        lastReadLocation: stats.lastReadLocation
-                    )
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                }
+                // Quick actions grid (always show — uses default location if stats not ready)
+                QuickActionsGrid(
+                    selectedTab: $selectedTab,
+                    lastReadLocation: homeVM.dailyStats?.lastReadLocation
+                )
 
                 // Reading progress card
                 if let stats = homeVM.dailyStats {
                     ReadingProgressCard(stats: stats) {
-                        // Switch to Quran tab when Continue is tapped
                         selectedTab = 1
                         HapticManager.shared.trigger(.light)
                     }
-                    .transition(.scale.combined(with: .opacity))
                 }
 
-                // Hijri calendar card
-                HijriCalendarCard(hijriDate: homeVM.currentHijriDate)
-                    .transition(.scale.combined(with: .opacity))
-
-                // Adhkar quick access
-                AdhkarQuickAccessCard()
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                // Daily stats row
+                if let stats = homeVM.dailyStats {
+                    DailyStatsRow(stats: stats)
+                }
             }
-            .padding(.horizontal, Spacing.screenHorizontal) // 24pt edge spacing for all cards
-            .padding(.vertical, Spacing.md) // Enhanced with specific spacing (24pt)
-            .animation(.spring(response: 0.5, dampingFraction: 0.8), value: isInitialized)
+            .padding(.horizontal, Spacing.screenHorizontal)
+            .padding(.vertical, Spacing.md)
         }
-        .overlay {
-            if homeVM.isLoading && !isInitialized {
-                loadingOverlay
-            }
-        }
-    }
-
-    // MARK: - Loading Overlay
-    private var loadingOverlay: some View {
-        ZStack {
-            themeManager.currentTheme.backgroundColor.opacity(0.95)
-                .ignoresSafeArea()
-
-            VStack(spacing: 20) {
-                ProgressView()
-                    .scaleEffect(1.5)
-                    .tint(themeManager.currentTheme.featureAccent)
-
-                Text("Preparing your spiritual journey...")
-                    .font(.subheadline)
-                    .foregroundColor(themeManager.currentTheme.textSecondary)
-            }
-        }
-        .transition(.opacity)
     }
 
     // MARK: - Data Loading
 
-    /// Initialize home page data
+    /// Initialize home page data — UI is shown immediately, data loads in background
     private func initialize() async {
         // Check if this is first launch
         checkFirstTimeUser()
 
         guard !showFirstTimeExperience else { return }
+        guard !isInitialized else { return }
 
-        homeVM.isLoading = true
+        // Load cached data first (instant, synchronous) so UI has content immediately
+        homeVM.updateGreeting()
 
-        // Initialize ViewModels in parallel
+        // Initialize ViewModels in parallel (non-blocking — UI is already visible)
         await withTaskGroup(of: Void.self) { group in
             group.addTask { await self.prayerVM.initialize() }
             group.addTask { await self.quranVM.loadSurahs() }
+            group.addTask { await self.homeVM.initialize() }
         }
 
-        // Initialize HomeViewModel with calculated stats
-        await homeVM.initialize()
-
-        // Calculate daily stats from other ViewModels
-        // ALWAYS recalculate to ensure fresh data (overwrites any stale cached data)
+        // Calculate daily stats from loaded ViewModels
         homeVM.dailyStats = homeVM.calculateDailyStats(
             from: quranVM,
             prayerVM: prayerVM
         )
 
-        // Cache the fresh stats
         homeVM.cacheHomeData()
-
-        homeVM.isLoading = false
         isInitialized = true
     }
 
@@ -280,7 +242,7 @@ struct HomeView: View {
     @Previewable @State var selectedTab = 0
 
     TabView(selection: $selectedTab) {
-        HomeView(selectedTab: $selectedTab)
+        HomeView(selectedTab: $selectedTab, prayerVM: PrayerViewModel(), quranVM: QuranViewModel())
             .environment(ThemeManager())
             .tabItem {
                 Label("Home", systemImage: "house.fill")
@@ -293,7 +255,7 @@ struct HomeView: View {
     @Previewable @State var selectedTab = 0
 
     TabView(selection: $selectedTab) {
-        HomeView(selectedTab: $selectedTab)
+        HomeView(selectedTab: $selectedTab, prayerVM: PrayerViewModel(), quranVM: QuranViewModel())
             .environment({
                 let manager = ThemeManager()
                 manager.setTheme(.dark)
@@ -310,7 +272,7 @@ struct HomeView: View {
     @Previewable @State var selectedTab = 0
 
     TabView(selection: $selectedTab) {
-        HomeView(selectedTab: $selectedTab)
+        HomeView(selectedTab: $selectedTab, prayerVM: PrayerViewModel(), quranVM: QuranViewModel())
             .environment({
                 let manager = ThemeManager()
                 manager.setTheme(.night)
@@ -327,7 +289,7 @@ struct HomeView: View {
     @Previewable @State var selectedTab = 0
 
     TabView(selection: $selectedTab) {
-        HomeView(selectedTab: $selectedTab)
+        HomeView(selectedTab: $selectedTab, prayerVM: PrayerViewModel(), quranVM: QuranViewModel())
             .environment({
                 let manager = ThemeManager()
                 manager.setTheme(.sepia)

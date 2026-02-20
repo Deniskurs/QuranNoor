@@ -248,8 +248,8 @@ enum EventCategory: String, CaseIterable, Identifiable, Codable {
 
 /// User's interaction with the Islamic calendar
 struct CalendarProgress: Codable {
-    var notifiedEvents: Set<UUID>  // Events user has been notified about
-    var favoriteEvents: Set<UUID>  // Events marked as favorite
+    var notifiedEvents: Set<String>  // Stable event keys (e.g., "1-10-Day of Ashura")
+    var favoriteEvents: Set<String>  // Stable event keys marked as favorite
     var lastViewedDate: Date?
     var enableNotifications: Bool
 
@@ -260,24 +260,29 @@ struct CalendarProgress: Codable {
         self.enableNotifications = true
     }
 
-    mutating func toggleFavorite(eventId: UUID) {
-        if favoriteEvents.contains(eventId) {
-            favoriteEvents.remove(eventId)
+    /// Derive a stable string key from an IslamicEvent
+    static func stableKey(for event: IslamicEvent) -> String {
+        "\(event.month.rawValue)-\(event.day)-\(event.name)"
+    }
+
+    mutating func toggleFavorite(eventKey: String) {
+        if favoriteEvents.contains(eventKey) {
+            favoriteEvents.remove(eventKey)
         } else {
-            favoriteEvents.insert(eventId)
+            favoriteEvents.insert(eventKey)
         }
     }
 
-    func isFavorite(eventId: UUID) -> Bool {
-        favoriteEvents.contains(eventId)
+    func isFavorite(eventKey: String) -> Bool {
+        favoriteEvents.contains(eventKey)
     }
 
-    mutating func markAsNotified(eventId: UUID) {
-        notifiedEvents.insert(eventId)
+    mutating func markAsNotified(eventKey: String) {
+        notifiedEvents.insert(eventKey)
     }
 
-    func hasBeenNotified(eventId: UUID) -> Bool {
-        notifiedEvents.contains(eventId)
+    func hasBeenNotified(eventKey: String) -> Bool {
+        notifiedEvents.contains(eventKey)
     }
 }
 

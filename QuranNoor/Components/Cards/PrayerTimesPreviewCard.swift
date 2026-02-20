@@ -152,7 +152,7 @@ struct PrayerTimesPreviewCard: View {
         backgroundColor: Color(hex: "#F8F4EA"),
         cardColor: .white,
         textColor: Color(hex: "#1A2332"),
-        accentColor: ThemeMode.light.featureAccent
+        accentColor: ThemeMode.light.accent
     ))
     .padding()
     .background(Color(hex: "#F8F4EA"))
@@ -164,7 +164,7 @@ struct PrayerTimesPreviewCard: View {
         backgroundColor: Color(hex: "#1A2332"),
         cardColor: Color(hex: "#2A3442"),
         textColor: Color(hex: "#F8F4EA"),
-        accentColor: AppColors.primary.green
+        accentColor: ThemeMode.dark.accent
     ))
     .padding()
     .background(Color(hex: "#1A2332"))
@@ -176,7 +176,7 @@ struct PrayerTimesPreviewCard: View {
         backgroundColor: .black,
         cardColor: Color(hex: "#1A1A1A"),
         textColor: Color(hex: "#E5E5E5"),
-        accentColor: AppColors.primary.gold
+        accentColor: ThemeMode.night.accentMuted
     ))
     .padding()
     .background(Color.black)

@@ -49,7 +49,9 @@ final class OnboardingStorage: OnboardingStorageProtocol {
             print("💾 Onboarding state saved: step \(state.currentStep.rawValue)")
             #endif
         } catch {
+            #if DEBUG
             print("⚠️ Failed to save onboarding state: \(error)")
+            #endif
         }
     }
 
@@ -82,7 +84,9 @@ final class OnboardingStorage: OnboardingStorageProtocol {
 
             return state
         } catch {
+            #if DEBUG
             print("⚠️ Failed to load onboarding state: \(error)")
+            #endif
             clearState() // Clear corrupted data
             return nil
         }
@@ -151,8 +155,6 @@ final class UserDefaultsMigrator {
             return
         }
 
-        print("📦 Migrating UserDefaults from v\(currentVersion) to v\(targetVersion)")
-
         // Apply migrations sequentially
         if currentVersion < Version.v2.rawValue {
             migrateToV2()
@@ -164,31 +166,17 @@ final class UserDefaultsMigrator {
 
         // Save new version
         userDefaults.set(targetVersion, forKey: versionKey)
-        print("✅ UserDefaults migration complete")
     }
 
     private func migrateToV2() {
-        print("📦 Migrating to v2: Adding permission persistence")
-
-        // Migrate old permission flags if they exist
-        _ = userDefaults.bool(forKey: "hasLocationPermission")
-        _ = userDefaults.bool(forKey: "hasNotificationPermission")
-
-        // These will be handled by PermissionManager going forward
-        // Just clean up old keys
+        // Clean up old permission flags — now handled by PermissionManager
         userDefaults.removeObject(forKey: "hasLocationPermission")
         userDefaults.removeObject(forKey: "hasNotificationPermission")
-
-        print("✅ v2 migration complete")
     }
 
     private func migrateToV3() {
-        print("📦 Migrating to v3: Adding resume state")
-
         // No specific migration needed - new fields have defaults
         // Old OnboardingState will decode with missing fields as nil
-
-        print("✅ v3 migration complete")
     }
 }
 

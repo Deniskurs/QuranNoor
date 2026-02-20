@@ -15,7 +15,7 @@ struct EventDetailView: View {
     @Environment(\.dismiss) private var dismiss
 
     private var isFavorite: Bool {
-        calendarService.isFavorite(eventId: event.id)
+        calendarService.isFavorite(event: event)
     }
 
     var body: some View {
@@ -54,7 +54,7 @@ struct EventDetailView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         withAnimation {
-                            calendarService.toggleFavorite(eventId: event.id)
+                            calendarService.toggleFavorite(event: event)
                         }
                     } label: {
                         Image(systemName: isFavorite ? "heart.fill" : "heart")
@@ -165,7 +165,7 @@ struct EventDetailView: View {
         VStack(spacing: 12) {
             HStack {
                 Image(systemName: "text.alignleft")
-                    .foregroundStyle(themeManager.currentTheme.featureAccent)
+                    .foregroundStyle(themeManager.currentTheme.accent)
                 Text("Description")
                     .font(.headline)
                 Spacer()
@@ -179,7 +179,7 @@ struct EventDetailView: View {
         .padding()
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(themeManager.currentTheme.featureBackgroundTint)
+                .fill(themeManager.currentTheme.accentTint)
         )
     }
 

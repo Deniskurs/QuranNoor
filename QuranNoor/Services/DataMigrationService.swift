@@ -38,11 +38,8 @@ final class DataMigrationService {
     func migrateIfNeeded(context: ModelContext) async -> (versesMigrated: Int, bookmarksMigrated: Int) {
         // Check if migration already completed
         guard !isMigrationComplete else {
-            print("ℹ️ SwiftData migration already complete - skipping")
             return (0, 0)
         }
-
-        print("🔄 Starting SwiftData migration from UserDefaults...")
 
         var versesMigrated = 0
         var bookmarksMigrated = 0
@@ -56,17 +53,13 @@ final class DataMigrationService {
         // Save changes
         do {
             try context.save()
-            print("✅ SwiftData migration saved successfully")
 
             // Mark migration as complete
             UserDefaults.standard.set(true, forKey: migrationCompleteKey)
-
-            // Clean up old UserDefaults data (optional - keep for backup)
-            // cleanupOldData()
-
-            print("✅ Migration complete: \(versesMigrated) verses, \(bookmarksMigrated) bookmarks")
         } catch {
+            #if DEBUG
             print("❌ Failed to save SwiftData migration: \(error)")
+            #endif
         }
 
         return (versesMigrated, bookmarksMigrated)
@@ -77,7 +70,6 @@ final class DataMigrationService {
     /// Migrate reading progress from UserDefaults to SwiftData
     private func migrateReadingProgress(context: ModelContext) async -> Int {
         guard let data = UserDefaults.standard.data(forKey: progressKey) else {
-            print("ℹ️ No reading progress data to migrate")
             return 0
         }
 
@@ -95,16 +87,13 @@ final class DataMigrationService {
                 context.insert(record)
                 count += 1
 
-                // Log progress every 500 verses
-                if count % 500 == 0 {
-                    print("   Migrated \(count) verses...")
-                }
             }
 
-            print("✅ Migrated reading progress: \(count) verses, streak: \(progress.streakDays) days")
             return count
         } catch {
+            #if DEBUG
             print("❌ Failed to decode reading progress for migration: \(error)")
+            #endif
             return 0
         }
     }
@@ -112,7 +101,6 @@ final class DataMigrationService {
     /// Migrate bookmarks from UserDefaults to SwiftData
     private func migrateBookmarks(context: ModelContext) async -> Int {
         guard let data = UserDefaults.standard.data(forKey: bookmarksKey) else {
-            print("ℹ️ No bookmarks data to migrate")
             return 0
         }
 
@@ -124,10 +112,11 @@ final class DataMigrationService {
                 context.insert(record)
             }
 
-            print("✅ Migrated \(bookmarks.count) bookmarks")
             return bookmarks.count
         } catch {
+            #if DEBUG
             print("❌ Failed to decode bookmarks for migration: \(error)")
+            #endif
             return 0
         }
     }
@@ -137,7 +126,6 @@ final class DataMigrationService {
     private func cleanupOldData() {
         UserDefaults.standard.removeObject(forKey: progressKey)
         UserDefaults.standard.removeObject(forKey: bookmarksKey)
-        print("🗑️ Cleaned up old UserDefaults data")
     }
 
     // MARK: - Utility Methods
@@ -145,7 +133,6 @@ final class DataMigrationService {
     /// Reset migration status (for debugging only)
     func resetMigration() {
         UserDefaults.standard.removeObject(forKey: migrationCompleteKey)
-        print("⚠️ Migration status reset - will re-migrate on next launch")
     }
 
     /// Get migration statistics without performing migration

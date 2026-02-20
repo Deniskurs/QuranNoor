@@ -147,18 +147,18 @@ extension View {
 
 extension Animation {
 
-    /// Smooth animation for iOS 26
-    static var smooth: Animation {
+    /// Custom smooth animation (renamed to avoid shadowing SwiftUI's built-in .smooth)
+    static var smoothCustom: Animation {
         .timingCurve(0.4, 0.0, 0.2, 1.0, duration: 0.3)
     }
 
-    /// Smooth animation with custom duration
-    static func smooth(duration: Double) -> Animation {
+    /// Custom smooth animation with custom duration (renamed to avoid shadowing SwiftUI's built-in .smooth(duration:))
+    static func smoothCustom(duration: Double) -> Animation {
         .timingCurve(0.4, 0.0, 0.2, 1.0, duration: duration)
     }
 
-    /// Snappy animation for quick interactions
-    static var snappy: Animation {
+    /// Custom snappy animation for quick interactions (renamed to avoid shadowing SwiftUI's built-in .snappy)
+    static var snappyCustom: Animation {
         .timingCurve(0.5, 0.0, 0.0, 1.0, duration: 0.2)
     }
 
