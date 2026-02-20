@@ -2,7 +2,9 @@
 //  AudioPlayerView.swift
 //  QuranNoor
 //
-//  Beautiful audio player for Quran recitations
+//  Immersive full-screen audio player for Quran recitations.
+//  Designed as a sacred reading experience with Arabic calligraphy
+//  as the visual centerpiece.
 //
 
 import SwiftUI
@@ -10,391 +12,539 @@ import SwiftUI
 struct AudioPlayerView: View {
     @Environment(ThemeManager.self) var themeManager: ThemeManager
     @State private var audioService = QuranAudioService.shared
-    @State private var showingReciterSelector = false
     @State private var isSeeking = false
+    @State private var currentTranslation: Translation?
+    @State private var surahName: String = ""
 
-    let verse: Verse
-    let allVerses: [Verse]? // Optional: All verses in surah for continuous playback
+    private let quranService = QuranService.shared
+
     let onClose: () -> Void
 
+    private var verse: Verse? { audioService.currentVerse }
+
     var body: some View {
-        VStack(spacing: 0) {
-            // Drag indicator
-            Capsule()
-                .fill(Color.secondary.opacity(0.3))
-                .frame(width: 40, height: 5)
-                .padding(.top, 12)
-                .padding(.bottom, 8)
+        let theme = themeManager.currentTheme
 
-            ScrollView {
-                VStack(spacing: 24) {
-                    // Header
-                    headerSection
+        ZStack(alignment: .top) {
+            theme.backgroundColor.ignoresSafeArea()
+            GradientBackground(style: .quran, opacity: 0.3)
 
-                    // Audio Waveform Visualization (placeholder)
-                    waveformVisualization
-
-                    // Progress Slider
-                    progressSection
-
-                    // Playback Controls
-                    playbackControls
-
-                    // Additional Controls
-                    additionalControls
+            VStack(spacing: 0) {
+                if let verse = verse {
+                    playerContent(verse: verse, theme: theme)
+                } else {
+                    emptyState(theme: theme)
                 }
-                .padding(20)
             }
         }
-        .background(themeManager.currentTheme.backgroundColor)
+        .onChange(of: audioService.currentVerse) { _, newVerse in
+            loadTranslation(for: newVerse)
+            loadSurahName(for: newVerse)
+        }
         .onAppear {
-            Task {
-                do {
-                    // If all verses provided and continuous playback enabled, play queue
-                    if let allVerses = allVerses,
-                       audioService.continuousPlaybackEnabled,
-                       let startIndex = allVerses.firstIndex(where: { $0.id == verse.id }) {
-                        try await audioService.playVerses(allVerses, startingAt: startIndex)
-                    } else {
-                        try await audioService.play(verse: verse)
-                    }
-                } catch {
-                    print("Failed to play: \(error)")
-                }
+            loadTranslation(for: verse)
+            loadSurahName(for: verse)
+        }
+    }
+
+    // MARK: - Top-Level Sections
+
+    private func playerContent(verse: Verse, theme: ThemeMode) -> some View {
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: Spacing.md) {
+                closeButton(theme: theme)
+                arabicCard(verse: verse, theme: theme)
+                errorBanner(verse: verse, theme: theme)
+                translationText(theme: theme)
+                verseInfo(verse: verse, theme: theme)
+                progressBar(theme: theme)
+                transportControls(theme: theme)
+                bottomRow(theme: theme)
             }
+            .padding(.horizontal, Spacing.screenHorizontal)
+            .padding(.bottom, Spacing.xl)
         }
-        .onDisappear {
-            audioService.stop()
+    }
+
+    private func emptyState(theme: ThemeMode) -> some View {
+        VStack(spacing: Spacing.md) {
+            Spacer()
+            emptyIcon(theme: theme)
+            emptyLabel(theme: theme)
+            emptyInstructions(theme: theme)
+            closeButtonForEmpty(theme: theme)
+            Spacer()
         }
-        .sheet(isPresented: $showingReciterSelector) {
-            ReciterSelectorView(currentReciter: audioService.selectedReciter) { reciter in
-                // Reciter already saved in ReciterSelectorView
-                // Could restart playback with new reciter if desired
+    }
+
+    // MARK: - Drag Indicator
+
+    private func dragIndicator(theme: ThemeMode) -> some View {
+        Capsule()
+            .fill(theme.textSecondary.opacity(0.3))
+            .frame(width: 36, height: 4)
+            .padding(.top, Spacing.xs)
+            .padding(.bottom, Spacing.xxs)
+    }
+
+    // MARK: - Close Button
+
+    private func closeButton(theme: ThemeMode) -> some View {
+        HStack {
+            Spacer()
+            Button { onClose() } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: FontSizes.sm, weight: .medium))
+                    .foregroundColor(theme.textTertiary)
+                    .frame(width: 32, height: 32)
+                    .background(Circle().fill(theme.cardColor))
             }
         }
     }
 
-    // MARK: - Header Section
-    private var headerSection: some View {
-        VStack(spacing: 12) {
-            // Verse info
-            VStack(spacing: 6) {
-                Text("Surah \(verse.surahNumber)")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
+    // MARK: - Arabic Calligraphy Card
 
-                Text("Verse \(verse.verseNumber)")
-                    .font(.system(size: 28, weight: .bold))
-                    .foregroundColor(themeManager.currentTheme.textColor)
+    private func arabicCard(verse: Verse, theme: ThemeMode) -> some View {
+        VStack(spacing: 0) {
+            arabicText(verse: verse, theme: theme)
+        }
+        .background(arabicCardBackground(theme: theme))
+        .animation(.easeInOut(duration: 0.3), value: verse.id)
+    }
+
+    private func arabicText(verse: Verse, theme: ThemeMode) -> some View {
+        Text(verse.text)
+            .font(.custom("KFGQPC HAFS Uthmanic Script Regular", size: 30))
+            .foregroundColor(theme.textPrimary)
+            .multilineTextAlignment(.center)
+            .lineSpacing(16)
+            .environment(\.layoutDirection, .rightToLeft)
+            .padding(.horizontal, Spacing.md)
+            .padding(.vertical, Spacing.lg)
+            .frame(maxWidth: .infinity)
+            .transition(.opacity)
+            .id(verse.id)
+    }
+
+    private func arabicCardBackground(theme: ThemeMode) -> some View {
+        RoundedRectangle(cornerRadius: BorderRadius.xl)
+            .fill(theme.cardColor)
+            .overlay(
+                RoundedRectangle(cornerRadius: BorderRadius.xl)
+                    .stroke(theme.accent.opacity(0.15), lineWidth: 0.5)
+            )
+            .shadow(color: theme.cardShadow, radius: theme.cardShadowRadius / 2, x: 0, y: 2)
+    }
+
+    // MARK: - Translation
+
+    private func translationText(theme: ThemeMode) -> some View {
+        Group {
+            if let translation = currentTranslation {
+                Text(translation.text)
+                    .font(.system(size: FontSizes.sm))
+                    .foregroundColor(theme.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(6)
+                    .padding(.horizontal, Spacing.xxs)
+                    .transition(.opacity)
+                    .animation(.easeInOut(duration: 0.3), value: currentTranslation?.id)
             }
+        }
+    }
 
-            // Reciter selector button
-            Button {
-                showingReciterSelector = true
-            } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "person.wave.2")
-                        .font(.system(size: 14))
-                    Text(audioService.selectedReciter.displayName)
-                        .font(.system(size: 15, weight: .medium))
-                    Image(systemName: "chevron.down")
-                        .font(.system(size: 12, weight: .semibold))
+    // MARK: - Verse Info
+
+    private func verseInfo(verse: Verse, theme: ThemeMode) -> some View {
+        VStack(spacing: Spacing.xxxs) {
+            surahLabel(theme: theme)
+            versePositionLabel(verse: verse, theme: theme)
+        }
+    }
+
+    private func surahLabel(theme: ThemeMode) -> some View {
+        Text(surahName.isEmpty ? "" : surahName)
+            .font(.system(size: FontSizes.xs, weight: .semibold))
+            .foregroundColor(theme.accent)
+            .textCase(.uppercase)
+            .tracking(1.2)
+    }
+
+    private func versePositionLabel(verse: Verse, theme: ThemeMode) -> some View {
+        Group {
+            if audioService.continuousPlaybackEnabled && !audioService.playingVerses.isEmpty {
+                Text("Verse \(verse.verseNumber) of \(audioService.playingVerses.count)")
+                    .font(.system(size: FontSizes.sm))
+                    .foregroundColor(theme.textTertiary)
+            } else {
+                Text("Verse \(verse.verseNumber)")
+                    .font(.system(size: FontSizes.sm))
+                    .foregroundColor(theme.textTertiary)
+            }
+        }
+    }
+
+    // MARK: - Progress Bar
+
+    private func progressBar(theme: ThemeMode) -> some View {
+        VStack(spacing: Spacing.xxs) {
+            progressTrack(theme: theme)
+            progressTimeLabels(theme: theme)
+        }
+        .padding(.top, Spacing.xxs)
+    }
+
+    private func progressTrack(theme: ThemeMode) -> some View {
+        GeometryReader { geometry in
+            let progress = audioService.duration > 0
+                ? CGFloat(audioService.currentTime / audioService.duration)
+                : 0
+
+            ZStack(alignment: .leading) {
+                trackBackground(theme: theme)
+                trackFill(width: geometry.size.width * progress, theme: theme)
+            }
+            .frame(height: 4)
+            .clipShape(Capsule())
+            .contentShape(Rectangle().inset(by: -12))
+            .gesture(seekGesture(in: geometry.size.width))
+        }
+        .frame(height: 4)
+    }
+
+    private func trackBackground(theme: ThemeMode) -> some View {
+        Capsule()
+            .fill(theme.textSecondary.opacity(0.12))
+            .frame(height: 4)
+    }
+
+    private func trackFill(width: CGFloat, theme: ThemeMode) -> some View {
+        Capsule()
+            .fill(theme.accent)
+            .frame(width: max(0, width), height: 4)
+            .animation(isSeeking ? nil : .linear(duration: 0.24), value: audioService.currentTime)
+    }
+
+    private func seekGesture(in totalWidth: CGFloat) -> some Gesture {
+        DragGesture(minimumDistance: 0)
+            .onChanged { value in
+                isSeeking = true
+                let ratio = Double(value.location.x / totalWidth)
+                let newTime = ratio * audioService.duration
+                audioService.seek(to: max(0, min(newTime, audioService.duration)))
+            }
+            .onEnded { _ in
+                isSeeking = false
+            }
+    }
+
+    private func progressTimeLabels(theme: ThemeMode) -> some View {
+        HStack {
+            Text(audioService.currentTime.formattedPlaybackTime)
+                .font(.system(size: FontSizes.xs, weight: .medium))
+                .foregroundColor(theme.textTertiary)
+                .monospacedDigit()
+            Spacer()
+            Text(audioService.duration.formattedPlaybackTime)
+                .font(.system(size: FontSizes.xs, weight: .medium))
+                .foregroundColor(theme.textTertiary)
+                .monospacedDigit()
+        }
+    }
+
+    // MARK: - Transport Controls
+
+    private func transportControls(theme: ThemeMode) -> some View {
+        HStack(spacing: Spacing.lg) {
+            previousButton(theme: theme)
+            playPauseButton(theme: theme)
+            nextButton(theme: theme)
+        }
+        .padding(.vertical, Spacing.xxs)
+    }
+
+    private func previousButton(theme: ThemeMode) -> some View {
+        Button {
+            Task { try? await audioService.playPreviousVerse() }
+        } label: {
+            Image(systemName: "backward.end.fill")
+                .font(.title3)
+                .foregroundColor(theme.textPrimary.opacity(previousDisabled ? 0.25 : 0.7))
+        }
+        .disabled(previousDisabled)
+        .frame(width: Spacing.tapTarget, height: Spacing.tapTarget)
+    }
+
+    private func nextButton(theme: ThemeMode) -> some View {
+        Button {
+            Task { try? await audioService.playNextVerse() }
+        } label: {
+            Image(systemName: "forward.end.fill")
+                .font(.title3)
+                .foregroundColor(theme.textPrimary.opacity(nextDisabled ? 0.25 : 0.7))
+        }
+        .disabled(nextDisabled)
+        .frame(width: Spacing.tapTarget, height: Spacing.tapTarget)
+    }
+
+    private func playPauseButton(theme: ThemeMode) -> some View {
+        Button {
+            audioService.togglePlayPause()
+        } label: {
+            playPauseIcon(theme: theme)
+        }
+        .scaleEffect(audioService.playbackState.isPlaying ? 1.0 : 0.95)
+        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: audioService.playbackState.isPlaying)
+    }
+
+    private func playPauseIcon(theme: ThemeMode) -> some View {
+        ZStack {
+            Circle()
+                .fill(theme.accent)
+                .frame(width: 64, height: 64)
+
+            Group {
+                if case .loading = audioService.playbackState {
+                    ProgressView()
+                        .scaleEffect(1.0)
+                        .tint(.white)
+                } else if case .buffering = audioService.playbackState {
+                    ProgressView()
+                        .scaleEffect(1.0)
+                        .tint(.white)
+                } else {
+                    Image(systemName: audioService.playbackState.isPlaying ? "pause.fill" : "play.fill")
+                        .font(.title.weight(.regular))
+                        .foregroundColor(.white)
+                        .offset(x: audioService.playbackState.isPlaying ? 0 : 2)
                 }
-                .foregroundColor(AppColors.primary.green)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
+            }
+        }
+    }
+
+    private var previousDisabled: Bool {
+        audioService.currentVerseIndex == 0 || audioService.playingVerses.isEmpty
+    }
+
+    private var nextDisabled: Bool {
+        audioService.currentVerseIndex >= audioService.playingVerses.count - 1
+            || audioService.playingVerses.isEmpty
+    }
+
+    // MARK: - Bottom Row
+
+    private func bottomRow(theme: ThemeMode) -> some View {
+        HStack(spacing: Spacing.xs) {
+            speedPill(theme: theme)
+            continuousPill(theme: theme)
+            reciterPill(theme: theme)
+            Spacer()
+        }
+        .padding(.top, Spacing.xxs)
+    }
+
+    // MARK: - Speed Pill
+
+    private func speedPill(theme: ThemeMode) -> some View {
+        Menu {
+            ForEach(speedOptions, id: \.self) { speed in
+                Button {
+                    audioService.playbackSpeed = Float(speed)
+                } label: {
+                    Label(speedLabel(for: speed),
+                          systemImage: audioService.playbackSpeed == Float(speed) ? "checkmark" : "")
+                }
+            }
+        } label: {
+            pillLabel(
+                icon: "gauge.with.dots.needle.50percent",
+                text: speedLabel(for: Double(audioService.playbackSpeed)),
+                isActive: audioService.playbackSpeed != 1.0,
+                theme: theme
+            )
+        }
+    }
+
+    private var speedOptions: [Double] {
+        [0.5, 0.75, 1.0, 1.25, 1.5, 2.0]
+    }
+
+    private func speedLabel(for speed: Double) -> String {
+        if speed == 1.0 { return "1\u{00D7}" }
+        if speed == floor(speed) { return String(format: "%.0f\u{00D7}", speed) }
+        return String(format: "%.2g\u{00D7}", speed)
+    }
+
+    // MARK: - Continuous Toggle Pill
+
+    private func continuousPill(theme: ThemeMode) -> some View {
+        Button {
+            audioService.continuousPlaybackEnabled.toggle()
+        } label: {
+            pillLabel(
+                icon: audioService.continuousPlaybackEnabled ? "repeat.circle.fill" : "repeat.circle",
+                text: "Auto",
+                isActive: audioService.continuousPlaybackEnabled,
+                theme: theme
+            )
+        }
+    }
+
+    // MARK: - Reciter Pill
+
+    private func reciterPill(theme: ThemeMode) -> some View {
+        Menu {
+            ForEach(Reciter.allCases) { reciter in
+                Button {
+                    switchReciter(to: reciter)
+                } label: {
+                    Label(reciter.displayName,
+                          systemImage: audioService.selectedReciter == reciter ? "checkmark" : "")
+                }
+            }
+        } label: {
+            pillLabel(
+                icon: "person.wave.2",
+                text: audioService.selectedReciter.shortName,
+                isActive: false,
+                theme: theme
+            )
+        }
+    }
+
+    private func switchReciter(to reciter: Reciter) {
+        let wasPlaying = audioService.playbackState.isPlaying
+        audioService.selectedReciter = reciter
+        if (wasPlaying || audioService.playbackState == .paused),
+           let verse = audioService.currentVerse {
+            Task {
+                try? await audioService.play(verse: verse, preserveQueue: true)
+            }
+        }
+    }
+
+    // MARK: - Shared Pill Label
+
+    private func pillLabel(icon: String, text: String, isActive: Bool, theme: ThemeMode) -> some View {
+        HStack(spacing: Spacing.xxxs) {
+            Image(systemName: icon)
+                .font(.system(size: FontSizes.xs))
+            Text(text)
+                .font(.system(size: FontSizes.xs, weight: .medium))
+        }
+        .foregroundColor(isActive ? theme.accent : theme.textSecondary)
+        .padding(.horizontal, Spacing.xs)
+        .padding(.vertical, Spacing.xxs)
+        .background(
+            Capsule()
+                .fill(isActive ? theme.accent.opacity(0.12) : theme.cardColor)
+        )
+    }
+
+    // MARK: - Empty State Elements
+
+    private func emptyIcon(theme: ThemeMode) -> some View {
+        Image(systemName: "waveform")
+            .font(.largeTitle.weight(.ultraLight))
+            .foregroundColor(theme.textTertiary)
+    }
+
+    private func emptyLabel(theme: ThemeMode) -> some View {
+        Text("No audio playing")
+            .font(.body)
+            .foregroundColor(theme.textSecondary)
+    }
+
+    private func emptyInstructions(theme: ThemeMode) -> some View {
+        Text("Select a surah to begin listening")
+            .font(.subheadline)
+            .foregroundColor(theme.textTertiary)
+            .multilineTextAlignment(.center)
+            .padding(.horizontal, Spacing.lg)
+    }
+
+    private func closeButtonForEmpty(theme: ThemeMode) -> some View {
+        Button {
+            onClose()
+        } label: {
+            Text("Close")
+                .font(.subheadline.weight(.medium))
+                .foregroundColor(theme.accent)
+                .padding(.horizontal, Spacing.md)
+                .padding(.vertical, Spacing.xs)
                 .background(
                     Capsule()
-                        .fill(AppColors.primary.green.opacity(0.15))
+                        .fill(theme.accent.opacity(0.12))
                 )
-            }
         }
+        .padding(.top, Spacing.xs)
     }
 
-    // MARK: - Verse Display (replaces animated waveform for performance)
-    private var waveformVisualization: some View {
-        ZStack {
-            // Gradient background
-            RoundedRectangle(cornerRadius: 16)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            AppColors.primary.green.opacity(0.1),
-                            themeManager.currentTheme.featureAccent.opacity(0.05)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .frame(height: 120)
+    // MARK: - Error Banner
 
-            // Clean verse info display (no animation - prevents GPU thrashing)
-            VStack(spacing: 12) {
-                // Playing indicator
-                HStack(spacing: 8) {
-                    if audioService.playbackState.isPlaying {
-                        // Simple pulsing dot (single animation, not 30)
-                        Circle()
-                            .fill(themeManager.currentTheme.featureAccent)
-                            .frame(width: 8, height: 8)
-                            .opacity(audioService.playbackState.isPlaying ? 1.0 : 0.3)
-                    }
+    private func errorBanner(verse: Verse, theme: ThemeMode) -> some View {
+        Group {
+            if case .error(let message) = audioService.playbackState {
+                HStack(spacing: Spacing.xs) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: FontSizes.sm))
+                        .foregroundColor(theme.semanticWarning)
 
-                    Text(audioService.playbackState.isPlaying ? "Now Playing" : "Paused")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(themeManager.currentTheme.featureAccent)
-                }
-
-                // Current verse being played (in continuous mode)
-                if audioService.continuousPlaybackEnabled && !audioService.playingVerses.isEmpty {
-                    VStack(spacing: 4) {
-                        Text("Verse \(audioService.currentVerseIndex + 1) of \(audioService.playingVerses.count)")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundColor(themeManager.currentTheme.textColor)
-
-                        // Progress indicator (static bars representing verse position)
-                        HStack(spacing: 2) {
-                            ForEach(0..<min(audioService.playingVerses.count, 20), id: \.self) { index in
-                                RoundedRectangle(cornerRadius: 1)
-                                    .fill(index <= audioService.currentVerseIndex ?
-                                          themeManager.currentTheme.featureAccent :
-                                          Color.secondary.opacity(0.2))
-                                    .frame(width: 8, height: 4)
-                            }
-                            if audioService.playingVerses.count > 20 {
-                                Text("...")
-                                    .font(.system(size: 10))
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                    }
-                } else {
-                    // Single verse mode
-                    Text(verse.text)
-                        .font(.system(size: 20, weight: .medium, design: .serif))
-                        .foregroundColor(themeManager.currentTheme.textColor.opacity(0.8))
+                    Text(message)
+                        .font(.system(size: FontSizes.xs))
+                        .foregroundColor(theme.textSecondary)
                         .lineLimit(2)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal)
-                }
-            }
-            .padding()
-        }
-    }
 
-    // MARK: - Progress Section
-    private var progressSection: some View {
-        VStack(spacing: 12) {
-            // Time labels
-            HStack {
-                Text(formatTime(audioService.currentTime))
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
-                    .monospacedDigit()
+                    Spacer()
 
-                Spacer()
-
-                Text(formatTime(audioService.duration))
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
-                    .monospacedDigit()
-            }
-
-            // Progress slider
-            GeometryReader { geometry in
-                ZStack(alignment: .leading) {
-                    // Track background
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(Color.secondary.opacity(0.2))
-                        .frame(height: 8)
-
-                    // Progress fill
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(
-                            LinearGradient(
-                                colors: [AppColors.primary.green, themeManager.currentTheme.featureAccent],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .frame(
-                            width: geometry.size.width * CGFloat(audioService.currentTime / max(audioService.duration, 1)),
-                            height: 8
-                        )
-
-                    // Thumb
-                    Circle()
-                        .fill(themeManager.currentTheme.featureAccent)
-                        .frame(width: 20, height: 20)
-                        .shadow(color: themeManager.currentTheme.featureAccent.opacity(0.5), radius: 4, x: 0, y: 2)
-                        .offset(
-                            x: geometry.size.width * CGFloat(audioService.currentTime / max(audioService.duration, 1)) - 10
-                        )
-                }
-                .gesture(
-                    DragGesture(minimumDistance: 0)
-                        .onChanged { value in
-                            isSeeking = true
-                            let newTime = Double(value.location.x / geometry.size.width) * audioService.duration
-                            audioService.seek(to: max(0, min(newTime, audioService.duration)))
-                        }
-                        .onEnded { _ in
-                            isSeeking = false
-                        }
-                )
-            }
-            .frame(height: 20)
-        }
-    }
-
-    // MARK: - Playback Controls
-    private var playbackControls: some View {
-        HStack(spacing: 30) {
-            // Previous verse (if continuous playback)
-            if audioService.continuousPlaybackEnabled && allVerses != nil {
-                Button {
-                    Task {
-                        try? await audioService.playPreviousVerse()
-                    }
-                } label: {
-                    Image(systemName: "backward.end.fill")
-                        .font(.system(size: 24))
-                        .foregroundColor(themeManager.currentTheme.textColor.opacity(0.8))
-                }
-                .disabled(audioService.currentVerseIndex == 0)
-            } else {
-                // Skip backward 10s (non-continuous mode)
-                Button {
-                    audioService.seek(to: max(0, audioService.currentTime - 10))
-                } label: {
-                    Image(systemName: "gobackward.10")
-                        .font(.system(size: 24))
-                        .foregroundColor(themeManager.currentTheme.textColor.opacity(0.8))
-                }
-                .disabled(audioService.currentTime < 10)
-            }
-
-            // Play/Pause button
-            Button {
-                audioService.togglePlayPause()
-            } label: {
-                ZStack {
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [AppColors.primary.green, themeManager.currentTheme.featureAccent],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: 72, height: 72)
-                        .shadow(color: AppColors.primary.green.opacity(0.4), radius: 8, x: 0, y: 4)
-
-                    Image(systemName: audioService.playbackState.isPlaying ? "pause.fill" : "play.fill")
-                        .font(.system(size: 32))
-                        .foregroundColor(.white)
-                        .offset(x: audioService.playbackState.isPlaying ? 0 : 2) // Center play icon
-                }
-            }
-            .scaleEffect(audioService.playbackState.isPlaying ? 1.0 : 0.95)
-            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: audioService.playbackState.isPlaying)
-
-            // Next verse (if continuous playback)
-            if audioService.continuousPlaybackEnabled && allVerses != nil {
-                Button {
-                    Task {
-                        try? await audioService.playNextVerse()
-                    }
-                } label: {
-                    Image(systemName: "forward.end.fill")
-                        .font(.system(size: 24))
-                        .foregroundColor(themeManager.currentTheme.textColor.opacity(0.8))
-                }
-                .disabled(audioService.currentVerseIndex >= audioService.playingVerses.count - 1)
-            } else {
-                // Skip forward 10s (non-continuous mode)
-                Button {
-                    audioService.seek(to: min(audioService.duration, audioService.currentTime + 10))
-                } label: {
-                    Image(systemName: "goforward.10")
-                        .font(.system(size: 24))
-                        .foregroundColor(themeManager.currentTheme.textColor.opacity(0.8))
-                }
-                .disabled(audioService.currentTime >= audioService.duration - 10)
-            }
-        }
-        .padding(.vertical, 8)
-    }
-
-    // MARK: - Additional Controls
-    private var additionalControls: some View {
-        HStack(spacing: 24) {
-            // Playback speed
-            Menu {
-                ForEach([0.5, 0.75, 1.0, 1.25, 1.5], id: \.self) { speed in
                     Button {
-                        audioService.playbackSpeed = Float(speed)
-                    } label: {
-                        HStack {
-                            Text("\(speed, specifier: "%.2f")×")
-                            if audioService.playbackSpeed == Float(speed) {
-                                Image(systemName: "checkmark")
-                            }
+                        Task {
+                            try? await audioService.play(verse: verse, preserveQueue: true)
                         }
+                    } label: {
+                        Text("Retry")
+                            .font(.system(size: FontSizes.xs, weight: .semibold))
+                            .foregroundColor(theme.accent)
                     }
                 }
-            } label: {
-                VStack(spacing: 4) {
-                    Image(systemName: "gauge.with.dots.needle.50percent")
-                        .font(.system(size: 20))
-                    Text("\(audioService.playbackSpeed, specifier: "%.2f")×")
-                        .font(.system(size: 12, weight: .medium))
-                }
-                .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
-            }
-
-            // Continuous playback toggle (if verses available)
-            if allVerses != nil {
-                Button {
-                    audioService.continuousPlaybackEnabled.toggle()
-                } label: {
-                    VStack(spacing: 4) {
-                        Image(systemName: audioService.continuousPlaybackEnabled ? "repeat.circle.fill" : "repeat.circle")
-                            .font(.system(size: 20))
-                        Text("Auto")
-                            .font(.system(size: 12, weight: .medium))
-                    }
-                    .foregroundColor(audioService.continuousPlaybackEnabled ?
-                                   themeManager.currentTheme.featureAccent :
-                                   themeManager.currentTheme.textColor.opacity(0.7))
-                }
-            }
-
-            Spacer()
-
-            // Close button
-            Button {
-                onClose()
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 20))
-                    Text("Close")
-                        .font(.system(size: 15, weight: .medium))
-                }
-                .foregroundColor(themeManager.currentTheme.textColor.opacity(0.7))
+                .padding(Spacing.xs)
+                .background(
+                    RoundedRectangle(cornerRadius: BorderRadius.md)
+                        .fill(theme.semanticWarning.opacity(0.1))
+                )
+                .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
-        .padding(.top, 8)
+        .animation(.easeOut(duration: 0.25), value: audioService.playbackState)
     }
 
-    // MARK: - Helper Functions
-    private func formatTime(_ time: TimeInterval) -> String {
-        guard time.isFinite && !time.isNaN else { return "0:00" }
+    private func loadTranslation(for verse: Verse?) {
+        guard let verse = verse else {
+            currentTranslation = nil
+            return
+        }
+        Task {
+            let preferredEdition = quranService.getTranslationPreferences().primaryTranslation
+            currentTranslation = try? await quranService.getTranslation(forVerse: verse, edition: preferredEdition)
+        }
+    }
 
-        let minutes = Int(time) / 60
-        let seconds = Int(time) % 60
-        return String(format: "%d:%02d", minutes, seconds)
+    private func loadSurahName(for verse: Verse?) {
+        guard let verse = verse else {
+            surahName = ""
+            return
+        }
+        Task {
+            if let surahs = try? await quranService.getSurahs() {
+                if let surah = surahs.first(where: { $0.id == verse.surahNumber }) {
+                    surahName = surah.englishName
+                } else {
+                    surahName = "Surah \(verse.surahNumber)"
+                }
+            } else {
+                surahName = "Surah \(verse.surahNumber)"
+            }
+        }
     }
 }
 
@@ -428,7 +578,6 @@ struct ReciterSelectorView: View {
                                 audioService.selectedReciter = reciter
                                 onSelect(reciter)
 
-                                // Auto-dismiss after selection
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                                     dismiss()
                                 }
@@ -438,11 +587,11 @@ struct ReciterSelectorView: View {
                 } header: {
                     Text("Select Reciter")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(themeManager.currentTheme.textSecondary)
                 } footer: {
                     Text("Choose your preferred Quran reciter. Audio will be downloaded from AlQuran.cloud.")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(themeManager.currentTheme.textSecondary)
                 }
             }
             .navigationTitle("Reciters")
@@ -460,37 +609,37 @@ struct ReciterSelectorView: View {
 
 // MARK: - Reciter Row
 struct ReciterRow: View {
+    @Environment(ThemeManager.self) var themeManager: ThemeManager
     let reciter: Reciter
     let isSelected: Bool
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            // Selection indicator
+        HStack(alignment: .top, spacing: Spacing.xs) {
             Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                .font(.system(size: 22))
-                .foregroundColor(isSelected ? AppColors.primary.green : .secondary.opacity(0.3))
+                .font(.title3)
+                .foregroundColor(isSelected ? themeManager.currentTheme.accent : themeManager.currentTheme.textSecondary.opacity(0.3))
                 .frame(width: 24, height: 24)
 
             VStack(alignment: .leading, spacing: 6) {
                 Text(reciter.displayName)
-                    .font(.system(size: 17, weight: isSelected ? .semibold : .regular))
-                    .foregroundColor(.primary)
+                    .font(.system(size: FontSizes.base, weight: isSelected ? .semibold : .regular))
+                    .foregroundColor(themeManager.currentTheme.textPrimary)
 
                 Text(reciter.description)
-                    .font(.system(size: 14))
-                    .foregroundColor(.secondary)
+                    .font(.system(size: FontSizes.sm))
+                    .foregroundColor(themeManager.currentTheme.textSecondary)
                     .lineLimit(2)
 
-                HStack(spacing: 8) {
+                HStack(spacing: Spacing.xxs) {
                     Image(systemName: "mappin.circle.fill")
-                        .font(.system(size: 12))
+                        .font(.system(size: FontSizes.xs))
                     Text(reciter.country)
-                        .font(.system(size: 13, weight: .medium))
+                        .font(.system(size: FontSizes.xs, weight: .medium))
                 }
-                .foregroundColor(.secondary.opacity(0.8))
+                .foregroundColor(themeManager.currentTheme.textSecondary.opacity(0.8))
             }
         }
-        .padding(.vertical, 8)
+        .padding(.vertical, Spacing.xxs)
     }
 }
 
@@ -500,17 +649,10 @@ struct ReciterRow: View {
         @State private var themeManager = ThemeManager()
 
         var body: some View {
-            AudioPlayerView(
-                verse: Verse(
-                    number: 1,
-                    surahNumber: 1,
-                    verseNumber: 1,
-                    text: "بِسۡمِ ٱللَّهِ ٱلرَّحۡمَـٰنِ ٱلرَّحِیمِ",
-                    juz: 1
-                ),
-                allVerses: nil
-            ) {
+            AudioPlayerView {
+                #if DEBUG
                 print("Close tapped")
+                #endif
             }
             .environment(themeManager)
         }
@@ -521,6 +663,8 @@ struct ReciterRow: View {
 
 #Preview("Reciter Selector") {
     ReciterSelectorView(currentReciter: .misharyRashid) { reciter in
+        #if DEBUG
         print("Selected: \(reciter.displayName)")
+        #endif
     }
 }

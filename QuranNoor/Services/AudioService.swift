@@ -8,7 +8,7 @@
 
 import AVFoundation
 import UIKit
-import Combine
+import Observation
 
 /// Sound effects available in the app
 enum SoundEffect: String, CaseIterable {
@@ -23,7 +23,9 @@ enum SoundEffect: String, CaseIterable {
 
 /// Centralized audio playback service
 /// Manages UI sound effects with zero-latency playback
-class AudioService: ObservableObject {
+@Observable
+@MainActor
+class AudioService {
 
     // MARK: - Singleton
 
@@ -35,17 +37,28 @@ class AudioService: ObservableObject {
     private var audioPlayers: [SoundEffect: AVAudioPlayer] = [:]
 
     /// Default volume for UI sounds (0.0 to 1.0)
-    @Published var volume: Float = 0.5
+    var volume: Float = 0.5
 
     /// Whether sound effects are enabled (always true per user request)
-    @Published var soundEffectsEnabled: Bool = true
+    var soundEffectsEnabled: Bool = true
 
     /// Audio session configured
     private var isAudioSessionConfigured = false
 
-    // MARK: - Initialization
+    // MARK: - Lazy Initialization
+    
+    /// Whether sounds have been preloaded (deferred until first use)
+    private var hasPreloaded = false
 
     private init() {
+        // Audio session and sound preloading are deferred until first play()
+        // This avoids blocking app startup with disk I/O and AVAudioSession activation
+    }
+    
+    /// Ensure audio is ready before first playback
+    private func ensureReady() {
+        guard !hasPreloaded else { return }
+        hasPreloaded = true
         configureAudioSession()
         preloadAllSounds()
     }
@@ -57,25 +70,14 @@ class AudioService: ObservableObject {
         guard !isAudioSessionConfigured else { return }
 
         do {
-            let audioSession = AVAudioSession.sharedInstance()
-
-            // Use .playback category to ignore silent mode
-            // Use .mixWithOthers to not interrupt Quran recitation or other audio
-            try audioSession.setCategory(
-                .playback,
-                mode: .default,
-                options: [.mixWithOthers]
-            )
-
-            try audioSession.setActive(true)
+            // Use centralized audio session manager to prevent conflicts
+            // UI sounds mix with everything and don't require exclusive access
+            try AudioSessionManager.shared.configureSession(for: .uiSounds)
             isAudioSessionConfigured = true
-
-            #if DEBUG
-            print("✅ AudioService: Audio session configured successfully")
-            #endif
-
         } catch {
+            #if DEBUG
             print("❌ AudioService: Failed to configure audio session - \(error.localizedDescription)")
+            #endif
         }
     }
 
@@ -96,7 +98,9 @@ class AudioService: ObservableObject {
             }
 
             guard let audioURL = url else {
+                #if DEBUG
                 print("⚠️ AudioService: Sound file not found - \(sound.fileName).\(sound.fileExtension)")
+                #endif
                 continue
             }
 
@@ -105,13 +109,10 @@ class AudioService: ObservableObject {
                 player.volume = volume
                 player.prepareToPlay() // Preload to buffer for instant playback
                 audioPlayers[sound] = player
-
-                #if DEBUG
-                print("✅ AudioService: Preloaded sound - \(sound.fileName)")
-                #endif
-
             } catch {
+                #if DEBUG
                 print("❌ AudioService: Failed to preload sound \(sound.fileName) - \(error.localizedDescription)")
+                #endif
             }
         }
     }
@@ -125,13 +126,13 @@ class AudioService: ObservableObject {
     func play(_ sound: SoundEffect, customVolume: Float? = nil) {
         guard soundEffectsEnabled else { return }
 
-        // Ensure audio session is active
-        if !isAudioSessionConfigured {
-            configureAudioSession()
-        }
+        // Lazy init: preload sounds on first play instead of at app launch
+        ensureReady()
 
         guard let player = audioPlayers[sound] else {
+            #if DEBUG
             print("⚠️ AudioService: Player not found for sound - \(sound.fileName)")
+            #endif
             return
         }
 
@@ -145,10 +146,6 @@ class AudioService: ObservableObject {
         // Reset to beginning and play
         player.currentTime = 0
         player.play()
-
-        #if DEBUG
-        print("🔊 AudioService: Playing sound - \(sound.fileName) at volume \(player.volume)")
-        #endif
     }
 
     /// Play confirm/forward navigation sound (confirmselect.mp3)
@@ -211,7 +208,8 @@ class AudioService: ObservableObject {
     // MARK: - Cleanup
 
     deinit {
-        stopAllSounds()
-        audioPlayers.removeAll()
+        // Note: deinit is nonisolated and cannot directly call @MainActor methods
+        // Audio players will be automatically deallocated when the service is destroyed
+        // Manual cleanup is not strictly necessary as AVAudioPlayer stops on dealloc
     }
 }

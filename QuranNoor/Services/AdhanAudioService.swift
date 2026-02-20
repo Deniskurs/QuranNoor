@@ -59,7 +59,8 @@ final class AdhanAudioService: NSObject {
 
         super.init()
 
-        setupAudioSession()
+        // Audio session setup is deferred to playAdhan() to avoid
+        // configuring the session at launch (which can override Quran playback's session)
     }
 
     // MARK: - Public Methods
@@ -67,19 +68,14 @@ final class AdhanAudioService: NSObject {
     /// Play the selected Adhan audio
     /// - Parameter prayer: The prayer for which Adhan is being played (optional, for logging)
     func playAdhan(for prayer: PrayerName? = nil) async {
-        guard isEnabled else {
-            print("⏸️ Adhan is disabled by user")
-            return
-        }
-
-        guard !isPlaying else {
-            print("⏸️ Adhan is already playing")
-            return
-        }
+        guard isEnabled else { return }
+        guard !isPlaying else { return }
 
         // Get the audio file URL
         guard let audioURL = selectedAdhan.fileURL else {
+            #if DEBUG
             print("❌ Adhan audio file not found: \(selectedAdhan.fileName)")
+            #endif
             return
         }
 
@@ -90,14 +86,13 @@ final class AdhanAudioService: NSObject {
                 try AVAudioPlayer(contentsOf: audioURL)
             }.value
         } catch {
+            #if DEBUG
             print("❌ Error loading Adhan audio: \(error.localizedDescription)")
+            #endif
             return
         }
 
-        guard let player = loadedPlayer else {
-            print("❌ Failed to create audio player for Adhan")
-            return
-        }
+        guard let player = loadedPlayer else { return }
 
         // Configure player and start playback on main thread
         player.delegate = self
@@ -105,22 +100,19 @@ final class AdhanAudioService: NSObject {
         player.prepareToPlay()
 
         do {
-            // Activate audio session
-            try AVAudioSession.sharedInstance().setActive(true)
+            // Activate audio session via centralized manager
+            try AudioSessionManager.shared.configureForAdhan()
 
             // Play the audio
             let success = player.play()
             if success {
                 audioPlayer = player
                 isPlaying = true
-                if let prayer = prayer {
-                    print("🔊 Playing Adhan (\(selectedAdhan.displayName)) for \(prayer.displayName)")
-                } else {
-                    print("🔊 Playing Adhan (\(selectedAdhan.displayName))")
-                }
             }
         } catch {
+            #if DEBUG
             print("❌ Error playing Adhan: \(error.localizedDescription)")
+            #endif
             isPlaying = false
         }
     }
@@ -133,10 +125,8 @@ final class AdhanAudioService: NSObject {
         audioPlayer = nil
         isPlaying = false
 
-        // Deactivate audio session
-        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
-
-        print("⏹️ Adhan playback stopped")
+        // Release audio session
+        AudioSessionManager.shared.releaseSession(for: .adhanCall)
     }
 
     /// Pause the currently playing Adhan
@@ -145,7 +135,6 @@ final class AdhanAudioService: NSObject {
 
         audioPlayer?.pause()
         isPlaying = false
-        print("⏸️ Adhan playback paused")
     }
 
     /// Resume the paused Adhan
@@ -154,7 +143,6 @@ final class AdhanAudioService: NSObject {
 
         audioPlayer?.play()
         isPlaying = true
-        print("▶️ Adhan playback resumed")
     }
 
     /// Change the selected Adhan audio
@@ -162,7 +150,6 @@ final class AdhanAudioService: NSObject {
     func selectAdhan(_ adhan: AdhanAudio) {
         selectedAdhan = adhan
         UserDefaults.standard.set(adhan.rawValue, forKey: Keys.selectedAdhan)
-        print("✅ Selected Adhan: \(adhan.displayName)")
     }
 
     /// Set the volume level
@@ -183,37 +170,20 @@ final class AdhanAudioService: NSObject {
         if !enabled {
             stopAdhan()
         }
-
-        print("🔔 Adhan \(enabled ? "enabled" : "disabled")")
     }
 
     /// Preview the selected Adhan (for testing in settings)
     func previewAdhan(_ adhan: AdhanAudio) async {
-        _ = selectedAdhan  // Store for potential future use
+        let previousAdhan = selectedAdhan
         selectedAdhan = adhan
-
         await playAdhan()
-
-        // Restore previous selection after playback ends
-        // (will be handled in delegate method)
+        // Note: playAdhan returns after starting, not after finishing
+        // Restore immediately since this is a preview
+        selectedAdhan = previousAdhan
     }
 
-    // MARK: - Private Methods
-
-    private func setupAudioSession() {
-        do {
-            let session = AVAudioSession.sharedInstance()
-
-            // Set category to playback to allow background audio and bypass silent mode
-            // Note: Only call setCategory ONCE to avoid redundancy and potential conflicts
-            try session.setCategory(.playback, mode: .default, options: [])
-
-            print("✅ Audio session configured for Adhan playback")
-        } catch {
-            print("❌ Failed to set up audio session: \(error.localizedDescription)")
-        }
-    }
 }
+
 
 // MARK: - AVAudioPlayerDelegate
 
@@ -223,10 +193,8 @@ extension AdhanAudioService: AVAudioPlayerDelegate {
             isPlaying = false
             audioPlayer = nil
 
-            // Deactivate audio session
-            try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
-
-            print("✅ Adhan playback finished")
+            // Release audio session
+            AudioSessionManager.shared.releaseSession(for: .adhanCall)
         }
     }
 
@@ -234,7 +202,9 @@ extension AdhanAudioService: AVAudioPlayerDelegate {
         Task { @MainActor in
             isPlaying = false
             audioPlayer = nil
+            #if DEBUG
             print("❌ Adhan decode error: \(error?.localizedDescription ?? "Unknown error")")
+            #endif
         }
     }
 }

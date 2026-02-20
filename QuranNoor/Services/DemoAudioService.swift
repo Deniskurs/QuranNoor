@@ -7,11 +7,12 @@
 //
 
 import AVFoundation
-import Combine
+
 
 /// Audio playback service for onboarding Quran demo
 /// Uses bundled verse-by-verse audio files (no network required)
 @Observable
+@MainActor
 final class DemoAudioService {
 
     // MARK: - Singleton
@@ -58,20 +59,17 @@ final class DemoAudioService {
         guard !isAudioSessionConfigured else { return }
 
         do {
-            let audioSession = AVAudioSession.sharedInstance()
-            try audioSession.setCategory(
-                .playback,
-                mode: .spokenAudio,
-                options: [.mixWithOthers, .duckOthers]
-            )
-            try audioSession.setActive(true)
+            // Use centralized audio session manager to prevent conflicts
+            try AudioSessionManager.shared.configureSession(for: .demoPlayback)
             isAudioSessionConfigured = true
 
             #if DEBUG
             print("✅ DemoAudioService: Audio session configured")
             #endif
         } catch {
+            #if DEBUG
             print("❌ DemoAudioService: Failed to configure audio session - \(error.localizedDescription)")
+            #endif
         }
     }
 
@@ -107,7 +105,9 @@ final class DemoAudioService {
         }
 
         guard let audioURL = url else {
+            #if DEBUG
             print("⚠️ DemoAudioService: Audio file not found - \(fileName).mp3")
+            #endif
             return
         }
 
@@ -136,7 +136,9 @@ final class DemoAudioService {
             #endif
 
         } catch {
+            #if DEBUG
             print("❌ DemoAudioService: Failed to play audio - \(error.localizedDescription)")
+            #endif
         }
     }
 
@@ -173,6 +175,9 @@ final class DemoAudioService {
         playbackState = .idle
         progress = 0
         currentTime = 0
+
+        // Release audio session
+        AudioSessionManager.shared.releaseSession(for: .demoPlayback)
     }
 
     /// Skip to next verse
@@ -201,14 +206,16 @@ final class DemoAudioService {
         stopProgressTimer()
 
         progressTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
-            guard let self = self,
-                  let player = self.audioPlayer else { return }
+            Task { @MainActor [weak self] in
+                guard let self = self,
+                      let player = self.audioPlayer else { return }
 
-            self.currentTime = player.currentTime
-            self.duration = player.duration
+                self.currentTime = player.currentTime
+                self.duration = player.duration
 
-            if player.duration > 0 {
-                self.progress = player.currentTime / player.duration
+                if player.duration > 0 {
+                    self.progress = player.currentTime / player.duration
+                }
             }
         }
     }
@@ -226,7 +233,8 @@ final class DemoAudioService {
             currentVerseIndex += 1
 
             // Small delay before next verse for natural flow
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+            Task { @MainActor [weak self] in
+                try? await Task.sleep(for: .seconds(0.3))
                 self?.playCurrentVerse()
             }
         } else {
@@ -239,7 +247,9 @@ final class DemoAudioService {
     // MARK: - Cleanup
 
     deinit {
-        stop()
+        // Note: deinit is nonisolated and cannot directly call @MainActor methods
+        // Audio player will be automatically stopped and deallocated
+        // Timer will be invalidated automatically when released
     }
 }
 

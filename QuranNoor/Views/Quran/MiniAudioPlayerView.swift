@@ -226,7 +226,9 @@ struct MiniAudioPlayerView: View {
                 Spacer()
 
                 MiniAudioPlayerView {
+                    #if DEBUG
                     print("Expand to full player")
+                    #endif
                 }
                 .environment(themeManager)
             }

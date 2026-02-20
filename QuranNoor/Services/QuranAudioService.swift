@@ -7,7 +7,8 @@
 
 import Foundation
 import AVFoundation
-import Combine
+import UIKit
+
 import MediaPlayer
 
 // MARK: - Reciter Model
@@ -112,6 +113,19 @@ class QuranAudioService: NSObject {
     private(set) var duration: TimeInterval = 0
     private(set) var isLoading: Bool = false
 
+    // UI visibility state (decoupled from audio lifecycle)
+    var isFullPlayerPresented: Bool = false
+
+    /// True when audio is active (playing, paused, loading, or buffering) — use for mini player visibility
+    var hasActivePlayback: Bool {
+        switch playbackState {
+        case .playing, .paused, .loading, .buffering:
+            return true
+        case .idle, .error:
+            return false
+        }
+    }
+
     // Continuous playback
     private(set) var playingVerses: [Verse] = [] // Queue of verses to play
     private(set) var currentVerseIndex: Int = 0
@@ -140,7 +154,6 @@ class QuranAudioService: NSObject {
         set {
             if let encoded = try? Self.encoder.encode(newValue) {
                 UserDefaults.standard.set(encoded, forKey: "selected_reciter")
-                print("✅ Reciter saved: \(newValue.displayName)")
             }
         }
     }
@@ -164,24 +177,104 @@ class QuranAudioService: NSObject {
     private var lastNowPlayingUpdate: TimeInterval = 0
     private let quranService = QuranService.shared
 
+    // MARK: - Audio URL Cache
+    @ObservationIgnored private let urlCache = AudioURLCache()
+
+    // MARK: - Now Playing Artwork (lazy-loaded once)
+    @ObservationIgnored private lazy var nowPlayingArtwork: MPMediaItemArtwork? = {
+        guard let image = UIImage(named: "AppIcon") ?? loadAppIconFromBundle() else { return nil }
+        return MPMediaItemArtwork(boundsSize: image.size) { _ in image }
+    }()
+
+    private func loadAppIconFromBundle() -> UIImage? {
+        guard let iconFiles = Bundle.main.infoDictionary?["CFBundleIcons"] as? [String: Any],
+              let primaryIcon = iconFiles["CFBundlePrimaryIcon"] as? [String: Any],
+              let iconNames = primaryIcon["CFBundleIconFiles"] as? [String],
+              let iconName = iconNames.last else { return nil }
+        return UIImage(named: iconName)
+    }
+
+    // MARK: - Preloading
+    @ObservationIgnored private var preloadedItems: [String: AVPlayerItem] = [:]
+    @ObservationIgnored private var preloadTask: Task<Void, Never>?
+    private let preloadCount = 2
+
     // MARK: - Initialization
+    private var hasSetupAudioSession = false
+
     private override init() {
         super.init()
+        // Audio session and remote command center are deferred until first playback
+        // to avoid blocking app launch with AVAudioSession activation.
+    }
+
+    private func ensureAudioSessionReady() {
+        guard !hasSetupAudioSession else { return }
+        hasSetupAudioSession = true
         setupAudioSession()
         setupRemoteCommandCenter()
-        print("✅ QuranAudioService.shared initialized")
+    }
+
+    // MARK: - Idle Timer Management
+
+    /// Prevents screen sleep while audio is playing, re-enables when stopped/paused.
+    private func updateIdleTimerState() {
+        UIApplication.shared.isIdleTimerDisabled = playbackState.isPlaying
+    }
+
+    // MARK: - Audio Session Reactivation
+
+    /// Re-activates the audio session if it was deactivated by an interruption.
+    private func reactivateAudioSessionIfNeeded() {
+        guard !AudioSessionManager.shared.isSessionActive else { return }
+        try? AudioSessionManager.shared.configureSession(for: .quranRecitation)
     }
 
     // MARK: - Audio Session Setup
     private func setupAudioSession() {
         do {
-            let audioSession = AVAudioSession.sharedInstance()
-            // Enable background playback
-            try audioSession.setCategory(.playback, mode: .spokenAudio, options: [.mixWithOthers])
-            try audioSession.setActive(true)
-            print("✅ Audio session configured for background playback")
+            // Use centralized audio session manager to prevent conflicts
+            try AudioSessionManager.shared.configureSession(for: .quranRecitation)
+
+            // Handle audio interruptions (phone calls, Siri, other apps)
+            NotificationCenter.default.addObserver(
+                self,
+                selector: #selector(handleAudioInterruption(_:)),
+                name: AVAudioSession.interruptionNotification,
+                object: AVAudioSession.sharedInstance()
+            )
         } catch {
-            print("❌ Failed to setup audio session: \(error)")
+            #if DEBUG
+            print("Failed to setup audio session: \(error)")
+            #endif
+        }
+    }
+
+    @objc private func handleAudioInterruption(_ notification: Notification) {
+        guard let userInfo = notification.userInfo,
+              let typeValue = userInfo[AVAudioSessionInterruptionTypeKey] as? UInt,
+              let type = AVAudioSession.InterruptionType(rawValue: typeValue) else {
+            return
+        }
+
+        Task { @MainActor in
+            switch type {
+            case .began:
+                // Phone call, Siri, etc. — pause playback
+                if playbackState.isPlaying {
+                    pause()
+                }
+            case .ended:
+                // Interruption ended — resume if appropriate
+                if let optionsValue = userInfo[AVAudioSessionInterruptionOptionKey] as? UInt {
+                    let options = AVAudioSession.InterruptionOptions(rawValue: optionsValue)
+                    if options.contains(.shouldResume), case .paused = playbackState {
+                        resume()
+                    }
+                }
+            @unknown default:
+                break
+            }
         }
     }
 
@@ -273,7 +366,7 @@ class QuranAudioService: NSObject {
             return .success
         }
 
-        print("✅ Remote command center configured for lock screen controls")
+        // Remote command center configured
     }
 
     // MARK: - Now Playing Info
@@ -295,6 +388,11 @@ class QuranAudioService: NSObject {
         nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = currentTime
         nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = playbackState.isPlaying ? Double(playbackSpeed) : 0.0
 
+        // Artwork
+        if let artwork = nowPlayingArtwork {
+            nowPlayingInfo[MPMediaItemPropertyArtwork] = artwork
+        }
+
         // Queue info (for continuous playback)
         if continuousPlaybackEnabled && !playingVerses.isEmpty {
             nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackQueueIndex] = currentVerseIndex
@@ -303,8 +401,6 @@ class QuranAudioService: NSObject {
 
         // Set the info
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
-
-        print("🎵 Updated Now Playing: Surah \(verse.surahNumber):\(verse.verseNumber) - \(selectedReciter.shortName)")
     }
 
     // MARK: - Playback Control
@@ -314,7 +410,7 @@ class QuranAudioService: NSObject {
     ///   - verse: The verse to play
     ///   - preserveQueue: If true, keeps the existing playingVerses queue (used by playVerses/playNextVerse)
     func play(verse: Verse, preserveQueue: Bool = false) async throws {
-        print("🎵 Playing verse \(verse.surahNumber):\(verse.verseNumber) (preserveQueue: \(preserveQueue))")
+        ensureAudioSessionReady()
 
         // If already playing the same verse, just resume
         if currentVerse?.id == verse.id, case .paused = playbackState {
@@ -322,16 +418,12 @@ class QuranAudioService: NSObject {
             return
         }
 
-        // Stop current playback but preserve queue info if needed
-        let savedVerses = playingVerses
-        let savedIndex = currentVerseIndex
-        stop()
-
-        // Restore queue if preserving, otherwise set single verse
         if preserveQueue {
-            playingVerses = savedVerses
-            currentVerseIndex = savedIndex
+            // Verse transition: light cleanup preserves queue, index, and UI state
+            cleanupCurrentPlayer()
         } else {
+            // Fresh play: full reset
+            stop()
             playingVerses = [verse]
             currentVerseIndex = 0
         }
@@ -348,9 +440,21 @@ class QuranAudioService: NSObject {
                 throw AudioError.noAudioAvailable
             }
 
-            // Create player
-            let playerItem = AVPlayerItem(url: url)
-            player = AVPlayer(playerItem: playerItem)
+            // Check for preloaded item first (zero-gap playback)
+            let cacheKey = audioCacheKey(for: verse)
+            let playerItem: AVPlayerItem
+            if let preloaded = preloadedItems.removeValue(forKey: cacheKey) {
+                playerItem = preloaded
+            } else {
+                playerItem = AVPlayerItem(url: url)
+            }
+
+            // Reuse existing AVPlayer when possible to avoid re-allocation gaps
+            if let existingPlayer = player {
+                existingPlayer.replaceCurrentItem(with: playerItem)
+            } else {
+                player = AVPlayer(playerItem: playerItem)
+            }
 
             // Setup observers
             setupPlayerObservers()
@@ -362,15 +466,17 @@ class QuranAudioService: NSObject {
             player?.rate = playbackSpeed
             playbackState = .playing
             isLoading = false
+            updateIdleTimerState()
 
             // Update lock screen info
             updateNowPlayingInfo()
 
-            print("✅ Started playing verse \(verse.surahNumber):\(verse.verseNumber)")
+            // Preload upcoming verses in background
+            preloadUpcoming()
         } catch {
             playbackState = .error(error.localizedDescription)
             isLoading = false
-            print("❌ Failed to play verse: \(error)")
+            updateIdleTimerState()
             throw error
         }
     }
@@ -378,10 +484,11 @@ class QuranAudioService: NSObject {
     /// Resume playback
     func resume() {
         guard player != nil else { return }
+        reactivateAudioSessionIfNeeded()
         player?.rate = playbackSpeed
         playbackState = .playing
+        updateIdleTimerState()
         updateNowPlayingInfo()
-        print("▶️ Resumed playback")
     }
 
     /// Pause playback
@@ -389,8 +496,18 @@ class QuranAudioService: NSObject {
         guard player != nil else { return }
         player?.pause()
         playbackState = .paused
+        updateIdleTimerState()
         updateNowPlayingInfo()
-        print("⏸️ Paused playback")
+        saveSession()
+    }
+
+    /// Light cleanup for verse transitions: pause and remove observers but keep
+    /// the player instance, queue, and UI state (isFullPlayerPresented) intact.
+    private func cleanupCurrentPlayer() {
+        player?.pause()
+        removePlayerObservers()
+        currentTime = 0
+        duration = 0
     }
 
     /// Stop playback and clean up
@@ -402,13 +519,23 @@ class QuranAudioService: NSObject {
         currentTime = 0
         duration = 0
         playbackState = .idle
+        updateIdleTimerState()
         playingVerses = []
         currentVerseIndex = 0
+
+        // Clear preloaded items
+        preloadTask?.cancel()
+        preloadTask = nil
+        preloadedItems.removeAll()
+
+        // Clear persisted session
+        PlaybackSessionStore.shared.clear()
 
         // Clear lock screen info
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
 
-        print("⏹️ Stopped playback")
+        // Release audio session so other apps can resume
+        AudioSessionManager.shared.releaseSession(for: .quranRecitation)
     }
 
     /// Play multiple verses in sequence (continuous playback)
@@ -426,7 +553,6 @@ class QuranAudioService: NSObject {
     /// Play next verse in queue
     func playNextVerse() async throws {
         guard currentVerseIndex < playingVerses.count - 1 else {
-            print("✅ Reached end of verse queue")
             stop()
             return
         }
@@ -434,18 +560,21 @@ class QuranAudioService: NSObject {
         currentVerseIndex += 1
         let nextVerse = playingVerses[currentVerseIndex]
         try await play(verse: nextVerse, preserveQueue: true)
+
+        // Save session after transitioning
+        saveSession()
     }
 
     /// Play previous verse in queue
     func playPreviousVerse() async throws {
-        guard currentVerseIndex > 0 else {
-            print("⚠️ Already at first verse")
-            return
-        }
+        guard currentVerseIndex > 0 else { return }
 
         currentVerseIndex -= 1
         let previousVerse = playingVerses[currentVerseIndex]
         try await play(verse: previousVerse, preserveQueue: true)
+
+        // Save session after transitioning
+        saveSession()
     }
 
     /// Seek to specific time
@@ -458,7 +587,6 @@ class QuranAudioService: NSObject {
                 guard let self = self, completed else { return }
                 self.currentTime = time
                 self.updateNowPlayingInfo()
-                print("⏩ Seeked to \(time)s")
             }
         }
     }
@@ -472,22 +600,77 @@ class QuranAudioService: NSObject {
         }
     }
 
+    // MARK: - Preloading
+
+    /// Preload AVPlayerItems for the next `preloadCount` verses to minimize gaps
+    private func preloadUpcoming() {
+        preloadTask?.cancel()
+        preloadTask = Task { [weak self] in
+            guard let self else { return }
+            let startIndex = self.currentVerseIndex + 1
+            let endIndex = min(startIndex + self.preloadCount, self.playingVerses.count)
+            guard startIndex < endIndex else { return }
+
+            for i in startIndex..<endIndex {
+                guard !Task.isCancelled else { return }
+                let verse = self.playingVerses[i]
+                let key = self.audioCacheKey(for: verse)
+                guard self.preloadedItems[key] == nil else { continue }
+
+                do {
+                    guard let url = try await self.fetchAudioURL(for: verse) else { continue }
+                    guard !Task.isCancelled else { return }
+                    let item = AVPlayerItem(url: url)
+                    // Buffer the asset so it's ready to play instantly
+                    _ = try await item.asset.load(.isPlayable)
+                    guard !Task.isCancelled else { return }
+                    self.preloadedItems[key] = item
+                } catch {
+                    // Preloading is best-effort — don't fail playback
+                    continue
+                }
+            }
+        }
+    }
+
+    // MARK: - Session Persistence
+
+    /// Save current playback state for later resume
+    private func saveSession() {
+        guard let verse = currentVerse else { return }
+        let queueSurah = playingVerses.first?.surahNumber ?? verse.surahNumber
+        let session = PlaybackSession(
+            surahNumber: verse.surahNumber,
+            verseNumber: verse.verseNumber,
+            reciterRawValue: selectedReciter.rawValue,
+            queueSurahNumber: queueSurah,
+            currentVerseIndex: currentVerseIndex,
+            currentTime: currentTime,
+            continuousEnabled: continuousPlaybackEnabled
+        )
+        PlaybackSessionStore.shared.save(session)
+    }
+
     // MARK: - Audio URL Fetching
 
+    /// Build a cache key for a given reciter + verse
+    private func audioCacheKey(for verse: Verse) -> String {
+        "\(selectedReciter.rawValue)_\(verse.surahNumber)_\(verse.verseNumber)"
+    }
+
     private func fetchAudioURL(for verse: Verse) async throws -> URL? {
+        // Check cache first
+        let cacheKey = audioCacheKey(for: verse)
+        if let cached = urlCache.cachedURL(for: cacheKey) {
+            return cached
+        }
+
         // Use AlQuran.cloud API to get audio URL
         let editionId = selectedReciter.rawValue
         let urlString = "https://api.alquran.cloud/v1/ayah/\(verse.surahNumber):\(verse.verseNumber)/\(editionId)"
 
         guard let url = URL(string: urlString) else {
             throw AudioError.invalidURL
-        }
-
-        let (data, response) = try await URLSession.shared.data(from: url)
-
-        guard let httpResponse = response as? HTTPURLResponse,
-              (200...299).contains(httpResponse.statusCode) else {
-            throw AudioError.networkError
         }
 
         // Parse response
@@ -499,12 +682,35 @@ class QuranAudioService: NSObject {
             }
         }
 
+        // Network fetch with single retry on failure
+        let data: Data
+        do {
+            let (responseData, response) = try await URLSession.shared.data(from: url)
+            guard let httpResponse = response as? HTTPURLResponse,
+                  (200...299).contains(httpResponse.statusCode) else {
+                throw AudioError.networkError
+            }
+            data = responseData
+        } catch {
+            // Retry once after 1 second
+            try await Task.sleep(nanoseconds: 1_000_000_000)
+            let (responseData, response) = try await URLSession.shared.data(from: url)
+            guard let httpResponse = response as? HTTPURLResponse,
+                  (200...299).contains(httpResponse.statusCode) else {
+                throw AudioError.networkError
+            }
+            data = responseData
+        }
+
         let audioResponse = try Self.decoder.decode(AudioResponse.self, from: data)
 
         guard let audioURLString = audioResponse.data.audio,
               let audioURL = URL(string: audioURLString) else {
             throw AudioError.noAudioAvailable
         }
+
+        // Store in cache
+        urlCache.store(url: audioURL, for: cacheKey)
 
         return audioURL
     }
@@ -514,19 +720,15 @@ class QuranAudioService: NSObject {
     private func setupPlayerObservers() {
         guard let player = player else { return }
 
-        // Time observer - fires every 1.0s for UI updates (reduced from 0.1s for performance)
-        // This prevents excessive SwiftUI re-renders that cause heating and lag
+        // Time observer - fires every 0.25s for smooth progress bar animation
         timeObserver = player.addPeriodicTimeObserver(
-            forInterval: CMTime(seconds: 1.0, preferredTimescale: 600),
+            forInterval: CMTime(seconds: 0.25, preferredTimescale: 600),
             queue: .main
         ) { [weak self] time in
-            // Dispatch to MainActor for Swift 6 concurrency safety
             Task { @MainActor [weak self] in
                 guard let self = self else { return }
 
                 let timeSeconds = time.seconds
-
-                // Update internal time immediately
                 self._internalCurrentTime = timeSeconds
 
                 // Update duration once if not set
@@ -536,12 +738,13 @@ class QuranAudioService: NSObject {
                     self.duration = itemDuration
                 }
 
-                // Only publish time if changed by more than 0.5s (throttle SwiftUI updates)
-                if abs(self._internalCurrentTime - self._lastPublishedTime) >= 0.5 {
-                    self._lastPublishedTime = self._internalCurrentTime
-                    self.currentTime = self._internalCurrentTime
+                // Publish time every tick for smooth progress bars
+                self.currentTime = timeSeconds
 
-                    // Update Now Playing info
+                // Throttle Now Playing info updates to ~1s (lock screen doesn't need 4Hz)
+                let now = CACurrentMediaTime()
+                if now - self.lastNowPlayingUpdate >= 1.0 {
+                    self.lastNowPlayingUpdate = now
                     self.updateNowPlayingInfo()
                 }
             }
@@ -586,47 +789,76 @@ class QuranAudioService: NSObject {
         statusObserver?.invalidate()
         statusObserver = nil
 
-        NotificationCenter.default.removeObserver(self)
+        if let currentItem = player?.currentItem {
+            NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: currentItem)
+        }
     }
 
     @objc private func playerDidFinishPlaying() {
         Task { @MainActor in
-            print("✅ Finished playing verse")
-
             // Auto-advance to next verse if continuous playback is enabled
             if continuousPlaybackEnabled && currentVerseIndex < playingVerses.count - 1 {
-                print("⏭️ Auto-advancing to next verse...")
                 do {
                     try await playNextVerse()
                 } catch {
-                    print("❌ Failed to play next verse: \(error)")
                     playbackState = .idle
                     currentTime = 0
                 }
             } else {
+                // Save session before stopping so resume is possible
+                saveSession()
                 playbackState = .idle
                 currentTime = 0
+                updateIdleTimerState()
             }
         }
     }
 
     private func waitForPlayerReady() async throws {
-        guard let player = player else {
+        guard let playerItem = player?.currentItem else {
             throw AudioError.playerNotReady
         }
 
-        // Wait up to 10 seconds for player to be ready
-        let startTime = Date()
-        while player.currentItem?.status != .readyToPlay {
-            if Date().timeIntervalSince(startTime) > 10 {
-                throw AudioError.timeout
+        // Fast path: already ready
+        if playerItem.status == .readyToPlay { return }
+        if playerItem.status == .failed {
+            throw playerItem.error ?? AudioError.playerNotReady
+        }
+
+        // Use continuation + KVO instead of busy-wait polling
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            var observation: NSKeyValueObservation?
+            var timeoutTask: Task<Void, Never>?
+            var resumed = false
+
+            observation = playerItem.observe(\.status, options: [.new]) { item, _ in
+                guard !resumed else { return }
+                switch item.status {
+                case .readyToPlay:
+                    resumed = true
+                    timeoutTask?.cancel()
+                    observation?.invalidate()
+                    continuation.resume()
+                case .failed:
+                    resumed = true
+                    timeoutTask?.cancel()
+                    observation?.invalidate()
+                    continuation.resume(throwing: item.error ?? AudioError.playerNotReady)
+                case .unknown:
+                    break
+                @unknown default:
+                    break
+                }
             }
 
-            if player.currentItem?.status == .failed {
-                throw player.currentItem?.error ?? AudioError.playerNotReady
+            // 10-second timeout
+            timeoutTask = Task { [weak observation] in
+                try? await Task.sleep(nanoseconds: 10_000_000_000)
+                guard !Task.isCancelled, !resumed else { return }
+                resumed = true
+                observation?.invalidate()
+                continuation.resume(throwing: AudioError.timeout)
             }
-
-            try await Task.sleep(nanoseconds: 100_000_000) // 0.1 second
         }
     }
 
@@ -636,7 +868,44 @@ class QuranAudioService: NSObject {
         // Observer cleanup will happen automatically when properties are deallocated
         // NSKeyValueObservation auto-invalidates, AVPlayer auto-stops on dealloc
         NotificationCenter.default.removeObserver(self)
-        print("🗑️ QuranAudioService deinitialized")
+    }
+}
+
+// MARK: - Audio URL Cache
+@MainActor private final class AudioURLCache {
+    private var memory: [String: URL] = [:]
+    private let diskURL: URL
+
+    init() {
+        let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first
+            ?? FileManager.default.temporaryDirectory
+        let cacheDir = caches.appendingPathComponent("AudioURLCache", isDirectory: true)
+        try? FileManager.default.createDirectory(at: cacheDir, withIntermediateDirectories: true)
+        diskURL = cacheDir.appendingPathComponent("urls.json")
+
+        // Load disk cache into memory
+        if let data = try? Data(contentsOf: diskURL),
+           let dict = try? JSONDecoder().decode([String: String].self, from: data) {
+            memory = dict.compactMapValues { URL(string: $0) }
+        }
+    }
+
+    func cachedURL(for key: String) -> URL? {
+        if let url = memory[key] { return url }
+        // Memory miss but disk might have it (if memory was cleared)
+        return nil
+    }
+
+    func store(url: URL, for key: String) {
+        memory[key] = url
+        persistToDisk()
+    }
+
+    private func persistToDisk() {
+        let stringDict = memory.mapValues { $0.absoluteString }
+        if let data = try? JSONEncoder().encode(stringDict) {
+            try? data.write(to: diskURL, options: .atomic)
+        }
     }
 }
 
