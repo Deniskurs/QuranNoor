@@ -18,8 +18,14 @@ final class IslamicCalendarService {
     private(set) var progress: CalendarProgress
     private(set) var ramadanTrackers: [Int: RamadanTracker] = [:]  // Year -> Tracker
 
+    /// Moon sighting day offset: adjusts the calculated Hijri date.
+    /// Positive = the calculated date is ahead (shift back), negative = behind (shift forward).
+    /// e.g. if Apple says "3 Ramadan" but your local sighting says "2 Ramadan", set offset to -1.
+    private(set) var hijriDayOffset: Int
+
     private static let progressKey = "islamicCalendarProgress"
     private static let ramadanTrackersKey = "ramadanTrackers"
+    private static let hijriOffsetKey = "hijriDayOffset"
 
     private let islamicCalendar: Calendar = {
         var calendar = Calendar(identifier: .islamic)
@@ -28,16 +34,30 @@ final class IslamicCalendarService {
     }()
 
     init() {
+        self.hijriDayOffset = UserDefaults.standard.integer(forKey: Self.hijriOffsetKey)
         self.progress = Self.loadProgress()
         self.ramadanTrackers = Self.loadRamadanTrackers()
         self.allEvents = Self.createEventsDatabase()
     }
 
+    /// Update the moon sighting offset (range: -3 to +3 days)
+    func setHijriDayOffset(_ offset: Int) {
+        let clamped = max(-3, min(3, offset))
+        hijriDayOffset = clamped
+        UserDefaults.standard.set(clamped, forKey: Self.hijriOffsetKey)
+    }
+
     // MARK: - Date Conversion
 
-    /// Convert Gregorian date to Hijri date
+    /// Convert Gregorian date to Hijri date (applies moon sighting offset)
     func convertToHijri(from gregorianDate: Date = Date()) -> HijriDate {
-        let components = islamicCalendar.dateComponents([.year, .month, .day, .weekday], from: gregorianDate)
+        // Apply moon sighting offset: shifting the Gregorian input date shifts
+        // the resulting Hijri date by the same number of days.
+        let adjustedDate = hijriDayOffset == 0
+            ? gregorianDate
+            : (Calendar.current.date(byAdding: .day, value: hijriDayOffset, to: gregorianDate) ?? gregorianDate)
+
+        let components = islamicCalendar.dateComponents([.year, .month, .day, .weekday], from: adjustedDate)
 
         let monthNumber = components.month ?? 1
         let monthEnum = HijriMonth.allCases[safe: monthNumber - 1] ?? .muharram

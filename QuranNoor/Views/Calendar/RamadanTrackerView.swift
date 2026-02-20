@@ -14,14 +14,13 @@ struct RamadanTrackerView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var currentTracker: RamadanTracker
-    private let currentYear: Int
-    private let currentDay: Int
+
+    /// Computed from service so they react to moon sighting offset changes
+    private var currentYear: Int { calendarService.convertToHijri().year }
+    private var currentDay: Int { calendarService.convertToHijri().day }
 
     init(calendarService: IslamicCalendarService) {
         self.calendarService = calendarService
-        let hijriDate = calendarService.convertToHijri()
-        self.currentYear = hijriDate.year
-        self.currentDay = hijriDate.day
         self._currentTracker = State(initialValue: calendarService.getCurrentRamadanTracker())
     }
 
@@ -38,6 +37,9 @@ struct RamadanTrackerView: View {
                     VStack(spacing: Spacing.sectionSpacing) {
                         // Hero header
                         heroHeader
+
+                        // Moon sighting adjustment
+                        moonSightingAdjustment
 
                         // Journey progress
                         journeyProgressCard
@@ -99,6 +101,88 @@ struct RamadanTrackerView: View {
                 .foregroundStyle(themeManager.currentTheme.textSecondary)
         }
         .padding(.vertical, Spacing.sm)
+    }
+
+    // MARK: - Moon Sighting Adjustment
+
+    private var moonSightingAdjustment: some View {
+        CardView(intensity: .subtle) {
+            VStack(spacing: Spacing.xs) {
+                HStack(spacing: Spacing.xxs) {
+                    Image(systemName: "moon.haze.fill")
+                        .font(.system(size: FontSizes.lg))
+                        .foregroundStyle(themeManager.currentTheme.accentMuted)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Moon Sighting Adjustment")
+                            .font(.system(size: FontSizes.sm, weight: .semibold))
+                            .foregroundStyle(themeManager.currentTheme.textPrimary)
+
+                        Text("Align with your local sighting")
+                            .font(.system(size: FontSizes.xs))
+                            .foregroundStyle(themeManager.currentTheme.textTertiary)
+                    }
+
+                    Spacer()
+                }
+
+                // Stepper row
+                HStack {
+                    Button {
+                        guard calendarService.hijriDayOffset > -3 else { return }
+                        calendarService.setHijriDayOffset(calendarService.hijriDayOffset - 1)
+                        HapticManager.shared.trigger(.light)
+                    } label: {
+                        Image(systemName: "minus.circle.fill")
+                            .font(.system(size: FontSizes.xl))
+                            .foregroundStyle(
+                                calendarService.hijriDayOffset > -3
+                                    ? themeManager.currentTheme.accent
+                                    : themeManager.currentTheme.textTertiary.opacity(0.3)
+                            )
+                    }
+                    .disabled(calendarService.hijriDayOffset <= -3)
+
+                    Spacer()
+
+                    VStack(spacing: 2) {
+                        Text(offsetLabel)
+                            .font(.system(size: FontSizes.lg, weight: .bold, design: .rounded))
+                            .foregroundStyle(themeManager.currentTheme.textPrimary)
+                            .contentTransition(.numericText())
+
+                        Text("days")
+                            .font(.system(size: FontSizes.xs))
+                            .foregroundStyle(themeManager.currentTheme.textTertiary)
+                    }
+
+                    Spacer()
+
+                    Button {
+                        guard calendarService.hijriDayOffset < 3 else { return }
+                        calendarService.setHijriDayOffset(calendarService.hijriDayOffset + 1)
+                        HapticManager.shared.trigger(.light)
+                    } label: {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.system(size: FontSizes.xl))
+                            .foregroundStyle(
+                                calendarService.hijriDayOffset < 3
+                                    ? themeManager.currentTheme.accent
+                                    : themeManager.currentTheme.textTertiary.opacity(0.3)
+                            )
+                    }
+                    .disabled(calendarService.hijriDayOffset >= 3)
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal, Spacing.sm)
+            }
+        }
+    }
+
+    private var offsetLabel: String {
+        let offset = calendarService.hijriDayOffset
+        if offset == 0 { return "0" }
+        return offset > 0 ? "+\(offset)" : "\(offset)"
     }
 
     // MARK: - Journey Progress Card
@@ -207,7 +291,7 @@ struct RamadanTrackerView: View {
                     }
 
                     // Hint
-                    Text("Tap each day to mark your fast")
+                    Text("Tap today or past days to log your fast")
                         .font(.system(size: FontSizes.xs))
                         .foregroundStyle(themeManager.currentTheme.textTertiary)
                         .frame(maxWidth: .infinity, alignment: .center)
@@ -220,8 +304,10 @@ struct RamadanTrackerView: View {
         let isCompleted = currentTracker.isFastingCompleted(day: day)
         let isToday = day == currentDay
         let isPast = day < currentDay
+        let isFuture = day > currentDay
 
         return Button {
+            guard !isFuture else { return }
             withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                 currentTracker.toggleFasting(day: day)
                 calendarService.updateRamadanTracker(currentTracker)
@@ -231,7 +317,7 @@ struct RamadanTrackerView: View {
             ZStack {
                 // Background
                 RoundedRectangle(cornerRadius: BorderRadius.md, style: .continuous)
-                    .fill(dayBackground(isCompleted: isCompleted, isToday: isToday, isPast: isPast))
+                    .fill(dayBackground(isCompleted: isCompleted, isToday: isToday, isPast: isPast, isFuture: isFuture))
                     .frame(width: 40, height: 40)
 
                 // Today ring
@@ -249,17 +335,26 @@ struct RamadanTrackerView: View {
                 } else {
                     Text("\(day)")
                         .font(.system(size: FontSizes.sm, weight: isToday ? .bold : .medium, design: .rounded))
-                        .foregroundStyle(isToday ? themeManager.currentTheme.accent : themeManager.currentTheme.textSecondary)
+                        .foregroundStyle(
+                            isFuture
+                                ? themeManager.currentTheme.textTertiary.opacity(0.4)
+                                : isToday
+                                    ? themeManager.currentTheme.accent
+                                    : themeManager.currentTheme.textSecondary
+                        )
                 }
             }
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Day \(day)\(isCompleted ? ", fasted" : "")\(isToday ? ", today" : "")")
+        .disabled(isFuture)
+        .accessibilityLabel("Day \(day)\(isCompleted ? ", fasted" : "")\(isToday ? ", today" : "")\(isFuture ? ", upcoming" : "")")
     }
 
-    private func dayBackground(isCompleted: Bool, isToday: Bool, isPast: Bool) -> Color {
+    private func dayBackground(isCompleted: Bool, isToday: Bool, isPast: Bool, isFuture: Bool) -> Color {
         if isCompleted {
             return themeManager.currentTheme.accent
+        } else if isFuture {
+            return themeManager.currentTheme.textTertiary.opacity(0.04)
         } else if isPast {
             return themeManager.currentTheme.textTertiary.opacity(0.08)
         } else {
@@ -320,8 +415,10 @@ struct RamadanTrackerView: View {
     private func qiyamNightCell(night: Int) -> some View {
         let isCompleted = currentTracker.isQiyamCompleted(night: night)
         let isOdd = night % 2 != 0
+        let isFuture = night > currentDay
 
         return Button {
+            guard !isFuture else { return }
             withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                 currentTracker.toggleQiyam(night: night)
                 calendarService.updateRamadanTracker(currentTracker)
@@ -376,7 +473,9 @@ struct RamadanTrackerView: View {
             }
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Night \(night)\(isCompleted ? ", Qiyam completed" : "")\(isOdd ? ", blessed odd night" : "")")
+        .disabled(isFuture)
+        .opacity(isFuture ? 0.35 : 1.0)
+        .accessibilityLabel("Night \(night)\(isCompleted ? ", Qiyam completed" : "")\(isOdd ? ", blessed odd night" : "")\(isFuture ? ", upcoming" : "")")
     }
 
     // MARK: - Spiritual Goals Section

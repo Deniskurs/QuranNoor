@@ -90,7 +90,10 @@ struct RamadanHomeCard: View {
                 }
             }
             .buttonStyle(.plain)
-            .sheet(isPresented: $showingTracker) {
+            .sheet(isPresented: $showingTracker, onDismiss: {
+                // Refresh in case user changed moon sighting offset
+                calendarService = IslamicCalendarService()
+            }) {
                 RamadanTrackerView(calendarService: calendarService)
             }
             .accessibilityLabel("Ramadan tracker, Day \(dayOfRamadan), \(tracker.totalFastingDays) fasts completed. Tap to open tracker.")
