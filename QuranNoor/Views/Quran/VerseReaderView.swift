@@ -1015,11 +1015,19 @@ struct VerseReaderView: View {
         loadError = nil
 
         do {
-            verses = try await quranService.getVerses(forSurah: surah.id)
+            // Fetch Arabic text and translations concurrently (2 API calls, not N+1)
+            async let versesTask = quranService.getVerses(forSurah: surah.id)
+            async let translationsTask = quranService.getTranslations(
+                forSurah: surah.id,
+                edition: selectedTranslation
+            )
+
+            let (fetchedVerses, fetchedTranslations) = try await (versesTask, translationsTask)
+            verses = fetchedVerses
+            translations = fetchedTranslations
             isLoading = false
 
             loadVerseReadStates()
-            await loadTranslations()
         } catch {
             loadError = error
             isLoading = false
@@ -1033,24 +1041,18 @@ struct VerseReaderView: View {
 
     private func loadTranslations(for versesToLoad: [Verse]? = nil) async {
         isLoadingTranslations = true
-        let targetVerses = versesToLoad ?? verses
 
-        // Load translations sequentially to avoid API rate limiting.
-        // The APIClient's concurrency throttle + cache handles efficiency.
-        for verse in targetVerses {
-            do {
-                let translation = try await self.quranService.getTranslation(
-                    forVerse: verse,
-                    edition: self.selectedTranslation
-                )
-                translations[verse.number] = translation
-            } catch {
-                #if DEBUG
-                if case APIError.serverError(let code) = error, code != 429 {
-                    print("Failed to load translation for verse \(verse.number): \(error)")
-                }
-                #endif
-            }
+        // Bulk fetch: single API call for the entire surah's translations
+        do {
+            let bulk = try await quranService.getTranslations(
+                forSurah: surah.id,
+                edition: selectedTranslation
+            )
+            translations = bulk
+        } catch {
+            #if DEBUG
+            print("Failed to load translations for Surah \(surah.id): \(error)")
+            #endif
         }
 
         isLoadingTranslations = false

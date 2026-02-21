@@ -362,6 +362,34 @@ class QuranService {
         }
     }
 
+    /// Get all translations for a surah in a single API call (bulk fetch).
+    /// Returns a dictionary keyed by absolute verse number for fast lookup.
+    func getTranslations(forSurah surahNumber: Int, edition: TranslationEdition? = nil) async throws -> [Int: Translation] {
+        let selectedEdition = edition ?? translationPreferences.primaryTranslation
+        let editionId = selectedEdition.rawValue
+
+        do {
+            let response: QuranSurahResponse = try await apiClient.fetchDirect(
+                url: "https://api.alquran.cloud/v1/surah/\(surahNumber)/\(editionId)",
+                cacheKey: "surah_translation_\(surahNumber)_\(editionId)"
+            )
+
+            var result: [Int: Translation] = [:]
+            result.reserveCapacity(response.ayahs.count)
+            for ayah in response.ayahs {
+                result[ayah.number] = Translation(
+                    verseNumber: ayah.number,
+                    language: selectedEdition.language,
+                    text: ayah.text,
+                    author: selectedEdition.author
+                )
+            }
+            return result
+        } catch {
+            return [:]
+        }
+    }
+
     /// Get translation for a verse from API using stored preferences
     func getTranslation(forVerse verse: Verse, edition: TranslationEdition? = nil) async throws -> Translation {
         let selectedEdition = edition ?? translationPreferences.primaryTranslation

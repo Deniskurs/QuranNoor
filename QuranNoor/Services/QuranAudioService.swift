@@ -133,7 +133,7 @@ class QuranAudioService: NSObject {
     // Internal state for throttling (not observed by SwiftUI)
     @ObservationIgnored private var _internalCurrentTime: TimeInterval = 0
     @ObservationIgnored private var _lastPublishedTime: TimeInterval = 0
-    var continuousPlaybackEnabled: Bool {
+    var continuousPlaybackEnabled: Bool = false {
         didSet {
             UserDefaults.standard.set(continuousPlaybackEnabled, forKey: "continuous_playback_enabled")
         }
@@ -141,7 +141,7 @@ class QuranAudioService: NSObject {
 
     // MARK: - Settings
     // Stored properties so @Observable can track mutations and notify SwiftUI views.
-    var selectedReciter: Reciter {
+    var selectedReciter: Reciter = .misharyRashid {
         didSet {
             if let encoded = try? Self.encoder.encode(selectedReciter) {
                 UserDefaults.standard.set(encoded, forKey: "selected_reciter")
@@ -149,7 +149,7 @@ class QuranAudioService: NSObject {
         }
     }
 
-    var playbackSpeed: Float {
+    var playbackSpeed: Float = 1.0 {
         didSet {
             UserDefaults.standard.set(playbackSpeed, forKey: "playback_speed")
             player?.rate = playbackSpeed
@@ -190,20 +190,17 @@ class QuranAudioService: NSObject {
     private var hasSetupAudioSession = false
 
     private override init() {
-        // Restore persisted settings before super.init()
+        super.init()
+
+        // Restore persisted settings after super.init() so @Observable registrar is ready.
+        // didSet won't fire during init of the declaring class, so no double-write.
         if let data = UserDefaults.standard.data(forKey: "selected_reciter"),
            let reciter = try? Self.decoder.decode(Reciter.self, from: data) {
             self.selectedReciter = reciter
-        } else {
-            self.selectedReciter = .misharyRashid
         }
         let speed = UserDefaults.standard.float(forKey: "playback_speed")
-        self.playbackSpeed = speed == 0 ? 1.0 : speed
+        if speed != 0 { self.playbackSpeed = speed }
         self.continuousPlaybackEnabled = UserDefaults.standard.bool(forKey: "continuous_playback_enabled")
-
-        super.init()
-        // Audio session and remote command center are deferred until first playback
-        // to avoid blocking app launch with AVAudioSession activation.
     }
 
     private func ensureAudioSessionReady() {
