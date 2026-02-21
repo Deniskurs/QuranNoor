@@ -118,18 +118,18 @@ class LocationService: NSObject {
         let coordinates = try await getCurrentLocation()
         let location = CLLocation(latitude: coordinates.latitude, longitude: coordinates.longitude)
 
-        // Try MKReverseGeocodingRequest with one retry on timeout
-        for attempt in 1...2 {
-            if let result = await reverseGeocode(location: location) {
-                return (coordinates, result.city)
+        // Try geocoding — retry up to 3 times with backoff on timeout
+        for attempt in 1...3 {
+            if let city = await reverseGeocode(location: location) {
+                return (coordinates, city)
             }
-            // Brief pause before retry
-            if attempt < 2 {
-                try? await Task.sleep(for: .milliseconds(500))
+            // Backoff: 1s, 2s between retries
+            if attempt < 3 {
+                try? await Task.sleep(for: .seconds(attempt))
             }
         }
 
-        // Geocoding failed — use cached city if available
+        // All attempts failed — use cached city if available
         if let cachedCity = self.cityName {
             return (coordinates, cachedCity)
         }
@@ -138,7 +138,7 @@ class LocationService: NSObject {
     }
 
     /// Reverse geocode using MKReverseGeocodingRequest (iOS 26)
-    private func reverseGeocode(location: CLLocation) async -> (city: String, country: String)? {
+    private func reverseGeocode(location: CLLocation) async -> String? {
         do {
             guard let request = MKReverseGeocodingRequest(location: location) else { return nil }
             let mapItems = try await request.mapItems
@@ -151,11 +151,11 @@ class LocationService: NSObject {
                 self.countryName = country
                 cacheLocation(LocationCoordinates(latitude: location.coordinate.latitude, longitude: location.coordinate.longitude), city: city, country: country)
 
-                return (city, country)
+                return city
             }
         } catch {
             #if DEBUG
-            print("⚠️ Reverse geocoding failed: \(error.localizedDescription)")
+            print("⚠️ Reverse geocoding failed (will retry): \(error.localizedDescription)")
             #endif
         }
         return nil

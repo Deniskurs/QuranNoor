@@ -129,9 +129,9 @@ class APIClient {
     private init() {
         let configuration = URLSessionConfiguration.default
 
-        // Performance: Set reasonable timeout limits
-        configuration.timeoutIntervalForRequest = 15 // 15 seconds per request (was 30)
-        configuration.timeoutIntervalForResource = 30 // 30 seconds total (was 60)
+        // Timeout limits: 20s per request handles large surahs (Al-Baqarah ~1MB JSON)
+        configuration.timeoutIntervalForRequest = 20
+        configuration.timeoutIntervalForResource = 40
 
         // Performance: Configure URL cache with size limits
         let memoryCapacity = 10 * 1024 * 1024 // 10MB memory cache
