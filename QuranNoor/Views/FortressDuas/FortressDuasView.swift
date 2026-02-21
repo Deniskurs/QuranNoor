@@ -33,47 +33,45 @@ struct FortressDuasView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 20) {
-                    // Header
-                    headerSection
+        ScrollView {
+            VStack(spacing: 20) {
+                // Header
+                headerSection
 
-                    // Statistics Card
-                    statisticsCard
+                // Statistics Card
+                statisticsCard
 
-                    // Toggle between categories and search results
-                    if searchText.isEmpty && !showingFavorites {
-                        // Categories Grid
-                        categoriesSection
-                    } else {
-                        // Search Results or Favorites
-                        resultsSection
-                    }
+                // Toggle between categories and search results
+                if searchText.isEmpty && !showingFavorites {
+                    // Categories Grid
+                    categoriesSection
+                } else {
+                    // Search Results or Favorites
+                    resultsSection
                 }
-                .padding()
             }
-            .navigationTitle("Fortress of the Muslim")
-            .navigationBarTitleDisplayMode(.large)
-            .searchable(text: $searchText, prompt: "Search duas...")
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        withAnimation {
-                            showingFavorites.toggle()
-                            if showingFavorites {
-                                searchText = ""
-                            }
+            .padding()
+        }
+        .navigationTitle("Fortress of the Muslim")
+        .navigationBarTitleDisplayMode(.large)
+        .searchable(text: $searchText, prompt: "Search duas...")
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    withAnimation {
+                        showingFavorites.toggle()
+                        if showingFavorites {
+                            searchText = ""
                         }
-                    } label: {
-                        Image(systemName: showingFavorites ? "heart.fill" : "heart")
-                            .foregroundStyle(showingFavorites ? .red : .primary)
                     }
+                } label: {
+                    Image(systemName: showingFavorites ? "heart.fill" : "heart")
+                        .foregroundStyle(showingFavorites ? .red : .primary)
                 }
             }
-            .navigationDestination(for: DuaCategory.self) { category in
-                DuaCategoryView(category: category, duaService: duaService)
-            }
+        }
+        .navigationDestination(for: DuaCategory.self) { category in
+            DuaCategoryView(category: category, duaService: duaService)
         }
     }
 

@@ -59,13 +59,16 @@ final class IslamicCalendarService {
 
     // MARK: - Date Conversion
 
-    /// Convert Gregorian date to Hijri date (applies moon sighting offset)
+    /// Convert Gregorian date to Hijri date (applies Maghrib-based transition + moon sighting offset)
     func convertToHijri(from gregorianDate: Date = Date()) -> HijriDate {
-        // Apply moon sighting offset: shifting the Gregorian input date shifts
-        // the resulting Hijri date by the same number of days.
+        // Step 1: Maghrib adjustment — if past Maghrib today, advance to next Gregorian day
+        // so Apple's Islamic calendar returns the next Hijri date.
+        let maghribAdjusted = MaghribTimeStore.shared.maghribAdjustedDate(from: gregorianDate)
+
+        // Step 2: Moon sighting offset — shift the resulting Gregorian date
         let adjustedDate = hijriDayOffset == 0
-            ? gregorianDate
-            : (Calendar.current.date(byAdding: .day, value: hijriDayOffset, to: gregorianDate) ?? gregorianDate)
+            ? maghribAdjusted
+            : (Calendar.current.date(byAdding: .day, value: hijriDayOffset, to: maghribAdjusted) ?? maghribAdjusted)
 
         let components = islamicCalendar.dateComponents([.year, .month, .day, .weekday], from: adjustedDate)
 
@@ -245,7 +248,7 @@ final class IslamicCalendarService {
     }
 
     func toggleQiyam(night: Int, year: Int) {
-        var tracker = ramadanTrackers[night] ?? RamadanTracker(year: year)
+        var tracker = ramadanTrackers[year] ?? RamadanTracker(year: year)
         tracker.toggleQiyam(night: night)
         ramadanTrackers[year] = tracker
         saveRamadanTrackers()

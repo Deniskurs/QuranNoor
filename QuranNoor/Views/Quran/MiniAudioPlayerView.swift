@@ -45,7 +45,8 @@ struct MiniAudioPlayerView: View {
                     currentTime: audioService.currentTime,
                     duration: audioService.duration,
                     onSeek: { time in audioService.seek(to: time) },
-                    animationNamespace: animationNamespace
+                    animationNamespace: animationNamespace,
+                    isGeometrySource: !audioService.isFullPlayerPresented
                 )
 
                 // Player content
@@ -54,7 +55,8 @@ struct MiniAudioPlayerView: View {
                     SurahArtworkBadge(
                         surahNumber: verse.surahNumber,
                         size: .mini,
-                        animationNamespace: animationNamespace
+                        animationNamespace: animationNamespace,
+                        isGeometrySource: !audioService.isFullPlayerPresented
                     )
 
                     // Verse info

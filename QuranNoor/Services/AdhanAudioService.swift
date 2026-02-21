@@ -177,8 +177,10 @@ final class AdhanAudioService: NSObject {
         let previousAdhan = selectedAdhan
         selectedAdhan = adhan
         await playAdhan()
-        // Note: playAdhan returns after starting, not after finishing
-        // Restore immediately since this is a preview
+        // Restore after audio finishes (delegate sets isPlaying = false)
+        while isPlaying {
+            try? await Task.sleep(for: .milliseconds(200))
+        }
         selectedAdhan = previousAdhan
     }
 
@@ -263,14 +265,4 @@ enum AdhanAudio: String, CaseIterable, Identifiable {
         return URL(fileURLWithPath: path)
     }
 
-    var duration: TimeInterval {
-        // Approximate durations (in seconds)
-        switch self {
-        case .makkah: return 180 // 3 minutes
-        case .madinah: return 210 // 3.5 minutes
-        case .abdulBasit: return 150 // 2.5 minutes
-        case .mishary: return 165 // 2.75 minutes
-        case .local: return 120 // 2 minutes
-        }
-    }
 }

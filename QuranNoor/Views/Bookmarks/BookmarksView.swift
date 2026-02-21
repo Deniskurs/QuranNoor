@@ -15,62 +15,60 @@ struct BookmarksView: View {
     @State private var showDetailSheet = false
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                // Background
-                themeManager.currentTheme.backgroundColor
-                    .ignoresSafeArea()
+        ZStack {
+            // Background
+            themeManager.currentTheme.backgroundColor
+                .ignoresSafeArea()
 
-                // Main content
-                VStack(spacing: 0) {
-                    // Search bar
-                    searchBar
-                        .padding(.horizontal, Spacing.screenHorizontal)
-                        .padding(.vertical, Spacing.xs)
+            // Main content
+            VStack(spacing: 0) {
+                // Search bar
+                searchBar
+                    .padding(.horizontal, Spacing.screenHorizontal)
+                    .padding(.vertical, Spacing.xs)
 
-                    // Tab selector
-                    tabSelector
-                        .padding(.horizontal, Spacing.screenHorizontal)
-                        .padding(.vertical, Spacing.xxs)
+                // Tab selector
+                tabSelector
+                    .padding(.horizontal, Spacing.screenHorizontal)
+                    .padding(.vertical, Spacing.xxs)
 
-                    // Content
-                    if viewModel.isLoading {
-                        loadingView
-                    } else if !viewModel.hasBookmarks {
-                        emptyStateView
-                    } else {
-                        tabContent
-                    }
+                // Content
+                if viewModel.isLoading {
+                    loadingView
+                } else if !viewModel.hasBookmarks {
+                    emptyStateView
+                } else {
+                    tabContent
                 }
             }
-            .navigationTitle("Bookmarks")
-            .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Menu {
-                        Button(action: {
-                            viewModel.refresh()
+        }
+        .navigationTitle("Bookmarks")
+        .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Menu {
+                    Button(action: {
+                        viewModel.refresh()
+                    }) {
+                        Label("Refresh", systemImage: "arrow.clockwise")
+                    }
+
+                    if viewModel.currentTabCount > 0 {
+                        Button(role: .destructive, action: {
+                            // Clear all bookmarks in current tab - confirmation is handled by destructive role
+                            viewModel.clearCurrentTab()
                         }) {
-                            Label("Refresh", systemImage: "arrow.clockwise")
+                            Label("Clear All", systemImage: "trash")
                         }
-
-                        if viewModel.currentTabCount > 0 {
-                            Button(role: .destructive, action: {
-                                // Clear all bookmarks in current tab - confirmation is handled by destructive role
-                                viewModel.clearCurrentTab()
-                            }) {
-                                Label("Clear All", systemImage: "trash")
-                            }
-                        }
-                    } label: {
-                        Image(systemName: "ellipsis.circle")
-                            .foregroundColor(themeManager.currentTheme.accent)
                     }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                        .foregroundColor(themeManager.currentTheme.accent)
                 }
             }
-            .onAppear {
-                viewModel.loadBookmarks()
-            }
+        }
+        .onAppear {
+            viewModel.loadBookmarks()
         }
         .sheet(item: $selectedBookmark) { bookmark in
             SpiritualContentDetailSheet(
@@ -105,6 +103,7 @@ struct BookmarksView: View {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundColor(themeManager.currentTheme.textTertiary)
                 }
+                .accessibilityLabel("Clear search")
             }
         }
         .padding(Spacing.xs)
@@ -401,6 +400,7 @@ private struct TabButton: View {
             )
         }
         .buttonStyle(PlainButtonStyle())
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
 
@@ -432,6 +432,7 @@ private struct CategoryPill: View {
                 )
         }
         .buttonStyle(PlainButtonStyle())
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
 

@@ -200,15 +200,22 @@ class PrayerViewModel {
             let adjustedPrayerTimes = PrayerTimeAdjustmentService.shared.applyAdjustments(to: prayerTimes)
             todayPrayerTimes = adjustedPrayerTimes
 
+            // Step 3.6: Publish Maghrib time for Hijri day transition
+            MaghribTimeStore.shared.update(maghribTime: adjustedPrayerTimes.maghrib)
+
             // Step 4: Schedule notifications (if enabled)
+            // Non-blocking: notification failures must not affect prayer time display
             if notificationService.isAuthorized && notificationService.notificationsEnabled {
-                // Get location info for rich notifications
                 let locationInfo = getLocationInfo()
-                try await notificationService.schedulePrayerNotifications(
-                    prayerTimes,
-                    city: locationInfo.city,
-                    countryCode: locationInfo.countryCode
-                )
+                do {
+                    try await notificationService.schedulePrayerNotifications(
+                        prayerTimes,
+                        city: locationInfo.city,
+                        countryCode: locationInfo.countryCode
+                    )
+                } catch {
+                    // Notification scheduling is non-critical
+                }
             }
 
             isLoadingPrayerTimes = false
@@ -454,6 +461,9 @@ class PrayerViewModel {
     // MARK: - Private Methods
 
     private func handleError(_ error: Error) {
+        // Task cancellation is normal (view disappeared mid-load) — don't show to user
+        if error is CancellationError { return }
+
         errorMessage = error.localizedDescription
         showError = true
     }

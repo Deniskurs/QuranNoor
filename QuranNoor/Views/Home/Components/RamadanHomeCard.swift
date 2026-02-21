@@ -12,6 +12,16 @@ struct RamadanHomeCard: View {
     @State private var calendarService = IslamicCalendarService()
     @State private var showingTracker = false
 
+    /// Optional prayer times for showing Suhoor/Iftar row
+    var prayerTimes: DailyPrayerTimes?
+
+    private static let timeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.timeStyle = .short
+        f.locale = Locale.autoupdatingCurrent
+        return f
+    }()
+
     var body: some View {
         if calendarService.isRamadan() {
             let tracker = calendarService.getCurrentRamadanTracker()
@@ -85,6 +95,46 @@ struct RamadanHomeCard: View {
                                     .font(.system(size: FontSizes.xs, weight: .semibold))
                             }
                             .foregroundStyle(themeManager.currentTheme.accent)
+                        }
+
+                        // Suhoor/Iftar times row (when prayer times available)
+                        if let times = prayerTimes {
+                            HStack(spacing: Spacing.sm) {
+                                // Suhoor
+                                HStack(spacing: Spacing.xxxs + 2) {
+                                    Image(systemName: "moon.fill")
+                                        .font(.system(size: FontSizes.xs))
+                                        .foregroundStyle(themeManager.currentTheme.accentMuted)
+
+                                    Text("Suhoor")
+                                        .font(.system(size: FontSizes.xs))
+                                        .foregroundStyle(themeManager.currentTheme.textTertiary)
+
+                                    Text(Self.timeFormatter.string(from: times.imsak ?? times.fajr))
+                                        .font(.system(size: FontSizes.xs, weight: .semibold, design: .rounded))
+                                        .foregroundStyle(themeManager.currentTheme.textPrimary)
+                                        .monospacedDigit()
+                                }
+
+                                Spacer()
+
+                                // Iftar
+                                HStack(spacing: Spacing.xxxs + 2) {
+                                    Image(systemName: "sunset.fill")
+                                        .font(.system(size: FontSizes.xs))
+                                        .foregroundStyle(themeManager.currentTheme.accentMuted)
+
+                                    Text("Iftar")
+                                        .font(.system(size: FontSizes.xs))
+                                        .foregroundStyle(themeManager.currentTheme.textTertiary)
+
+                                    Text(Self.timeFormatter.string(from: times.maghrib))
+                                        .font(.system(size: FontSizes.xs, weight: .semibold, design: .rounded))
+                                        .foregroundStyle(themeManager.currentTheme.textPrimary)
+                                        .monospacedDigit()
+                                }
+                            }
+                            .padding(.top, Spacing.xxxs)
                         }
                     }
                 }

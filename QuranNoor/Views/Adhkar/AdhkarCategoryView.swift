@@ -31,13 +31,18 @@ struct AdhkarCategoryView: View {
                 // Dhikr List
                 LazyVStack(spacing: 12) {
                     ForEach(adhkar) { dhikr in
-                        DhikrCard(
-                            dhikr: dhikr,
-                            isCompleted: adhkarService.isCompleted(dhikrId: dhikr.id)
-                        )
-                        .onTapGesture {
+                        Button {
                             selectedDhikr = dhikr
+                        } label: {
+                            DhikrCard(
+                                dhikr: dhikr,
+                                isCompleted: adhkarService.isCompleted(dhikrId: dhikr.id)
+                            )
                         }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("\(dhikr.transliteration)")
+                        .accessibilityHint("Double tap to view details")
+                        .accessibilityAddTraits(adhkarService.isCompleted(dhikrId: dhikr.id) ? [.isButton, .isSelected] : .isButton)
                     }
                 }
                 .padding(.horizontal)
@@ -80,17 +85,17 @@ struct AdhkarCategoryView: View {
 
                     if statistics.isFullyCompleted {
                         Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(.green)
+                            .foregroundStyle(themeManager.currentTheme.accent)
                     }
                 }
 
                 ProgressView(value: statistics.completionPercentage, total: 100)
-                    .tint(statistics.isFullyCompleted ? .green : categoryColor)
+                    .tint(statistics.isFullyCompleted ? themeManager.currentTheme.accent : categoryColor)
             }
             .padding()
             .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(.ultraThinMaterial)
+                RoundedRectangle(cornerRadius: CornerRadius.md)
+                    .fill(themeManager.currentTheme.cardColor)
             )
             .padding(.horizontal)
 
@@ -126,6 +131,7 @@ struct AdhkarCategoryView: View {
 // MARK: - Dhikr Card
 
 struct DhikrCard: View {
+    @Environment(ThemeManager.self) var themeManager
     let dhikr: Dhikr
     let isCompleted: Bool
 
@@ -168,18 +174,18 @@ struct DhikrCard: View {
                 // Completed Indicator
                 if isCompleted {
                     Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(.green)
+                        .foregroundStyle(themeManager.currentTheme.accent)
                 }
             }
         }
         .padding()
         .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(.ultraThinMaterial)
+            RoundedRectangle(cornerRadius: CornerRadius.md)
+                .fill(themeManager.currentTheme.cardColor)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(isCompleted ? .green : .clear, lineWidth: 2)
+            RoundedRectangle(cornerRadius: CornerRadius.md)
+                .stroke(isCompleted ? themeManager.currentTheme.accent : .clear, lineWidth: 2)
         )
     }
 }

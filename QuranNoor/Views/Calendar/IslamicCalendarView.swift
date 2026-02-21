@@ -37,39 +37,37 @@ struct IslamicCalendarView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 20) {
-                    // Current Hijri Date Card
-                    currentDateCard
+        ScrollView {
+            VStack(spacing: 20) {
+                // Current Hijri Date Card
+                currentDateCard
 
-                    // Ramadan Tracker Button (if in Ramadan)
-                    if calendarService.isRamadan() {
-                        ramadanTrackerButton
-                    }
-
-                    // Upcoming Events
-                    upcomingEventsSection
-
-                    // Category Filter
-                    categoryFilterSection
-
-                    // Events List
-                    eventsListSection
+                // Ramadan Tracker Button (if in Ramadan)
+                if calendarService.isRamadan() {
+                    ramadanTrackerButton
                 }
-                .padding()
+
+                // Upcoming Events
+                upcomingEventsSection
+
+                // Category Filter
+                categoryFilterSection
+
+                // Events List
+                eventsListSection
             }
-            .navigationTitle("Islamic Calendar")
-            .navigationBarTitleDisplayMode(.large)
-            .searchable(text: $searchText, prompt: "Search events...")
-            .sheet(isPresented: $showingEventDetail) {
-                if let event = selectedEvent {
-                    EventDetailView(event: event, calendarService: calendarService)
-                }
+            .padding()
+        }
+        .navigationTitle("Islamic Calendar")
+        .navigationBarTitleDisplayMode(.large)
+        .searchable(text: $searchText, prompt: "Search events...")
+        .sheet(isPresented: $showingEventDetail) {
+            if let event = selectedEvent {
+                EventDetailView(event: event, calendarService: calendarService)
             }
-            .sheet(isPresented: $showingRamadanTracker) {
-                RamadanTrackerView(calendarService: calendarService)
-            }
+        }
+        .sheet(isPresented: $showingRamadanTracker) {
+            RamadanTrackerView(calendarService: calendarService)
         }
     }
 
@@ -96,7 +94,7 @@ struct IslamicCalendarView: View {
             VStack(spacing: 4) {
                 HStack {
                     Image(systemName: calendarService.getCurrentHijriMonth().isSacred ? "star.fill" : "calendar")
-                        .foregroundStyle(calendarService.getCurrentHijriMonth().isSacred ? .yellow : themeManager.currentTheme.accent)
+                        .foregroundStyle(calendarService.getCurrentHijriMonth().isSacred ? themeManager.currentTheme.accentMuted : themeManager.currentTheme.accent)
 
                     Text(calendarService.getCurrentHijriMonth().isSacred ? "Sacred Month" : "Islamic Month")
                         .font(.caption)
@@ -116,7 +114,7 @@ struct IslamicCalendarView: View {
             RoundedRectangle(cornerRadius: 16)
                 .fill(
                     .linearGradient(
-                        colors: [.green.opacity(0.1), .teal.opacity(0.1)],
+                        colors: [themeManager.currentTheme.accent.opacity(0.1), themeManager.currentTheme.accentMuted.opacity(0.1)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
@@ -124,7 +122,7 @@ struct IslamicCalendarView: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: 16)
-                .stroke(calendarService.getCurrentHijriMonth().isSacred ? .yellow : .green, lineWidth: 2)
+                .stroke(calendarService.getCurrentHijriMonth().isSacred ? themeManager.currentTheme.accentMuted : themeManager.currentTheme.accent, lineWidth: 2)
         )
     }
 
@@ -168,8 +166,8 @@ struct IslamicCalendarView: View {
             }
             .padding()
             .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(.ultraThinMaterial)
+                RoundedRectangle(cornerRadius: CornerRadius.md)
+                    .fill(themeManager.currentTheme.cardColor)
             )
         }
         .buttonStyle(.plain)
@@ -197,8 +195,8 @@ struct IslamicCalendarView: View {
                     .padding()
                     .frame(maxWidth: .infinity)
                     .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(.ultraThinMaterial)
+                        RoundedRectangle(cornerRadius: CornerRadius.md)
+                            .fill(themeManager.currentTheme.cardColor)
                     )
             } else {
                 ForEach(upcomingEvents) { event in
@@ -220,7 +218,7 @@ struct IslamicCalendarView: View {
                 CategoryFilterChip(
                     name: "All",
                     icon: "calendar",
-                    color: .gray,
+                    color: themeManager.currentTheme.textTertiary,
                     isSelected: selectedFilter == nil
                 ) {
                     selectedFilter = nil
@@ -338,8 +336,8 @@ struct UpcomingEventCard: View {
             }
             .padding()
             .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(.ultraThinMaterial)
+                RoundedRectangle(cornerRadius: CornerRadius.md)
+                    .fill(themeManager.currentTheme.cardColor)
             )
         }
         .buttonStyle(.plain)
@@ -382,9 +380,10 @@ struct EventCard: View {
                         }
                     } label: {
                         Image(systemName: isFavorite ? "heart.fill" : "heart")
-                            .foregroundStyle(isFavorite ? .red : .secondary)
+                            .foregroundStyle(isFavorite ? themeManager.currentTheme.accentMuted : .secondary)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel(isFavorite ? "Remove from favorites" : "Add to favorites")
                 }
 
                 // Event name
@@ -434,12 +433,12 @@ struct EventCard: View {
             }
             .padding()
             .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(.ultraThinMaterial)
+                RoundedRectangle(cornerRadius: CornerRadius.md)
+                    .fill(themeManager.currentTheme.cardColor)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(isFavorite ? .red.opacity(0.3) : .clear, lineWidth: 2)
+                RoundedRectangle(cornerRadius: CornerRadius.md)
+                    .stroke(isFavorite ? themeManager.currentTheme.accentMuted.opacity(0.3) : .clear, lineWidth: 2)
             )
         }
         .buttonStyle(.plain)
@@ -480,6 +479,8 @@ struct CategoryFilterChip: View {
             .foregroundStyle(isSelected ? color : .primary)
         }
         .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+        .accessibilityLabel("Filter: \(name)")
     }
 }
 

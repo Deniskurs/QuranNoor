@@ -40,12 +40,19 @@ class NotificationService {
 
     // MARK: - Observable Properties
     var isAuthorized: Bool = false
-    var notificationsEnabled: Bool = false
+    var notificationsEnabled: Bool {
+        get { NotificationPreferencesService.shared.globalNotificationsEnabled }
+        set {
+            if newValue {
+                NotificationPreferencesService.shared.enableAllNotifications()
+            } else {
+                NotificationPreferencesService.shared.disableAllNotifications()
+            }
+        }
+    }
 
     // MARK: - Private Properties
     private let center = UNUserNotificationCenter.current()
-    private let userDefaults = UserDefaults.standard
-    private let notificationsEnabledKey = "notificationsEnabled"
 
     // MARK: - Dynamic Notification Titles
     /// Prayer-specific dynamic titles with emojis
@@ -112,11 +119,38 @@ class NotificationService {
         "Don't let this slip away - your soul needs this connection 🕌"
     ]
 
+    // MARK: - Migration
+    private static let legacyKey = "notificationsEnabled"
+    private static let migrationKey = "notificationService_migrated_v1"
+
     // MARK: - Initializer
     init() {
-        loadNotificationSettings()
+        migrateLegacyPreference()
         Task {
             await checkAuthorizationStatus()
+        }
+    }
+
+    /// One-time migration from the old stored `notificationsEnabled` UserDefaults key
+    /// to the per-prayer preference system in NotificationPreferencesService.
+    private func migrateLegacyPreference() {
+        let defaults = UserDefaults.standard
+        guard !defaults.bool(forKey: Self.migrationKey) else { return }
+        defaults.set(true, forKey: Self.migrationKey)
+
+        let hasPerPrayerPrefs = defaults.dictionary(forKey: "prayerNotificationsEnabled") != nil
+
+        if let _ = defaults.object(forKey: Self.legacyKey) {
+            // Old key exists — migrate its value
+            let wasEnabled = defaults.bool(forKey: Self.legacyKey)
+            if !wasEnabled && !hasPerPrayerPrefs {
+                NotificationPreferencesService.shared.disableAllNotifications()
+            }
+            defaults.removeObject(forKey: Self.legacyKey)
+        } else if !hasPerPrayerPrefs {
+            // No old key and no per-prayer prefs — fresh state or user never opted in.
+            // Match old default (disabled) until user explicitly enables.
+            NotificationPreferencesService.shared.disableAllNotifications()
         }
     }
 
@@ -129,8 +163,7 @@ class NotificationService {
             isAuthorized = granted
 
             if granted {
-                notificationsEnabled = true
-                saveNotificationSettings()
+                NotificationPreferencesService.shared.enableAllNotifications()
             }
 
             return granted
@@ -373,13 +406,11 @@ class NotificationService {
         if notificationsEnabled {
             // Disable
             await cancelPrayerNotifications()
-            notificationsEnabled = false
+            NotificationPreferencesService.shared.disableAllNotifications()
         } else {
             // Enable (will need prayer times from ViewModel)
-            notificationsEnabled = true
+            NotificationPreferencesService.shared.enableAllNotifications()
         }
-
-        saveNotificationSettings()
     }
 
     /// Get count of pending notifications
@@ -390,12 +421,8 @@ class NotificationService {
 
     // MARK: - Private Methods
 
-    private func loadNotificationSettings() {
-        notificationsEnabled = userDefaults.bool(forKey: notificationsEnabledKey)
-    }
-
     func saveNotificationSettings() {
-        userDefaults.set(notificationsEnabled, forKey: notificationsEnabledKey)
+        // No-op: notifications state is now managed by NotificationPreferencesService
     }
 }
 
@@ -405,13 +432,13 @@ extension NotificationService {
     func registerNotificationCategories() {
         // Prayer time actions
         let prayedAction = UNNotificationAction(
-            identifier: "PRAYED",
+            identifier: "MARK_PRAYED_ACTION",
             title: "Mark as Prayed",
             options: []
         )
 
         let snoozeAction = UNNotificationAction(
-            identifier: "SNOOZE",
+            identifier: "SNOOZE_ACTION",
             title: "Remind me in 5 min",
             options: []
         )

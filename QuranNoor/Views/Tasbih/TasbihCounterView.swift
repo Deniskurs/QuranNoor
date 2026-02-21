@@ -39,10 +39,9 @@ struct TasbihCounterView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                // Background gradient
-                LinearGradient(
+        ZStack {
+            // Background gradient
+            LinearGradient(
                     colors: [themeManager.currentTheme.accent.opacity(0.12), themeManager.currentTheme.accentMuted.opacity(0.08)],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
@@ -119,8 +118,7 @@ struct TasbihCounterView: View {
                     startNewSession()
                 }
             }
-            .toast(message: toastMessage, style: toastStyle, isPresented: $showToast)
-        }
+        .toast(message: toastMessage, style: toastStyle, isPresented: $showToast)
     }
 
     // MARK: - Statistics Header

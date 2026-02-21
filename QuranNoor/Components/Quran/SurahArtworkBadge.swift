@@ -15,6 +15,7 @@ struct SurahArtworkBadge: View {
     let arabicText: String?
     let size: Size
     var animationNamespace: Namespace.ID?
+    var isGeometrySource: Bool = true
 
     @Environment(ThemeManager.self) var themeManager: ThemeManager
 
@@ -22,12 +23,14 @@ struct SurahArtworkBadge: View {
         surahNumber: Int,
         arabicText: String? = nil,
         size: Size,
-        animationNamespace: Namespace.ID? = nil
+        animationNamespace: Namespace.ID? = nil,
+        isGeometrySource: Bool = true
     ) {
         self.surahNumber = surahNumber
         self.arabicText = arabicText
         self.size = size
         self.animationNamespace = animationNamespace
+        self.isGeometrySource = isGeometrySource
     }
 
     // Accent gradient varies by surah for subtle variety
@@ -81,7 +84,7 @@ struct SurahArtworkBadge: View {
 
         return Group {
             if let ns = animationNamespace {
-                badge.matchedGeometryEffect(id: "playerArtwork", in: ns)
+                badge.matchedGeometryEffect(id: "playerArtwork", in: ns, isSource: isGeometrySource)
             } else {
                 badge
             }
@@ -125,7 +128,7 @@ struct SurahArtworkBadge: View {
 
         return Group {
             if let ns = animationNamespace {
-                card.matchedGeometryEffect(id: "playerArtwork", in: ns)
+                card.matchedGeometryEffect(id: "playerArtwork", in: ns, isSource: isGeometrySource)
             } else {
                 card
             }

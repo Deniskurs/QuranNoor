@@ -85,16 +85,18 @@ class HijriCalendarService {
 
     // MARK: - Public Methods
 
-    /// Get current Hijri date
+    /// Get current Hijri date (Maghrib-aware: advances after Maghrib)
     func getCurrentHijriDate() async throws -> HijriDate {
-        let todayString = Self.dateFormatter.string(from: Date())
-        let apiDate = try await convertGregorianToHijriInternal(date: todayString)
+        let adjustedDate = MaghribTimeStore.shared.maghribAdjustedDate(from: Date())
+        let dateString = Self.dateFormatter.string(from: adjustedDate)
+        let apiDate = try await convertGregorianToHijriInternal(date: dateString)
         return convertToDomainModel(apiDate)
     }
 
-    /// Get cached Hijri date (synchronous version using cached data only)
+    /// Get cached Hijri date (synchronous, Maghrib-aware)
     func getCachedHijriDate() -> HijriDate? {
-        let todayString = Self.dateFormatter.string(from: Date())
+        let adjustedDate = MaghribTimeStore.shared.maghribAdjustedDate(from: Date())
+        let todayString = Self.dateFormatter.string(from: adjustedDate)
         let cacheKey = "cache_\(hijriDateCacheKey(for: todayString))"
 
         guard let entryData = userDefaults.data(forKey: cacheKey),

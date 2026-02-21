@@ -118,42 +118,47 @@ class LocationService: NSObject {
         let coordinates = try await getCurrentLocation()
         let location = CLLocation(latitude: coordinates.latitude, longitude: coordinates.longitude)
 
-        // Reverse geocoding: Use MapKit (iOS 26+ only app)
-        do {
-            guard let request = MKReverseGeocodingRequest(location: location) else {
-                throw LocationServiceError.geocodingFailed
+        // Try MKReverseGeocodingRequest with one retry on timeout
+        for attempt in 1...2 {
+            if let result = await reverseGeocode(location: location) {
+                return (coordinates, result.city)
             }
-
-            let mapItems = try await request.mapItems
-
-            if let addressRep = mapItems.first?.addressRepresentations {
-                // MKAddressRepresentations provides cityName and regionName (country)
-                let city = addressRep.cityName ?? "Unknown City"
-                let country = addressRep.regionName ?? ""
-
-                // Update published properties
-                self.cityName = city
-                self.countryName = country
-
-                // Cache the values
-                cacheLocation(coordinates, city: city, country: country)
-
-                return (coordinates, city)
+            // Brief pause before retry
+            if attempt < 2 {
+                try? await Task.sleep(for: .milliseconds(500))
             }
-        } catch {
-            // Geocoding failed, but we still have coordinates
-            #if DEBUG
-            print("⚠️ Reverse geocoding failed: \(error.localizedDescription)")
-            #endif
         }
 
-        // If geocoding failed, return cached city if available
+        // Geocoding failed — use cached city if available
         if let cachedCity = self.cityName {
             return (coordinates, cachedCity)
         }
 
-        // No cached city and geocoding failed - return coordinates with fallback city
         return (coordinates, "Unknown City")
+    }
+
+    /// Reverse geocode using MKReverseGeocodingRequest (iOS 26)
+    private func reverseGeocode(location: CLLocation) async -> (city: String, country: String)? {
+        do {
+            guard let request = MKReverseGeocodingRequest(location: location) else { return nil }
+            let mapItems = try await request.mapItems
+
+            if let addressRep = mapItems.first?.addressRepresentations {
+                let city = addressRep.cityName ?? "Unknown City"
+                let country = addressRep.regionName ?? ""
+
+                self.cityName = city
+                self.countryName = country
+                cacheLocation(LocationCoordinates(latitude: location.coordinate.latitude, longitude: location.coordinate.longitude), city: city, country: country)
+
+                return (city, country)
+            }
+        } catch {
+            #if DEBUG
+            print("⚠️ Reverse geocoding failed: \(error.localizedDescription)")
+            #endif
+        }
+        return nil
     }
 
     /// Check if location services are enabled (derived from authorization status to avoid blocking calls on main thread)

@@ -17,6 +17,7 @@ struct AudioProgressBar: View {
     let duration: TimeInterval
     let onSeek: (TimeInterval) -> Void
     var animationNamespace: Namespace.ID?
+    var isGeometrySource: Bool = true
 
     @Environment(ThemeManager.self) var themeManager: ThemeManager
     @State private var isTouching = false
@@ -39,7 +40,7 @@ struct AudioProgressBar: View {
         }
 
         if let ns = animationNamespace {
-            bar.matchedGeometryEffect(id: "playerProgress", in: ns)
+            bar.matchedGeometryEffect(id: "playerProgress", in: ns, isSource: isGeometrySource)
         } else {
             bar
         }
@@ -62,6 +63,7 @@ struct AudioProgressBar: View {
                     .fill(theme.accent)
                     .frame(width: max(0, fillWidth), height: 3)
                     .shadow(color: theme.accent.opacity(0.5), radius: 4, x: 0, y: 0)
+                    .animation(dragProgress != nil ? nil : .linear(duration: 0.25), value: displayProgress)
             }
             .clipShape(Capsule())
             .contentShape(Rectangle())
@@ -105,6 +107,7 @@ struct AudioProgressBar: View {
                             )
                         )
                         .frame(width: max(0, fillWidth), height: trackHeight)
+                        .animation(isTouching ? nil : .linear(duration: 0.25), value: displayProgress)
 
                     // Scrubber knob
                     Circle()
@@ -114,6 +117,7 @@ struct AudioProgressBar: View {
                         .scaleEffect(isTouching ? 1.2 : 1.0)
                         .offset(x: max(0, min(fillWidth - 8, geometry.size.width - 16)))
                         .opacity(isTouching ? 1.0 : 0.0)
+                        .animation(isTouching ? nil : .linear(duration: 0.25), value: displayProgress)
                 }
                 .animation(.easeOut(duration: 0.15), value: isTouching)
                 .contentShape(Rectangle().inset(by: -16))

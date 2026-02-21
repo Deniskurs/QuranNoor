@@ -49,8 +49,32 @@ final class HomeViewModel {
 
     // MARK: - Initialization
 
+    @ObservationIgnored private nonisolated(unsafe) var hijriTransitionToken: (any NSObjectProtocol)?
+
     init() {
         updateGreeting()
+        observeHijriTransition()
+    }
+
+    deinit {
+        if let token = hijriTransitionToken {
+            NotificationCenter.default.removeObserver(token)
+        }
+    }
+
+    /// Observe Maghrib-based Hijri date transition to refresh the displayed date live
+    private func observeHijriTransition() {
+        hijriTransitionToken = NotificationCenter.default.addObserver(
+            forName: .hijriDateTransition,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                // Re-fetch the Hijri date using now-Maghrib-aware services
+                self.currentHijriDate = await self.loadHijriDate()
+            }
+        }
     }
 
     // MARK: - Public Methods
@@ -222,6 +246,8 @@ final class HomeViewModel {
     }
 
     private func handleError(_ error: Error) {
+        if error is CancellationError { return }
+
         errorMessage = error.localizedDescription
         showError = true
         #if DEBUG

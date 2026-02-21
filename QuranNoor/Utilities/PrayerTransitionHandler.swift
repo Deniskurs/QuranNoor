@@ -8,6 +8,11 @@
 
 import Foundation
 
+/// Notification posted when the Hijri date transitions at Maghrib
+extension Notification.Name {
+    static let hijriDateTransition = Notification.Name("hijriDateTransition")
+}
+
 /// Handles automatic day transitions at midnight
 @MainActor
 class PrayerTransitionHandler {
@@ -23,6 +28,9 @@ class PrayerTransitionHandler {
     /// Task for periodic period recalculation
     private var recalculationTask: Task<Void, Never>?
 
+    /// Task for Maghrib Hijri date transition
+    private var maghribTransitionTask: Task<Void, Never>?
+
     // MARK: - Initialization
 
     init(viewModel: PrayerViewModel) {
@@ -35,12 +43,14 @@ class PrayerTransitionHandler {
     func start() {
         scheduleMidnightCheck()
         schedulePeriodicRecalculation()
+        scheduleMaghribHijriTransition()
     }
 
     /// Stop all automatic tasks
     func stop() {
         dayTransitionTask?.cancel()
         recalculationTask?.cancel()
+        maghribTransitionTask?.cancel()
     }
 
     // MARK: - Midnight Transition
@@ -121,6 +131,37 @@ class PrayerTransitionHandler {
         }
     }
 
+    // MARK: - Maghrib Hijri Transition
+
+    /// Schedule a task to post hijriDateTransition notification at Maghrib
+    /// so views can refresh the Hijri date in real-time
+    private func scheduleMaghribHijriTransition() {
+        maghribTransitionTask?.cancel()
+
+        guard let maghribTime = viewModel?.todayPrayerTimes?.maghrib else { return }
+
+        let now = Date()
+        // Only schedule if Maghrib is in the future
+        guard maghribTime > now else { return }
+
+        let timeUntilMaghrib = maghribTime.timeIntervalSince(now)
+
+        maghribTransitionTask = Task {
+            do {
+                // Wait until Maghrib + 2 seconds
+                let sleepDuration = UInt64((timeUntilMaghrib + 2) * 1_000_000_000)
+                try await Task.sleep(nanoseconds: sleepDuration)
+
+                guard !Task.isCancelled else { return }
+
+                // Post notification so views refresh their Hijri date
+                NotificationCenter.default.post(name: .hijriDateTransition, object: nil)
+            } catch {
+                // Task was cancelled
+            }
+        }
+    }
+
     // MARK: - Periodic Recalculation
 
     /// Schedule periodic recalculation of prayer period (every 5 minutes)
@@ -159,5 +200,6 @@ class PrayerTransitionHandler {
         // Cancel tasks directly (can't call stop() from deinit due to MainActor isolation)
         dayTransitionTask?.cancel()
         recalculationTask?.cancel()
+        maghribTransitionTask?.cancel()
     }
 }

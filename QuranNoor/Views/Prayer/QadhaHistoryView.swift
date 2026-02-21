@@ -61,7 +61,12 @@ struct QadhaHistoryView: View {
                         Button {
                             selectedPrayerFilter = nil
                         } label: {
-                            Label("All Prayers", systemImage: selectedPrayerFilter == nil ? "checkmark" : "")
+                            HStack {
+                                Text("All Prayers")
+                                if selectedPrayerFilter == nil {
+                                    Image(systemName: "checkmark")
+                                }
+                            }
                         }
 
                         Divider()

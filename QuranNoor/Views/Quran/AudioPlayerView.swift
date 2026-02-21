@@ -153,28 +153,20 @@ struct AudioPlayerView: View {
     // MARK: - Top Bar
 
     private func topBar(theme: ThemeMode) -> some View {
-        ZStack {
-            // Drag indicator
-            Capsule()
-                .fill(theme.textSecondary.opacity(0.3))
-                .frame(width: 36, height: 5)
-
-            // Close button
-            HStack {
-                Spacer()
-                Button {
-                    HapticManager.shared.trigger(.light)
-                    onClose()
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: FontSizes.sm, weight: .medium))
-                        .foregroundColor(theme.textTertiary)
-                        .frame(width: 32, height: 32)
-                        .background(
-                            Circle()
-                                .fill(theme.cardColor.opacity(0.8))
-                        )
-                }
+        HStack {
+            Spacer()
+            Button {
+                HapticManager.shared.trigger(.light)
+                onClose()
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: FontSizes.sm, weight: .medium))
+                    .foregroundColor(theme.textTertiary)
+                    .frame(width: 32, height: 32)
+                    .background(
+                        Circle()
+                            .fill(theme.cardColor.opacity(0.8))
+                    )
             }
         }
         .padding(.horizontal, Spacing.screenHorizontal)
@@ -345,8 +337,12 @@ struct AudioPlayerView: View {
                     audioService.playbackSpeed = Float(speed)
                     HapticManager.shared.trigger(.selection)
                 } label: {
-                    Label(speedLabel(for: speed),
-                          systemImage: audioService.playbackSpeed == Float(speed) ? "checkmark" : "")
+                    HStack {
+                        Text(speedLabel(for: speed))
+                        if audioService.playbackSpeed == Float(speed) {
+                            Image(systemName: "checkmark")
+                        }
+                    }
                 }
             }
         } label: {
@@ -393,8 +389,12 @@ struct AudioPlayerView: View {
                 Button {
                     switchReciter(to: reciter)
                 } label: {
-                    Label(reciter.displayName,
-                          systemImage: audioService.selectedReciter == reciter ? "checkmark" : "")
+                    HStack {
+                        Text(reciter.displayName)
+                        if audioService.selectedReciter == reciter {
+                            Image(systemName: "checkmark")
+                        }
+                    }
                 }
             }
         } label: {

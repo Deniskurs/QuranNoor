@@ -15,8 +15,8 @@ import MediaPlayer
 enum Reciter: String, CaseIterable, Identifiable, Codable {
     case misharyRashid = "ar.alafasy"
     case abdulBasit = "ar.abdulbasitmurattal"
-    case saadAlGhamdi = "ar.saoodshuraym"
-    case mahmoudKhalil = "ar.khalilalhusary"
+    case saudAlShuraym = "ar.saoodshuraym"
+    case mahmoudKhalil = "ar.husary"
     case mahirAlMuaiqly = "ar.mahermuaiqly"
 
     var id: String { rawValue }
@@ -27,8 +27,8 @@ enum Reciter: String, CaseIterable, Identifiable, Codable {
             return "Mishary Rashid Al-Afasy"
         case .abdulBasit:
             return "Abdul Basit (Murattal)"
-        case .saadAlGhamdi:
-            return "Saad Al-Ghamdi"
+        case .saudAlShuraym:
+            return "Saud Al-Shuraym"
         case .mahmoudKhalil:
             return "Mahmoud Khalil Al-Husary"
         case .mahirAlMuaiqly:
@@ -42,8 +42,8 @@ enum Reciter: String, CaseIterable, Identifiable, Codable {
             return "Al-Afasy"
         case .abdulBasit:
             return "Abdul Basit"
-        case .saadAlGhamdi:
-            return "Al-Ghamdi"
+        case .saudAlShuraym:
+            return "Al-Shuraym"
         case .mahmoudKhalil:
             return "Al-Husary"
         case .mahirAlMuaiqly:
@@ -57,7 +57,7 @@ enum Reciter: String, CaseIterable, Identifiable, Codable {
             return "Clear and melodious recitation from Kuwait"
         case .abdulBasit:
             return "Classic Egyptian recitation with Tajweed"
-        case .saadAlGhamdi:
+        case .saudAlShuraym:
             return "Beautiful recitation from Saudi Arabia"
         case .mahmoudKhalil:
             return "Traditional Egyptian recitation"
@@ -72,7 +72,7 @@ enum Reciter: String, CaseIterable, Identifiable, Codable {
             return "Kuwait"
         case .abdulBasit, .mahmoudKhalil:
             return "Egypt"
-        case .saadAlGhamdi, .mahirAlMuaiqly:
+        case .saudAlShuraym, .mahirAlMuaiqly:
             return "Saudi Arabia"
         }
     }
@@ -209,10 +209,13 @@ class QuranAudioService: NSObject {
     }
 
     private func ensureAudioSessionReady() {
-        guard !hasSetupAudioSession else { return }
-        hasSetupAudioSession = true
+        if !hasSetupAudioSession {
+            hasSetupAudioSession = true
+            setupRemoteCommandCenter()
+        }
+        // Always (re-)activate the audio session — stop() releases it,
+        // so we must re-activate before every play.
         setupAudioSession()
-        setupRemoteCommandCenter()
     }
 
     // MARK: - Idle Timer Management

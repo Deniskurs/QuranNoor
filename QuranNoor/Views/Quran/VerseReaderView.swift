@@ -420,7 +420,11 @@ struct VerseReaderView: View {
         return Button {
             audioService.continuousPlaybackEnabled = true
             Task {
-                try? await audioService.playVerses(verses, startingAt: 0)
+                do {
+                    try await audioService.playVerses(verses, startingAt: 0)
+                } catch {
+                    showAudioError(error)
+                }
             }
             HapticManager.shared.trigger(.selection)
         } label: {
@@ -475,7 +479,11 @@ struct VerseReaderView: View {
                         Button {
                             audioService.continuousPlaybackEnabled = true
                             Task {
-                                try? await audioService.playVerses(verses, startingAt: index)
+                                do {
+                                    try await audioService.playVerses(verses, startingAt: index)
+                                } catch {
+                                    showAudioError(error)
+                                }
                             }
                             HapticManager.shared.trigger(.selection)
                         } label: {
@@ -485,7 +493,11 @@ struct VerseReaderView: View {
                         // Single verse only
                         Button {
                             Task {
-                                try? await audioService.play(verse: verse)
+                                do {
+                                    try await audioService.play(verse: verse)
+                                } catch {
+                                    showAudioError(error)
+                                }
                             }
                             HapticManager.shared.trigger(.selection)
                         } label: {
@@ -496,7 +508,11 @@ struct VerseReaderView: View {
                         Button {
                             audioService.continuousPlaybackEnabled = true
                             Task {
-                                try? await audioService.playVerses(verses, startingAt: 0)
+                                do {
+                                    try await audioService.playVerses(verses, startingAt: 0)
+                                } catch {
+                                    showAudioError(error)
+                                }
                             }
                             HapticManager.shared.trigger(.selection)
                         } label: {
@@ -1067,6 +1083,15 @@ struct VerseReaderView: View {
         HapticManager.shared.triggerPattern(.bookmarkAdded)
         toastMessage = "Saved to \(BookmarkCategory.shortLabel(for: category))"
         toastStyle = .success
+        showToast = true
+    }
+
+    // MARK: - Audio Error Feedback
+
+    private func showAudioError(_ error: Error) {
+        if error is CancellationError { return }
+        toastMessage = "Audio unavailable — check connection"
+        toastStyle = .error
         showToast = true
     }
 

@@ -16,37 +16,35 @@ struct AdhkarView: View {
     @State private var showingFortressDuas = false
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 20) {
-                    // Header
-                    headerSection
+        ScrollView {
+            VStack(spacing: 20) {
+                // Header
+                headerSection
 
-                    // Statistics Card
-                    statisticsCard
+                // Statistics Card
+                statisticsCard
 
-                    // Quick Access Section
-                    quickAccessSection
+                // Quick Access Section
+                quickAccessSection
 
-                    // Categories
-                    categoriesSection
-                }
-                .padding()
+                // Categories
+                categoriesSection
             }
-            .navigationTitle("Adhkar")
-            .navigationBarTitleDisplayMode(.large)
-            .navigationDestination(for: AdhkarCategory.self) { category in
-                AdhkarCategoryView(category: category, adhkarService: adhkarService)
-            }
-            .sheet(isPresented: $showingTasbih) {
-                TasbihCounterView()
-            }
-            .sheet(isPresented: $showingNamesOfAllah) {
-                NamesOfAllahView()
-            }
-            .sheet(isPresented: $showingFortressDuas) {
-                FortressDuasView()
-            }
+            .padding()
+        }
+        .navigationTitle("Adhkar")
+        .navigationBarTitleDisplayMode(.large)
+        .navigationDestination(for: AdhkarCategory.self) { category in
+            AdhkarCategoryView(category: category, adhkarService: adhkarService)
+        }
+        .sheet(isPresented: $showingTasbih) {
+            NavigationStack { TasbihCounterView() }
+        }
+        .sheet(isPresented: $showingNamesOfAllah) {
+            NavigationStack { NamesOfAllahView() }
+        }
+        .sheet(isPresented: $showingFortressDuas) {
+            NavigationStack { FortressDuasView() }
         }
     }
 
@@ -57,7 +55,7 @@ struct AdhkarView: View {
             Image(systemName: "sparkles")
                 .font(.system(size: 50))
                 .foregroundStyle(.linearGradient(
-                    colors: [.green, .teal],
+                    colors: [themeManager.currentTheme.accent, themeManager.currentTheme.accentMuted],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 ))
@@ -84,7 +82,7 @@ struct AdhkarView: View {
                     title: "Current Streak",
                     value: "\(adhkarService.progress.streak)",
                     icon: "flame.fill",
-                    color: .orange
+                    color: themeManager.currentTheme.accentMuted
                 )
 
                 Divider()
@@ -94,14 +92,14 @@ struct AdhkarView: View {
                     title: "Total Completions",
                     value: "\(adhkarService.progress.totalCompletions)",
                     icon: "checkmark.circle.fill",
-                    color: .green
+                    color: themeManager.currentTheme.accent
                 )
             }
         }
         .padding()
         .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(.ultraThinMaterial)
+            RoundedRectangle(cornerRadius: CornerRadius.lg)
+                .fill(themeManager.currentTheme.cardColor)
         )
     }
 
@@ -155,11 +153,13 @@ struct AdhkarView: View {
                     }
                     .padding()
                     .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(.ultraThinMaterial)
+                        RoundedRectangle(cornerRadius: CornerRadius.md)
+                            .fill(themeManager.currentTheme.cardColor)
                     )
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Digital Tasbih counter")
+                .accessibilityHint("Double tap to open")
 
                 // 99 Names of Allah Button
                 Button {
@@ -170,7 +170,7 @@ struct AdhkarView: View {
                             Circle()
                                 .fill(
                                     .linearGradient(
-                                        colors: [.green, .teal],
+                                        colors: [themeManager.currentTheme.accent, themeManager.currentTheme.accentMuted],
                                         startPoint: .topLeading,
                                         endPoint: .bottomTrailing
                                     )
@@ -202,11 +202,13 @@ struct AdhkarView: View {
                     }
                     .padding()
                     .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(.ultraThinMaterial)
+                        RoundedRectangle(cornerRadius: CornerRadius.md)
+                            .fill(themeManager.currentTheme.cardColor)
                     )
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("99 Names of Allah")
+                .accessibilityHint("Double tap to open")
 
                 // Fortress of the Muslim Button
                 Button {
@@ -217,7 +219,7 @@ struct AdhkarView: View {
                             Circle()
                                 .fill(
                                     .linearGradient(
-                                        colors: [.orange, .red],
+                                        colors: [themeManager.currentTheme.accentMuted, themeManager.currentTheme.accent],
                                         startPoint: .topLeading,
                                         endPoint: .bottomTrailing
                                     )
@@ -248,11 +250,13 @@ struct AdhkarView: View {
                     }
                     .padding()
                     .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(.ultraThinMaterial)
+                        RoundedRectangle(cornerRadius: CornerRadius.md)
+                            .fill(themeManager.currentTheme.cardColor)
                     )
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Fortress of the Muslim")
+                .accessibilityHint("Double tap to open")
             }
         }
     }
@@ -356,41 +360,41 @@ struct AdhkarCategoryCard: View {
 
                 if statistics.isFullyCompleted {
                     Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(.green)
+                        .foregroundStyle(themeManager.currentTheme.accent)
                         .font(.caption)
                 }
             }
         }
         .padding()
         .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(.ultraThinMaterial)
+            RoundedRectangle(cornerRadius: CornerRadius.md)
+                .fill(themeManager.currentTheme.cardColor)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(statistics.isFullyCompleted ? .green : .clear, lineWidth: 2)
+            RoundedRectangle(cornerRadius: CornerRadius.md)
+                .stroke(statistics.isFullyCompleted ? themeManager.currentTheme.accent : .clear, lineWidth: 2)
         )
     }
 
     private var iconColor: Color {
         switch category {
         case .morning:
-            return .orange
+            return themeManager.currentTheme.accentMuted
         case .evening:
-            return .purple
+            return themeManager.currentTheme.accent
         case .afterPrayer:
-            return .green
+            return themeManager.currentTheme.accent
         case .beforeSleep:
             return themeManager.currentTheme.accent
         case .waking:
-            return .yellow
+            return themeManager.currentTheme.accentMuted
         case .general:
-            return .teal
+            return themeManager.currentTheme.accentMuted
         }
     }
 
     private var progressColor: Color {
-        statistics.completionPercentage >= 100 ? .green : iconColor
+        statistics.completionPercentage >= 100 ? themeManager.currentTheme.accent : iconColor
     }
 }
 

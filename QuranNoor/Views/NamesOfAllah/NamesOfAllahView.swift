@@ -28,61 +28,59 @@ struct NamesOfAllahView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                // Background
-                LinearGradient(
-                    colors: [themeManager.currentTheme.accent.opacity(0.12), themeManager.currentTheme.accentMuted.opacity(0.08)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .ignoresSafeArea()
+        ZStack {
+            // Background
+            LinearGradient(
+                colors: [themeManager.currentTheme.accent.opacity(0.12), themeManager.currentTheme.accentMuted.opacity(0.08)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
 
-                VStack(spacing: 0) {
-                    // Header with Progress
-                    headerSection
+            VStack(spacing: 0) {
+                // Header with Progress
+                headerSection
 
-                    // Names List
-                    ScrollView {
-                        LazyVStack(spacing: 12) {
-                            ForEach(filteredNames) { name in
-                                NameCard(
-                                    name: name,
-                                    isFavorite: namesService.isFavorite(number: name.number),
-                                    isLearned: namesService.isLearned(number: name.number),
-                                    onFavorite: {
-                                        withAnimation {
-                                            namesService.toggleFavorite(number: name.number)
-                                        }
+                // Names List
+                ScrollView {
+                    LazyVStack(spacing: 12) {
+                        ForEach(filteredNames) { name in
+                            NameCard(
+                                name: name,
+                                isFavorite: namesService.isFavorite(number: name.number),
+                                isLearned: namesService.isLearned(number: name.number),
+                                onFavorite: {
+                                    withAnimation {
+                                        namesService.toggleFavorite(number: name.number)
                                     }
-                                )
-                                .onTapGesture {
-                                    selectedName = name
                                 }
+                            )
+                            .onTapGesture {
+                                selectedName = name
                             }
                         }
-                        .padding()
                     }
+                    .padding()
                 }
             }
-            .navigationTitle("99 Names of Allah")
-            .navigationBarTitleDisplayMode(.large)
-            .searchable(text: $searchText, prompt: "Search names...")
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        withAnimation {
-                            showFavoritesOnly.toggle()
-                        }
-                    } label: {
-                        Image(systemName: showFavoritesOnly ? "heart.fill" : "heart")
-                            .foregroundStyle(showFavoritesOnly ? .red : .primary)
+        }
+        .navigationTitle("99 Names of Allah")
+        .navigationBarTitleDisplayMode(.large)
+        .searchable(text: $searchText, prompt: "Search names...")
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    withAnimation {
+                        showFavoritesOnly.toggle()
                     }
+                } label: {
+                    Image(systemName: showFavoritesOnly ? "heart.fill" : "heart")
+                        .foregroundStyle(showFavoritesOnly ? .red : .primary)
                 }
             }
-            .sheet(item: $selectedName) { name in
-                NameDetailView(name: name, namesService: namesService)
-            }
+        }
+        .sheet(item: $selectedName) { name in
+            NameDetailView(name: name, namesService: namesService)
         }
     }
 

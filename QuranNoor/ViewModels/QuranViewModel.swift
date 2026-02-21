@@ -70,10 +70,9 @@ class QuranViewModel {
 
         rebuildSurahProgressCache()
 
-        // Defer preloading to avoid flooding the API at launch.
-        // Wait 3 seconds so critical UI data (prayer times, hijri date) loads first.
+        // Defer preloading briefly so critical UI data (prayer times, hijri date) loads first.
         Task {
-            try? await Task.sleep(for: .seconds(3))
+            try? await Task.sleep(for: .milliseconds(500))
             await preloadCommonSurahs()
         }
     }

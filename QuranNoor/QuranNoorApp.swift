@@ -227,8 +227,25 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
             }
 
         case "SNOOZE_ACTION":
-            // User snoozed the notification (could reschedule for 5 minutes later)
-            break
+            // Reschedule notification for 5 minutes later
+            if let prayerName = userInfo["prayer"] as? String {
+                let content = UNMutableNotificationContent()
+                content.title = "Prayer Reminder"
+                content.body = "Time for \(prayerName) prayer"
+                content.sound = .default
+                content.userInfo = userInfo
+                content.categoryIdentifier = "PRAYER_TIME"
+
+                let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 300, repeats: false)
+                let request = UNNotificationRequest(
+                    identifier: "snooze_\(prayerName)_\(Date().timeIntervalSince1970)",
+                    content: content,
+                    trigger: trigger
+                )
+                Task {
+                    try? await UNUserNotificationCenter.current().add(request)
+                }
+            }
 
         case UNNotificationDefaultActionIdentifier:
             // User tapped the notification (default action)

@@ -202,9 +202,7 @@ struct QiblaCompassView: View {
 
     // MARK: - Body
     var body: some View {
-        NavigationStack {
-            configuredContent
-        }
+        configuredContent
     }
 
     // MARK: - Helper Methods

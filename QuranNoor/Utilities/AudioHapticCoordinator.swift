@@ -100,8 +100,8 @@ class AudioHapticCoordinator {
         audioService.playNotification(customVolume: customVolume)
 
         // Use existing prayer complete haptic pattern
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-            self.hapticManager.triggerPattern(.prayerComplete)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self] in
+            self?.hapticManager.triggerPattern(.prayerComplete)
         }
     }
 
@@ -111,8 +111,8 @@ class AudioHapticCoordinator {
         audioService.playNotification(customVolume: 0.7) // Louder for celebration
 
         // Use streak achieved haptic pattern
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            self.hapticManager.triggerPattern(.streakAchieved)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+            self?.hapticManager.triggerPattern(.streakAchieved)
         }
     }
 
@@ -155,8 +155,8 @@ class AudioHapticCoordinator {
         playSuccess()
 
         // After a brief delay, play startup sound for transition
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            self.playStartup(customVolume: 0.6)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+            self?.playStartup(customVolume: 0.6)
         }
     }
 

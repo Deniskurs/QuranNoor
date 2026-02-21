@@ -19,6 +19,7 @@ struct PrayerTimesView: View {
 
     // Note: Access singletons directly - don't wrap in @State
     private let hijriService = HijriCalendarService()
+    @State private var islamicCalendarService = IslamicCalendarService()
 
     // UI State
     @State private var showMethodPicker: Bool = false
@@ -64,6 +65,12 @@ struct PrayerTimesView: View {
 
                             // Islamic divider after hero
                             IslamicDivider(style: .ornamental)
+
+                            // Ramadan Suhoor/Iftar banner (shown only during Ramadan)
+                            if islamicCalendarService.isRamadan(),
+                               let times = viewModel.todayPrayerTimes {
+                                ramadanBanner(times: times)
+                            }
 
                             // Today's Prayers List (static — no per-second updates needed)
                             if viewModel.isLoadingPrayerTimes {
@@ -522,6 +529,65 @@ struct PrayerTimesView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, Spacing.xxl)
+    }
+
+    // MARK: - Ramadan Banner
+
+    private static let ramadanTimeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.timeStyle = .short
+        f.locale = Locale.autoupdatingCurrent
+        return f
+    }()
+
+    private func ramadanBanner(times: DailyPrayerTimes) -> some View {
+        HStack(spacing: Spacing.md) {
+            // Suhoor
+            HStack(spacing: Spacing.xxxs + 2) {
+                Image(systemName: "moon.fill")
+                    .font(.system(size: FontSizes.sm))
+                    .foregroundStyle(themeManager.currentTheme.accentMuted)
+
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Suhoor")
+                        .font(.system(size: FontSizes.xs, weight: .medium))
+                        .foregroundStyle(themeManager.currentTheme.textSecondary)
+
+                    Text(Self.ramadanTimeFormatter.string(from: times.imsak ?? times.fajr))
+                        .font(.system(size: FontSizes.base, weight: .bold, design: .rounded))
+                        .foregroundStyle(themeManager.currentTheme.textPrimary)
+                        .monospacedDigit()
+                }
+            }
+
+            Spacer()
+
+            // Iftar
+            HStack(spacing: Spacing.xxxs + 2) {
+                Image(systemName: "sunset.fill")
+                    .font(.system(size: FontSizes.sm))
+                    .foregroundStyle(themeManager.currentTheme.accentMuted)
+
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Iftar")
+                        .font(.system(size: FontSizes.xs, weight: .medium))
+                        .foregroundStyle(themeManager.currentTheme.textSecondary)
+
+                    Text(Self.ramadanTimeFormatter.string(from: times.maghrib))
+                        .font(.system(size: FontSizes.base, weight: .bold, design: .rounded))
+                        .foregroundStyle(themeManager.currentTheme.textPrimary)
+                        .monospacedDigit()
+                }
+            }
+        }
+        .padding(.horizontal, Spacing.sm)
+        .padding(.vertical, Spacing.xs)
+        .background(
+            RoundedRectangle(cornerRadius: BorderRadius.md)
+                .fill(themeManager.currentTheme.accent.opacity(0.08))
+        )
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Ramadan: Suhoor at \(Self.ramadanTimeFormatter.string(from: times.imsak ?? times.fajr)), Iftar at \(Self.ramadanTimeFormatter.string(from: times.maghrib))")
     }
 
     // MARK: - Helper Methods

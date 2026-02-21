@@ -32,7 +32,6 @@ struct SettingsView: View {
 
     // MARK: - Body
     var body: some View {
-        NavigationStack {
             ZStack {
                 // Base theme background (ensures pure black in night mode for OLED)
                 themeManager.currentTheme.backgroundColor
@@ -127,7 +126,6 @@ struct SettingsView: View {
                     showToast = true
                 }
             }
-        }
         .sheet(isPresented: $showPrayerCalcInfo) {
             NavigationStack {
                 ScrollView {
