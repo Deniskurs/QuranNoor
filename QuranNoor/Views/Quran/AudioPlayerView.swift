@@ -3,8 +3,8 @@
 //  QuranNoor
 //
 //  Immersive full-screen audio player for Quran recitations.
-//  Designed as a sacred reading experience with Arabic calligraphy
-//  as the visual centerpiece.
+//  Inspired by Apple Music with large transport controls, gradient background,
+//  scrubber knob, swipe-down dismiss, and haptic feedback.
 //
 
 import SwiftUI
@@ -12,12 +12,17 @@ import SwiftUI
 struct AudioPlayerView: View {
     @Environment(ThemeManager.self) var themeManager: ThemeManager
     @State private var audioService = QuranAudioService.shared
-    @State private var isSeeking = false
     @State private var currentTranslation: Translation?
     @State private var surahName: String = ""
+    @State private var isPlayPausePressed = false
+
+    // Swipe-down dismiss state
+    @State private var dismissDragOffset: CGFloat = 0
+    @State private var isDismissDragging = false
 
     private let quranService = QuranService.shared
 
+    var animationNamespace: Namespace.ID?
     let onClose: () -> Void
 
     private var verse: Verse? { audioService.currentVerse }
@@ -25,18 +30,33 @@ struct AudioPlayerView: View {
     var body: some View {
         let theme = themeManager.currentTheme
 
-        ZStack(alignment: .top) {
-            theme.backgroundColor.ignoresSafeArea()
-            GradientBackground(style: .quran, opacity: 0.3)
+        GeometryReader { geometry in
+            ZStack {
+                // Background: theme color + radial accent wash
+                theme.backgroundColor.ignoresSafeArea()
 
-            VStack(spacing: 0) {
-                if let verse = verse {
-                    playerContent(verse: verse, theme: theme)
-                } else {
-                    emptyState(theme: theme)
+                RadialGradient(
+                    colors: [
+                        theme.accent.opacity(0.12),
+                        Color.clear
+                    ],
+                    center: .init(x: 0.5, y: 0.3),
+                    startRadius: 0,
+                    endRadius: geometry.size.height * 0.7
+                )
+                .ignoresSafeArea()
+
+                VStack(spacing: 0) {
+                    if let verse = verse {
+                        playerContent(verse: verse, theme: theme)
+                    } else {
+                        emptyState(theme: theme)
+                    }
                 }
             }
         }
+        .offset(y: dismissDragOffset)
+        .gesture(dismissGesture)
         .onChange(of: audioService.currentVerse) { _, newVerse in
             loadTranslation(for: newVerse)
             loadSurahName(for: newVerse)
@@ -47,93 +67,140 @@ struct AudioPlayerView: View {
         }
     }
 
-    // MARK: - Top-Level Sections
+    // MARK: - Dismiss Gesture
+
+    private var dismissGesture: some Gesture {
+        DragGesture(minimumDistance: 30, coordinateSpace: .local)
+            .onChanged { value in
+                // Only respond to downward drags
+                if value.translation.height > 0 {
+                    isDismissDragging = true
+                    dismissDragOffset = value.translation.height * 0.5
+                }
+            }
+            .onEnded { value in
+                isDismissDragging = false
+                if value.translation.height > 100 {
+                    HapticManager.shared.trigger(.medium)
+                    onClose()
+                } else {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        dismissDragOffset = 0
+                    }
+                }
+            }
+    }
+
+    // MARK: - Player Content (fixed layout, no ScrollView)
 
     private func playerContent(verse: Verse, theme: ThemeMode) -> some View {
-        ScrollView(showsIndicators: false) {
-            VStack(spacing: Spacing.md) {
-                closeButton(theme: theme)
-                arabicCard(verse: verse, theme: theme)
-                errorBanner(verse: verse, theme: theme)
-                translationText(theme: theme)
-                verseInfo(verse: verse, theme: theme)
-                progressBar(theme: theme)
-                transportControls(theme: theme)
-                bottomRow(theme: theme)
-            }
-            .padding(.horizontal, Spacing.screenHorizontal)
-            .padding(.bottom, Spacing.xl)
-        }
-    }
-
-    private func emptyState(theme: ThemeMode) -> some View {
-        VStack(spacing: Spacing.md) {
-            Spacer()
-            emptyIcon(theme: theme)
-            emptyLabel(theme: theme)
-            emptyInstructions(theme: theme)
-            closeButtonForEmpty(theme: theme)
-            Spacer()
-        }
-    }
-
-    // MARK: - Drag Indicator
-
-    private func dragIndicator(theme: ThemeMode) -> some View {
-        Capsule()
-            .fill(theme.textSecondary.opacity(0.3))
-            .frame(width: 36, height: 4)
-            .padding(.top, Spacing.xs)
-            .padding(.bottom, Spacing.xxs)
-    }
-
-    // MARK: - Close Button
-
-    private func closeButton(theme: ThemeMode) -> some View {
-        HStack {
-            Spacer()
-            Button { onClose() } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: FontSizes.sm, weight: .medium))
-                    .foregroundColor(theme.textTertiary)
-                    .frame(width: 32, height: 32)
-                    .background(Circle().fill(theme.cardColor))
-            }
-        }
-    }
-
-    // MARK: - Arabic Calligraphy Card
-
-    private func arabicCard(verse: Verse, theme: ThemeMode) -> some View {
         VStack(spacing: 0) {
-            arabicText(verse: verse, theme: theme)
-        }
-        .background(arabicCardBackground(theme: theme))
-        .animation(.easeInOut(duration: 0.3), value: verse.id)
-    }
+            // Top bar: drag indicator + close
+            topBar(theme: theme)
 
-    private func arabicText(verse: Verse, theme: ThemeMode) -> some View {
-        Text(verse.text)
-            .font(.custom("KFGQPC HAFS Uthmanic Script Regular", size: 30))
-            .foregroundColor(theme.textPrimary)
-            .multilineTextAlignment(.center)
-            .lineSpacing(16)
-            .environment(\.layoutDirection, .rightToLeft)
-            .padding(.horizontal, Spacing.md)
-            .padding(.vertical, Spacing.lg)
-            .frame(maxWidth: .infinity)
-            .transition(.opacity)
-            .id(verse.id)
-    }
+            Spacer(minLength: Spacing.sm)
 
-    private func arabicCardBackground(theme: ThemeMode) -> some View {
-        RoundedRectangle(cornerRadius: BorderRadius.xl)
-            .fill(theme.cardColor)
-            .overlay(
-                RoundedRectangle(cornerRadius: BorderRadius.xl)
-                    .stroke(theme.accent.opacity(0.15), lineWidth: 0.5)
+            // Arabic text artwork card
+            SurahArtworkBadge(
+                surahNumber: verse.surahNumber,
+                arabicText: verse.text,
+                size: .full,
+                animationNamespace: animationNamespace
             )
-            .shadow(color: theme.cardShadow, radius: theme.cardShadowRadius / 2, x: 0, y: 2)
+            .animation(.easeInOut(duration: 0.3), value: verse.id)
+
+            // Verse info
+            verseInfo(verse: verse, theme: theme)
+                .padding(.top, Spacing.sm)
+
+            // Error banner
+            errorBanner(verse: verse, theme: theme)
+                .padding(.horizontal, Spacing.screenHorizontal)
+
+            // Translation (3 lines max with fade)
+            translationText(theme: theme)
+                .padding(.top, Spacing.xxs)
+                .padding(.horizontal, Spacing.screenHorizontal)
+
+            Spacer(minLength: Spacing.sm)
+
+            // Progress bar with scrubber
+            AudioProgressBar(
+                style: .full,
+                progress: audioService.duration > 0
+                    ? audioService.currentTime / audioService.duration
+                    : 0,
+                currentTime: audioService.currentTime,
+                duration: audioService.duration,
+                onSeek: { time in audioService.seek(to: time) },
+                animationNamespace: animationNamespace
+            )
+            .padding(.horizontal, Spacing.screenHorizontal)
+
+            // Transport controls
+            transportControls(theme: theme)
+                .padding(.top, Spacing.sm)
+
+            // Bottom pills row
+            bottomRow(theme: theme)
+                .padding(.top, Spacing.xs)
+                .padding(.horizontal, Spacing.screenHorizontal)
+
+            Spacer(minLength: Spacing.sm)
+        }
+    }
+
+    // MARK: - Top Bar
+
+    private func topBar(theme: ThemeMode) -> some View {
+        ZStack {
+            // Drag indicator
+            Capsule()
+                .fill(theme.textSecondary.opacity(0.3))
+                .frame(width: 36, height: 5)
+
+            // Close button
+            HStack {
+                Spacer()
+                Button {
+                    HapticManager.shared.trigger(.light)
+                    onClose()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: FontSizes.sm, weight: .medium))
+                        .foregroundColor(theme.textTertiary)
+                        .frame(width: 32, height: 32)
+                        .background(
+                            Circle()
+                                .fill(theme.cardColor.opacity(0.8))
+                        )
+                }
+            }
+        }
+        .padding(.horizontal, Spacing.screenHorizontal)
+        .padding(.top, Spacing.xs)
+    }
+
+    // MARK: - Verse Info
+
+    private func verseInfo(verse: Verse, theme: ThemeMode) -> some View {
+        VStack(spacing: Spacing.xxxs) {
+            Text(surahName.isEmpty ? "" : surahName)
+                .font(.system(size: FontSizes.sm, weight: .semibold))
+                .foregroundColor(theme.accent)
+                .textCase(.uppercase)
+                .tracking(1.2)
+
+            Group {
+                if audioService.continuousPlaybackEnabled && !audioService.playingVerses.isEmpty {
+                    Text("Verse \(verse.verseNumber) of \(audioService.playingVerses.count)")
+                } else {
+                    Text("Verse \(verse.verseNumber)")
+                }
+            }
+            .font(.system(size: FontSizes.sm))
+            .foregroundColor(theme.textTertiary)
+        }
     }
 
     // MARK: - Translation
@@ -146,109 +213,11 @@ struct AudioPlayerView: View {
                     .foregroundColor(theme.textSecondary)
                     .multilineTextAlignment(.center)
                     .lineSpacing(6)
-                    .padding(.horizontal, Spacing.xxs)
+                    .lineLimit(3)
+                    .truncationMode(.tail)
                     .transition(.opacity)
                     .animation(.easeInOut(duration: 0.3), value: currentTranslation?.id)
             }
-        }
-    }
-
-    // MARK: - Verse Info
-
-    private func verseInfo(verse: Verse, theme: ThemeMode) -> some View {
-        VStack(spacing: Spacing.xxxs) {
-            surahLabel(theme: theme)
-            versePositionLabel(verse: verse, theme: theme)
-        }
-    }
-
-    private func surahLabel(theme: ThemeMode) -> some View {
-        Text(surahName.isEmpty ? "" : surahName)
-            .font(.system(size: FontSizes.xs, weight: .semibold))
-            .foregroundColor(theme.accent)
-            .textCase(.uppercase)
-            .tracking(1.2)
-    }
-
-    private func versePositionLabel(verse: Verse, theme: ThemeMode) -> some View {
-        Group {
-            if audioService.continuousPlaybackEnabled && !audioService.playingVerses.isEmpty {
-                Text("Verse \(verse.verseNumber) of \(audioService.playingVerses.count)")
-                    .font(.system(size: FontSizes.sm))
-                    .foregroundColor(theme.textTertiary)
-            } else {
-                Text("Verse \(verse.verseNumber)")
-                    .font(.system(size: FontSizes.sm))
-                    .foregroundColor(theme.textTertiary)
-            }
-        }
-    }
-
-    // MARK: - Progress Bar
-
-    private func progressBar(theme: ThemeMode) -> some View {
-        VStack(spacing: Spacing.xxs) {
-            progressTrack(theme: theme)
-            progressTimeLabels(theme: theme)
-        }
-        .padding(.top, Spacing.xxs)
-    }
-
-    private func progressTrack(theme: ThemeMode) -> some View {
-        GeometryReader { geometry in
-            let progress = audioService.duration > 0
-                ? CGFloat(audioService.currentTime / audioService.duration)
-                : 0
-
-            ZStack(alignment: .leading) {
-                trackBackground(theme: theme)
-                trackFill(width: geometry.size.width * progress, theme: theme)
-            }
-            .frame(height: 4)
-            .clipShape(Capsule())
-            .contentShape(Rectangle().inset(by: -12))
-            .gesture(seekGesture(in: geometry.size.width))
-        }
-        .frame(height: 4)
-    }
-
-    private func trackBackground(theme: ThemeMode) -> some View {
-        Capsule()
-            .fill(theme.textSecondary.opacity(0.12))
-            .frame(height: 4)
-    }
-
-    private func trackFill(width: CGFloat, theme: ThemeMode) -> some View {
-        Capsule()
-            .fill(theme.accent)
-            .frame(width: max(0, width), height: 4)
-            .animation(isSeeking ? nil : .linear(duration: 0.24), value: audioService.currentTime)
-    }
-
-    private func seekGesture(in totalWidth: CGFloat) -> some Gesture {
-        DragGesture(minimumDistance: 0)
-            .onChanged { value in
-                isSeeking = true
-                let ratio = Double(value.location.x / totalWidth)
-                let newTime = ratio * audioService.duration
-                audioService.seek(to: max(0, min(newTime, audioService.duration)))
-            }
-            .onEnded { _ in
-                isSeeking = false
-            }
-    }
-
-    private func progressTimeLabels(theme: ThemeMode) -> some View {
-        HStack {
-            Text(audioService.currentTime.formattedPlaybackTime)
-                .font(.system(size: FontSizes.xs, weight: .medium))
-                .foregroundColor(theme.textTertiary)
-                .monospacedDigit()
-            Spacer()
-            Text(audioService.duration.formattedPlaybackTime)
-                .font(.system(size: FontSizes.xs, weight: .medium))
-                .foregroundColor(theme.textTertiary)
-                .monospacedDigit()
         }
     }
 
@@ -256,65 +225,88 @@ struct AudioPlayerView: View {
 
     private func transportControls(theme: ThemeMode) -> some View {
         HStack(spacing: Spacing.lg) {
-            previousButton(theme: theme)
-            playPauseButton(theme: theme)
-            nextButton(theme: theme)
-        }
-        .padding(.vertical, Spacing.xxs)
-    }
+            // Previous verse
+            Button {
+                HapticManager.shared.trigger(.light)
+                Task { try? await audioService.playPreviousVerse() }
+            } label: {
+                Image(systemName: "backward.end.fill")
+                    .font(.system(size: 28))
+                    .foregroundColor(theme.textPrimary.opacity(previousDisabled ? 0.25 : 0.7))
+            }
+            .disabled(previousDisabled)
+            .frame(width: Spacing.tapTarget, height: Spacing.tapTarget)
 
-    private func previousButton(theme: ThemeMode) -> some View {
-        Button {
-            Task { try? await audioService.playPreviousVerse() }
-        } label: {
-            Image(systemName: "backward.end.fill")
-                .font(.title3)
-                .foregroundColor(theme.textPrimary.opacity(previousDisabled ? 0.25 : 0.7))
-        }
-        .disabled(previousDisabled)
-        .frame(width: Spacing.tapTarget, height: Spacing.tapTarget)
-    }
+            // Skip back 15s
+            Button {
+                HapticManager.shared.trigger(.light)
+                let newTime = max(0, audioService.currentTime - 15)
+                audioService.seek(to: newTime)
+            } label: {
+                Image(systemName: "gobackward.15")
+                    .font(.system(size: 22))
+                    .foregroundColor(theme.textPrimary.opacity(0.7))
+            }
+            .frame(width: Spacing.tapTarget, height: Spacing.tapTarget)
 
-    private func nextButton(theme: ThemeMode) -> some View {
-        Button {
-            Task { try? await audioService.playNextVerse() }
-        } label: {
-            Image(systemName: "forward.end.fill")
-                .font(.title3)
-                .foregroundColor(theme.textPrimary.opacity(nextDisabled ? 0.25 : 0.7))
-        }
-        .disabled(nextDisabled)
-        .frame(width: Spacing.tapTarget, height: Spacing.tapTarget)
-    }
+            // Play/Pause (72pt)
+            Button {
+                HapticManager.shared.trigger(.medium)
+                audioService.togglePlayPause()
+            } label: {
+                playPauseIcon(theme: theme)
+            }
+            .scaleEffect(isPlayPausePressed ? 0.92 : 1.0)
+            .animation(.spring(response: 0.2, dampingFraction: 0.6), value: isPlayPausePressed)
+            .onLongPressGesture(minimumDuration: .infinity, pressing: { pressing in
+                isPlayPausePressed = pressing
+            }, perform: {})
 
-    private func playPauseButton(theme: ThemeMode) -> some View {
-        Button {
-            audioService.togglePlayPause()
-        } label: {
-            playPauseIcon(theme: theme)
+            // Skip forward 15s
+            Button {
+                HapticManager.shared.trigger(.light)
+                let newTime = min(audioService.duration, audioService.currentTime + 15)
+                audioService.seek(to: newTime)
+            } label: {
+                Image(systemName: "goforward.15")
+                    .font(.system(size: 22))
+                    .foregroundColor(theme.textPrimary.opacity(0.7))
+            }
+            .frame(width: Spacing.tapTarget, height: Spacing.tapTarget)
+
+            // Next verse
+            Button {
+                HapticManager.shared.trigger(.light)
+                Task { try? await audioService.playNextVerse() }
+            } label: {
+                Image(systemName: "forward.end.fill")
+                    .font(.system(size: 28))
+                    .foregroundColor(theme.textPrimary.opacity(nextDisabled ? 0.25 : 0.7))
+            }
+            .disabled(nextDisabled)
+            .frame(width: Spacing.tapTarget, height: Spacing.tapTarget)
         }
-        .scaleEffect(audioService.playbackState.isPlaying ? 1.0 : 0.95)
-        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: audioService.playbackState.isPlaying)
     }
 
     private func playPauseIcon(theme: ThemeMode) -> some View {
         ZStack {
             Circle()
                 .fill(theme.accent)
-                .frame(width: 64, height: 64)
+                .frame(width: 72, height: 72)
+                .shadow(color: theme.accent.opacity(0.3), radius: 12, x: 0, y: 4)
 
             Group {
                 if case .loading = audioService.playbackState {
                     ProgressView()
-                        .scaleEffect(1.0)
+                        .scaleEffect(1.2)
                         .tint(.white)
                 } else if case .buffering = audioService.playbackState {
                     ProgressView()
-                        .scaleEffect(1.0)
+                        .scaleEffect(1.2)
                         .tint(.white)
                 } else {
                     Image(systemName: audioService.playbackState.isPlaying ? "pause.fill" : "play.fill")
-                        .font(.title.weight(.regular))
+                        .font(.system(size: 28, weight: .regular))
                         .foregroundColor(.white)
                         .offset(x: audioService.playbackState.isPlaying ? 0 : 2)
                 }
@@ -339,8 +331,9 @@ struct AudioPlayerView: View {
             continuousPill(theme: theme)
             reciterPill(theme: theme)
             Spacer()
+            AirPlayButton(tintColor: theme.textSecondary)
+                .frame(width: 28, height: 28)
         }
-        .padding(.top, Spacing.xxs)
     }
 
     // MARK: - Speed Pill
@@ -350,6 +343,7 @@ struct AudioPlayerView: View {
             ForEach(speedOptions, id: \.self) { speed in
                 Button {
                     audioService.playbackSpeed = Float(speed)
+                    HapticManager.shared.trigger(.selection)
                 } label: {
                     Label(speedLabel(for: speed),
                           systemImage: audioService.playbackSpeed == Float(speed) ? "checkmark" : "")
@@ -380,6 +374,7 @@ struct AudioPlayerView: View {
     private func continuousPill(theme: ThemeMode) -> some View {
         Button {
             audioService.continuousPlaybackEnabled.toggle()
+            HapticManager.shared.trigger(.selection)
         } label: {
             pillLabel(
                 icon: audioService.continuousPlaybackEnabled ? "repeat.circle.fill" : "repeat.circle",
@@ -415,6 +410,7 @@ struct AudioPlayerView: View {
     private func switchReciter(to reciter: Reciter) {
         let wasPlaying = audioService.playbackState.isPlaying
         audioService.selectedReciter = reciter
+        HapticManager.shared.trigger(.selection)
         if (wasPlaying || audioService.playbackState == .paused),
            let verse = audioService.currentVerse {
             Task {
@@ -435,49 +431,50 @@ struct AudioPlayerView: View {
         .foregroundColor(isActive ? theme.accent : theme.textSecondary)
         .padding(.horizontal, Spacing.xs)
         .padding(.vertical, Spacing.xxs)
+        .frame(minHeight: Spacing.tapTarget)
         .background(
             Capsule()
                 .fill(isActive ? theme.accent.opacity(0.12) : theme.cardColor)
         )
     }
 
-    // MARK: - Empty State Elements
+    // MARK: - Empty State
 
-    private func emptyIcon(theme: ThemeMode) -> some View {
-        Image(systemName: "waveform")
-            .font(.largeTitle.weight(.ultraLight))
-            .foregroundColor(theme.textTertiary)
-    }
+    private func emptyState(theme: ThemeMode) -> some View {
+        VStack(spacing: Spacing.md) {
+            Spacer()
 
-    private func emptyLabel(theme: ThemeMode) -> some View {
-        Text("No audio playing")
-            .font(.body)
-            .foregroundColor(theme.textSecondary)
-    }
+            Image(systemName: "waveform")
+                .font(.largeTitle.weight(.ultraLight))
+                .foregroundColor(theme.textTertiary)
 
-    private func emptyInstructions(theme: ThemeMode) -> some View {
-        Text("Select a surah to begin listening")
-            .font(.subheadline)
-            .foregroundColor(theme.textTertiary)
-            .multilineTextAlignment(.center)
-            .padding(.horizontal, Spacing.lg)
-    }
+            Text("No audio playing")
+                .font(.body)
+                .foregroundColor(theme.textSecondary)
 
-    private func closeButtonForEmpty(theme: ThemeMode) -> some View {
-        Button {
-            onClose()
-        } label: {
-            Text("Close")
-                .font(.subheadline.weight(.medium))
-                .foregroundColor(theme.accent)
-                .padding(.horizontal, Spacing.md)
-                .padding(.vertical, Spacing.xs)
-                .background(
-                    Capsule()
-                        .fill(theme.accent.opacity(0.12))
-                )
+            Text("Select a surah to begin listening")
+                .font(.subheadline)
+                .foregroundColor(theme.textTertiary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, Spacing.lg)
+
+            Button {
+                onClose()
+            } label: {
+                Text("Close")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundColor(theme.accent)
+                    .padding(.horizontal, Spacing.md)
+                    .padding(.vertical, Spacing.xs)
+                    .background(
+                        Capsule()
+                            .fill(theme.accent.opacity(0.12))
+                    )
+            }
+            .padding(.top, Spacing.xs)
+
+            Spacer()
         }
-        .padding(.top, Spacing.xs)
     }
 
     // MARK: - Error Banner
@@ -517,6 +514,8 @@ struct AudioPlayerView: View {
         }
         .animation(.easeOut(duration: 0.25), value: audioService.playbackState)
     }
+
+    // MARK: - Data Loading
 
     private func loadTranslation(for verse: Verse?) {
         guard let verse = verse else {

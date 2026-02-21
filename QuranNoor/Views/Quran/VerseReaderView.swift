@@ -331,9 +331,11 @@ struct VerseReaderView: View {
             }
 
             // Now Playing indicator (taps to open full player)
+            // No animationNamespace — VerseReaderView uses .sheet() for the full player
             MiniAudioPlayerView(
                 showSkipControls: false,
                 showCloseButton: false,
+                animationNamespace: nil,
                 onTap: { showFullPlayer = true }
             )
             .padding(.bottom, Spacing.xxs)
