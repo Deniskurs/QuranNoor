@@ -2,131 +2,127 @@
 //  ThemeSelectionView.swift
 //  QuranNoor
 //
-//  Enhanced theme selection with live preview, personality descriptions,
-//  and intelligent theme recommendations
-//
+//  Screen 3: Theme selection with 2x2 grid, live preview, and launch CTA
+//  Compact theme cards with swatch, icon, name, selected ring animation
 
 import SwiftUI
 
 struct ThemeSelectionView: View {
     // MARK: - Properties
     @Environment(ThemeManager.self) var themeManager: ThemeManager
-    @Environment(\.dynamicTypeSize) var dynamicTypeSize
     var accessibilityHelper = AccessibilityHelper.shared
 
     let coordinator: OnboardingCoordinator
 
     @State private var selectedTheme: ThemeMode
-    @State private var showPreview = true
+
+    private let columns = [
+        GridItem(.flexible(), spacing: Spacing.gridSpacing),
+        GridItem(.flexible(), spacing: Spacing.gridSpacing)
+    ]
 
     // MARK: - Initialization
 
     init(coordinator: OnboardingCoordinator) {
         self.coordinator = coordinator
-        // Initialize with current theme or suggested theme
         _selectedTheme = State(initialValue: ThemeMode(rawValue: coordinator.selectedTheme) ?? ThemeSelectionView.suggestedTheme())
     }
 
     // MARK: - Body
     var body: some View {
+        let theme = themeManager.currentTheme
+
         ScrollView {
-            VStack(spacing: 32) {
+            VStack(spacing: Spacing.lg) {
                 // MARK: - Header
-                VStack(spacing: 12) {
+                VStack(spacing: Spacing.xs) {
                     Image(systemName: "paintbrush.fill")
-                        .font(.system(size: 50))
-                        .foregroundColor(themeManager.currentTheme.accentMuted)
-                        .accessibilityHidden(true)
+                        .font(.system(size: 44))
+                        .foregroundColor(theme.accentMuted)
 
                     ThemedText("Choose Your Theme", style: .title)
-                        .foregroundColor(themeManager.currentTheme.accent)
-                        .accessibilityAddTraits(.isHeader)
+                        .foregroundColor(theme.accent)
 
-                    ThemedText.body("Select your preferred reading mode. You can change this anytime in Settings")
+                    ThemedText.body("You can change this anytime in Settings")
                         .multilineTextAlignment(.center)
-                        .reducedTransparency(opacity: 0.8)
-                        .padding(.horizontal, 32)
+                        .foregroundColor(theme.textSecondary)
                 }
-                .padding(.top, 40)
+                .padding(.top, Spacing.xl)
 
-                // MARK: - Live Preview
-                if showPreview {
-                    VStack(spacing: 12) {
-                        HStack {
-                            ThemedText("Preview", style: .heading)
-                                .foregroundColor(themeManager.currentTheme.textPrimary)
-                            Spacer()
-                        }
-                        .padding(.horizontal, 24)
-
-                        PrayerTimesPreviewCard(theme: selectedTheme.theme)
-                            .padding(.horizontal, 24)
-                            .transition(AccessibleTransition.scale)
-                    }
-                }
-
-                // MARK: - Theme Options
-                VStack(spacing: 16) {
-                    ForEach([ThemeMode.light, ThemeMode.dark, ThemeMode.night, ThemeMode.sepia], id: \.self) { theme in
-                        ThemeOptionCard(
-                            theme: theme,
-                            isSelected: selectedTheme == theme,
-                            isSuggested: theme == Self.suggestedTheme(),
+                // MARK: - 2x2 Theme Grid
+                LazyVGrid(columns: columns, spacing: Spacing.gridSpacing) {
+                    ForEach([ThemeMode.light, .dark, .night, .sepia], id: \.self) { mode in
+                        ThemeGridCard(
+                            theme: mode,
+                            isSelected: selectedTheme == mode,
+                            isSuggested: mode == Self.suggestedTheme(),
                             onSelect: {
-                                selectTheme(theme)
+                                selectTheme(mode)
                             }
                         )
                     }
                 }
-                .padding(.horizontal, 24)
+                .padding(.horizontal, Spacing.screenHorizontal)
 
-                Spacer()
+                // MARK: - Live Preview
+                VStack(spacing: Spacing.xs) {
+                    HStack {
+                        ThemedText("Preview", style: .heading)
+                            .foregroundColor(theme.textPrimary)
+                        Spacer()
+                    }
 
-                // MARK: - Complete Button
-                Button {
-                    completeOnboarding()
-                } label: {
-                    Label("Get Started", systemImage: "checkmark.circle.fill")
-                        .frame(maxWidth: .infinity)
+                    PrayerTimesPreviewCard(theme: selectedTheme.theme)
+                        .animation(.smooth(duration: 0.3), value: selectedTheme)
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .tint(themeManager.currentTheme.accent)
-                .padding(.horizontal, 32)
-                .padding(.bottom, 40)
-                .accessibleElement(
-                    label: "Get Started with \(selectedTheme.displayName) theme",
-                    hint: "Double tap to complete onboarding and start using the app",
-                    traits: .isButton
-                )
+                .padding(.horizontal, Spacing.screenHorizontal)
+
+                Spacer(minLength: Spacing.xxl + 60)
             }
         }
-        .accessibilityPageAnnouncement("Theme Selection. Step \(coordinator.currentStep.rawValue + 1) of \(OnboardingCoordinator.OnboardingStep.allCases.count). Choose your preferred theme for reading the Quran and viewing prayer times.")
+        .safeAreaInset(edge: .bottom) {
+            // MARK: - Launch CTA
+            Button {
+                completeOnboarding()
+            } label: {
+                Label("Bismillah, Let's Begin", systemImage: "checkmark.circle.fill")
+                    .labelStyle(.titleAndIcon)
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .tint(themeManager.currentTheme.accent)
+            .padding(.horizontal, Spacing.screenHorizontal)
+            .padding(.vertical, Spacing.sm)
+            .background(
+                themeManager.currentTheme.backgroundColor
+                    .opacity(0.95)
+                    .ignoresSafeArea()
+            )
+        }
+        .accessibilityPageAnnouncement("Theme Selection. Step 3 of 3. Choose your preferred theme for reading the Quran and viewing prayer times.")
     }
 
     // MARK: - Methods
 
-    private func selectTheme(_ theme: ThemeMode) {
-        withAnimation(accessibilityHelper.shouldAnimate ? .spring(response: 0.3) : nil) {
-            selectedTheme = theme
-            coordinator.selectedTheme = theme.rawValue
-            // Don't change the entire app theme during selection — only update the preview
+    private func selectTheme(_ mode: ThemeMode) {
+        withAnimation(accessibilityHelper.shouldAnimate ? .spring(response: 0.3, dampingFraction: 0.7) : nil) {
+            selectedTheme = mode
+            coordinator.selectedTheme = mode.rawValue
         }
 
         AudioHapticCoordinator.shared.playSelection()
 
-        // Announce theme selection for VoiceOver
         if accessibilityHelper.isVoiceOverRunning {
             UIAccessibility.post(
                 notification: .announcement,
-                argument: "\(theme.displayName) theme selected. \(theme.personality)"
+                argument: "\(mode.displayName) theme selected. \(mode.personality)"
             )
         }
     }
 
     private func completeOnboarding() {
         coordinator.selectedTheme = selectedTheme.rawValue
-        // Apply the selected theme to the app now (on completion, not during browsing)
         themeManager.setTheme(selectedTheme)
         coordinator.complete()
     }
@@ -136,11 +132,11 @@ struct ThemeSelectionView: View {
         let hour = Calendar.current.component(.hour, from: Date())
 
         switch hour {
-        case 6..<18:  // 6 AM to 6 PM
+        case 6..<18:
             return .light
-        case 18..<22:  // 6 PM to 10 PM
+        case 18..<22:
             return .dark
-        case 22..<24, 0..<6:  // 10 PM to 6 AM
+        case 22..<24, 0..<6:
             return .night
         default:
             return .light
@@ -148,119 +144,69 @@ struct ThemeSelectionView: View {
     }
 }
 
-// MARK: - Theme Option Card Component
+// MARK: - Theme Grid Card
 
-struct ThemeOptionCard: View {
+struct ThemeGridCard: View {
     let theme: ThemeMode
     let isSelected: Bool
     let isSuggested: Bool
     let onSelect: () -> Void
 
     @Environment(ThemeManager.self) var themeManager: ThemeManager
-    var accessibilityHelper = AccessibilityHelper.shared
 
     var body: some View {
         Button {
             onSelect()
         } label: {
-            VStack(spacing: 12) {
-                HStack(spacing: 16) {
-                    // Theme preview circle
-                    ZStack {
-                        Circle()
-                            .fill(theme.backgroundColor)
-                            .frame(width: 50, height: 50)
-                            .overlay(
-                                Circle()
-                                    .stroke(theme.textPrimary.opacity(AccessibilityHelper.shared.opacity(0.3)), lineWidth: 1)
-                            )
+            VStack(spacing: Spacing.xxs) {
+                // Color swatch
+                ZStack {
+                    RoundedRectangle(cornerRadius: CornerRadius.md)
+                        .fill(theme.backgroundColor)
+                        .frame(height: 60)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: CornerRadius.md)
+                                .stroke(theme.textPrimary.opacity(0.15), lineWidth: 1)
+                        )
 
-                        // Checkmark if selected
-                        if isSelected {
-                            Image(systemName: "checkmark.circle.fill")
-                                .font(.system(size: 24))
-                                .foregroundColor(themeManager.currentTheme.accent)
-                                .transition(AccessibleTransition.scale)
-                        }
-                    }
-                    .accessibilityHidden(true)
-
-                    // Theme info
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack(spacing: 8) {
-                            ThemedText(theme.displayName, style: .body)
-                                .fontWeight(.semibold)
-                                .foregroundColor(
-                                    isSelected ? themeManager.currentTheme.accent : themeManager.currentTheme.textPrimary
-                                )
-
-                            if isSuggested {
-                                Text("SUGGESTED")
-                                    .font(.caption2.weight(.bold))
-                                    .foregroundColor(themeManager.currentTheme.backgroundColor)
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 4)
-                                    .background(
-                                        Capsule()
-                                            .fill(themeManager.currentTheme.accentMuted)
-                                    )
-                                    .transition(AccessibleTransition.scale)
-                            }
-                        }
-
-                        ThemedText.caption(theme.description)
-                            .reducedTransparency(opacity: 0.7)
-                    }
-
-                    Spacer()
-
-                    // Theme icon
                     Image(systemName: theme.icon)
                         .font(.system(size: 24))
                         .foregroundColor(theme.accent)
-                        .accessibilityHidden(true)
                 }
 
-                // Personality description
-                if isSelected {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Divider()
-
-                        HStack(spacing: 8) {
-                            Image(systemName: "sparkles")
-                                .font(.caption)
-                                .foregroundColor(themeManager.currentTheme.accentMuted)
-
-                            ThemedText.caption(theme.personality)
-                                .multilineTextAlignment(.leading)
-                        }
-                    }
-                    .transition(
-                        accessibilityHelper.shouldAnimate ?
-                            .asymmetric(
-                                insertion: .move(edge: .top).combined(with: .opacity),
-                                removal: .move(edge: .top).combined(with: .opacity)
-                            ) :
-                            .opacity
+                // Name
+                Text(theme.displayName)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(
+                        isSelected ? themeManager.currentTheme.accent : themeManager.currentTheme.textPrimary
                     )
+
+                // Suggested badge
+                if isSuggested {
+                    Text("Suggested")
+                        .font(.caption2.weight(.medium))
+                        .foregroundColor(themeManager.currentTheme.accentMuted)
                 }
             }
-            .padding(16)
+            .padding(Spacing.xs)
             .background(
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: CornerRadius.lg)
                     .fill(themeManager.currentTheme.cardColor)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(
-                                isSelected ? themeManager.currentTheme.accent : Color.clear,
-                                lineWidth: 2
-                            )
-                    )
             )
+            .overlay(
+                RoundedRectangle(cornerRadius: CornerRadius.lg)
+                    .stroke(
+                        isSelected ? themeManager.currentTheme.accent : Color.clear,
+                        lineWidth: 2.5
+                    )
+                    .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
+            )
+            .scaleEffect(isSelected ? 1.02 : 1.0)
+            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
         }
         .buttonStyle(.plain)
         .accessibleElement(
-            label: "\(theme.displayName) theme. \(theme.description). \(theme.personality). \(isSuggested ? "Suggested for current time of day." : "")",
+            label: "\(theme.displayName) theme. \(theme.description). \(isSuggested ? "Suggested for current time of day." : "")",
             hint: "Double tap to select this theme",
             traits: isSelected ? [.isButton, .isSelected] : .isButton
         )
@@ -323,10 +269,10 @@ extension ThemeMode {
     var theme: Theme {
         Theme(
             name: displayName,
-            backgroundColor: backgroundColor,  // From Colors.swift
-            cardColor: cardColor,              // From Colors.swift
-            textColor: textPrimary,            // From Colors.swift
-            accentColor: accent                // From Colors.swift
+            backgroundColor: backgroundColor,
+            cardColor: cardColor,
+            textColor: textPrimary,
+            accentColor: accent
         )
     }
 }

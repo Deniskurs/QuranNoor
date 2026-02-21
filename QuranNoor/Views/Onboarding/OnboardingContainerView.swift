@@ -2,22 +2,19 @@
 //  OnboardingContainerView.swift
 //  QuranNoor
 //
-//  Main onboarding container with page navigation
-//  Redesigned for iOS 26 with native buttons, audio feedback, and centralized state management
-//
+//  Main onboarding container with NavigationStack
+//  3-screen flow: Welcome+Permissions → Prayer Setup → Theme & Launch
 
 import SwiftUI
 
 struct OnboardingContainerView: View {
     // MARK: - Properties
     @Environment(ThemeManager.self) var themeManager: ThemeManager
-    @Environment(\.dismiss) var dismiss
-
-    // AppStorage binding to directly update completion status
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
 
     @State private var coordinator: OnboardingCoordinator
     @State private var permissionManager = PermissionManager.shared
+    @State private var navigationPath: [OnboardingCoordinator.OnboardingStep] = []
 
     // Audio & Haptic coordinator
     private let feedbackCoordinator = AudioHapticCoordinator.shared
@@ -26,38 +23,6 @@ struct OnboardingContainerView: View {
 
     init(coordinator: OnboardingCoordinator? = nil) {
         _coordinator = State(initialValue: coordinator ?? OnboardingCoordinator())
-    }
-
-    // MARK: - Computed Properties
-
-    /// Determines if Continue button should be shown
-    /// Hidden on permission steps until permission is granted
-    private var shouldShowContinueButton: Bool {
-        let currentStepIndex = coordinator.currentStep.rawValue
-        let totalSteps = OnboardingCoordinator.OnboardingStep.allCases.count
-
-        // Don't show on last two steps (personalization and theme have their own buttons)
-        guard currentStepIndex < totalSteps - 2 else {
-            return false
-        }
-
-        // Step 1 = Location permission (locationAndCalculation)
-        let isLocationStep = (currentStepIndex == 1)
-        // Step 2 = Notification permission
-        let isNotificationStep = (currentStepIndex == 2)
-
-        // On permission steps, hide container button
-        // Location step has embedded Continue button (after method selection)
-        if isLocationStep {
-            return false
-        }
-        // Notification step: show Continue only if permission granted
-        else if isNotificationStep {
-            return permissionManager.notificationStatus.isGranted
-        }
-
-        // On non-permission steps, always show Continue
-        return true
     }
 
     // MARK: - Body
@@ -69,110 +34,41 @@ struct OnboardingContainerView: View {
 
             GradientBackground(style: .home, opacity: 0.15)
 
-            VStack(spacing: 0) {
-                // Progress indicator
-                OnboardingProgressView(
-                    currentStep: coordinator.currentStep.rawValue + 1,
-                    totalSteps: OnboardingCoordinator.OnboardingStep.allCases.count
+            NavigationStack(path: $navigationPath) {
+                // Root: Screen 1 - Welcome & Permissions
+                WelcomePermissionsView(
+                    coordinator: coordinator,
+                    permissionManager: permissionManager
                 )
-                .padding(.horizontal)
-                .padding(.top, 8)
-
-                // Spacer for consistent top padding
-                Spacer()
-                    .frame(height: 44)
-
-                // Page content - Map coordinator steps to views
-                TabView(selection: Binding(
-                    get: { coordinator.currentStep.rawValue },
-                    set: { newValue in
-                        if OnboardingCoordinator.OnboardingStep(rawValue: newValue) != nil {
-                            // Manual swipe - update coordinator
-                            if newValue > coordinator.currentStep.rawValue {
-                                coordinator.advance()
-                            } else if newValue < coordinator.currentStep.rawValue {
-                                coordinator.goBack()
+                .navigationBarBackButtonHidden()
+                .toolbar { stepIndicator }
+                .navigationDestination(for: OnboardingCoordinator.OnboardingStep.self) { step in
+                    destinationView(for: step)
+                        .navigationBarBackButtonHidden()
+                        .toolbar {
+                            // Back button
+                            ToolbarItem(placement: .navigationBarLeading) {
+                                Button {
+                                    feedbackCoordinator.playBack()
+                                    navigationPath.removeLast()
+                                    coordinator.goBack()
+                                } label: {
+                                    Label("Back", systemImage: "chevron.left")
+                                }
+                                .tint(themeManager.currentTheme.accentMuted)
                             }
+
+                            // Step indicator
+                            stepIndicator
                         }
-                    }
-                )) {
-                    // Step 0: Welcome
-                    WelcomeView(coordinator: coordinator)
-                        .tag(0)
-
-                    // Step 1: Location & Calculation (combined view)
-                    LocationAndCalculationView(
-                        coordinator: coordinator,
-                        permissionManager: permissionManager
-                    )
-                    .tag(1)
-
-                    // Step 2: Notifications
-                    NotificationPermissionView(
-                        coordinator: coordinator,
-                        permissionManager: permissionManager
-                    )
-                    .tag(2)
-
-                    // Step 3: Personalization (name entry)
-                    PersonalizationView(
-                        coordinator: coordinator
-                    )
-                    .tag(3)
-
-                    // Step 4: Theme Selection
-                    ThemeSelectionView(
-                        coordinator: coordinator
-                    )
-                    .tag(4)
                 }
-                .tabViewStyle(.page(indexDisplayMode: .never)) // Hide default page indicator
-                .animation(.smooth(duration: 0.3), value: coordinator.currentStep)
-
-                // Navigation buttons - Native iOS 26 style
-                HStack(spacing: 16) {
-                    // Back button (not on first page)
-                    if coordinator.currentStep.rawValue > 0 {
-                        Button {
-                            previousPage()
-                        } label: {
-                            Label("Back", systemImage: "chevron.left")
-                        }
-                        .buttonStyle(.borderless)
-                        .controlSize(.large)
-                        .tint(themeManager.currentTheme.accentMuted)
-                    }
-
-                    Spacer()
-
-                    // Next/Get Started button (conditionally shown)
-                    // Hidden on permission steps until permission is granted
-                    if shouldShowContinueButton {
-                        Button {
-                            nextPage()
-                        } label: {
-                            Label {
-                                Text("Continue")
-                            } icon: {
-                                Image(systemName: "chevron.right")
-                            }
-                            .labelStyle(.titleAndIcon)
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .controlSize(.large)
-                        .tint(themeManager.currentTheme.accent)
-                    }
-                }
-                .padding(.horizontal, 24)
-                .padding(.vertical, 16)
-                .padding(.bottom, 8)
             }
         }
-        .interactiveDismissDisabled()  // Prevent swipe to dismiss
+        .interactiveDismissDisabled()
         .onChange(of: coordinator.currentStep) { oldStep, newStep in
-            // Play selection haptic when step changes
-            if oldStep != newStep {
-                HapticManager.shared.trigger(.selection)
+            // Sync NavigationStack path when coordinator advances
+            if newStep.rawValue > oldStep.rawValue && !navigationPath.contains(newStep) {
+                navigationPath.append(newStep)
             }
         }
         .onChange(of: coordinator.isComplete) { _, isComplete in
@@ -182,39 +78,44 @@ struct OnboardingContainerView: View {
         }
     }
 
-    // MARK: - Methods
+    // MARK: - Step Indicator
 
-    /// Navigate to next page with audio and haptic feedback
-    private func nextPage() {
-        withAnimation(.smooth(duration: 0.3)) {
-            coordinator.advance()
-            // Play confirm sound with haptic
-            feedbackCoordinator.playConfirm()
+    @ToolbarContentBuilder
+    private var stepIndicator: some ToolbarContent {
+        ToolbarItem(placement: .principal) {
+            StepDotsView(
+                currentStep: coordinator.currentStep.rawValue,
+                totalSteps: OnboardingCoordinator.OnboardingStep.allCases.count,
+                accentColor: themeManager.currentTheme.accent,
+                inactiveColor: themeManager.currentTheme.textTertiary.opacity(0.4)
+            )
         }
     }
 
-    /// Navigate to previous page with audio and haptic feedback
-    private func previousPage() {
-        withAnimation(.smooth(duration: 0.3)) {
-            coordinator.goBack()
-            // Play back sound with haptic
-            feedbackCoordinator.playBack()
+    // MARK: - Destination Views
+
+    @ViewBuilder
+    private func destinationView(for step: OnboardingCoordinator.OnboardingStep) -> some View {
+        switch step {
+        case .welcomePermissions:
+            WelcomePermissionsView(
+                coordinator: coordinator,
+                permissionManager: permissionManager
+            )
+        case .prayerSetup:
+            PrayerSetupView(
+                coordinator: coordinator,
+                permissionManager: permissionManager
+            )
+        case .themeAndLaunch:
+            ThemeSelectionView(coordinator: coordinator)
         }
     }
 
-    /// Skip to complete onboarding with audio and haptic feedback
-    private func skipOnboarding() {
-        // Play back sound for skipping
-        feedbackCoordinator.playBack()
-
-        // Skip remaining steps
-        coordinator.skip()
-    }
+    // MARK: - Completion
 
     /// Complete onboarding and transition to main app
     private func completeOnboarding() {
-        // MARK: - Transfer coordinator selections to live services
-
         // 1. Apply selected theme to ThemeManager
         if let theme = ThemeMode(rawValue: coordinator.selectedTheme) {
             themeManager.setTheme(theme)
@@ -237,16 +138,15 @@ struct OnboardingContainerView: View {
         let fullMethodName = methodMapping[methodKey] ?? methodKey
         UserDefaults.standard.set(fullMethodName, forKey: "selectedCalculationMethod")
 
-        // 3. User name is already saved by PersonalizationView.saveName() — no action needed
+        // 3. User name is saved by PrayerSetupView.saveName() — no action needed
 
-        // Mark onboarding as complete (coordinator saves to storage)
+        // Mark onboarding as complete
         coordinator.complete()
 
-        // Play onboarding completion feedback (success + startup sound)
+        // Play onboarding completion feedback
         feedbackCoordinator.playOnboardingComplete()
 
         // Update AppStorage to trigger app transition
-        // Brief delay allows startup sound to play
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             withAnimation(.easeInOut(duration: 0.6)) {
                 hasCompletedOnboarding = true
@@ -255,45 +155,24 @@ struct OnboardingContainerView: View {
     }
 }
 
-// MARK: - Progress View Component
+// MARK: - Step Dots View
 
-struct OnboardingProgressView: View {
+struct StepDotsView: View {
     let currentStep: Int
     let totalSteps: Int
-
-    @Environment(ThemeManager.self) var themeManager: ThemeManager
+    let accentColor: Color
+    let inactiveColor: Color
 
     var body: some View {
-        VStack(spacing: 4) {
-            // Progress text
-            Text("Step \(currentStep) of \(totalSteps)")
-                .font(.caption)
-                .foregroundColor(themeManager.currentTheme.textTertiary)
-
-            // Progress bar
-            GeometryReader { geometry in
-                ZStack(alignment: .leading) {
-                    // Background
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(themeManager.currentTheme.textTertiary.opacity(0.3))
-                        .frame(height: 6)
-
-                    // Progress
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(themeManager.currentTheme.accent)
-                        .frame(width: geometry.size.width * progress, height: 6)
-                        .animation(.smooth(duration: 0.3), value: progress)
-                }
+        HStack(spacing: 8) {
+            ForEach(0..<totalSteps, id: \.self) { index in
+                Capsule()
+                    .fill(index == currentStep ? accentColor : inactiveColor)
+                    .frame(width: index == currentStep ? 24 : 8, height: 8)
+                    .animation(.spring(response: 0.4), value: currentStep)
             }
-            .frame(height: 6)
-            .accessibilityLabel("Onboarding progress")
-            .accessibilityValue("\(Int(progress * 100)) percent complete, step \(currentStep) of \(totalSteps)")
         }
-        .padding(.vertical, 8)
-    }
-
-    private var progress: Double {
-        Double(currentStep) / Double(totalSteps)
+        .accessibilityLabel("Step \(currentStep + 1) of \(totalSteps)")
     }
 }
 

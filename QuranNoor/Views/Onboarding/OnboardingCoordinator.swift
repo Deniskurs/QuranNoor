@@ -2,8 +2,8 @@
 //  OnboardingCoordinator.swift
 //  QuranNoor
 //
-//  Created by Claude on 11/3/24.
 //  Manages onboarding state, navigation, and persistence
+//  Simplified to 3-screen flow: Welcome+Permissions → Prayer Setup → Theme & Launch
 
 import SwiftUI
 import Observation
@@ -18,41 +18,31 @@ final class OnboardingCoordinator {
     // MARK: - Onboarding Steps
 
     enum OnboardingStep: Int, Codable, CaseIterable, Identifiable {
-        case welcome = 0
-        case locationAndCalculation = 1
-        case notifications = 2
-        case personalization = 3
-        case themeSelection = 4
+        case welcomePermissions = 0
+        case prayerSetup = 1
+        case themeAndLaunch = 2
 
         var id: Int { rawValue }
 
         var title: String {
             switch self {
-            case .welcome:
+            case .welcomePermissions:
                 return "Welcome"
-            case .locationAndCalculation:
-                return "Prayer Times Setup"
-            case .notifications:
-                return "Prayer Reminders"
-            case .personalization:
-                return "Personalize"
-            case .themeSelection:
+            case .prayerSetup:
+                return "Prayer Setup"
+            case .themeAndLaunch:
                 return "Choose Theme"
             }
         }
 
         var accessibilityDescription: String {
             switch self {
-            case .welcome:
-                return "Welcome to Qur'an Noor, your spiritual companion"
-            case .locationAndCalculation:
-                return "Set up your location for accurate prayer times"
-            case .notifications:
-                return "Enable notifications to never miss a prayer"
-            case .personalization:
-                return "Customize your app experience with your name"
-            case .themeSelection:
-                return "Select your preferred reading theme"
+            case .welcomePermissions:
+                return "Welcome to Qur'an Noor. Set up location and notification permissions"
+            case .prayerSetup:
+                return "Choose your prayer calculation method and enter your name"
+            case .themeAndLaunch:
+                return "Select your preferred reading theme and begin"
             }
         }
     }
@@ -99,20 +89,8 @@ final class OnboardingCoordinator {
     /// Selected theme mode
     var selectedTheme: String
 
-    /// Enable Qadha counter
-    var enableQadhaCounter: Bool
-
-    /// Use Hijri calendar by default
-    var useHijriCalendar: Bool
-
-    /// Show transliteration
-    var showTransliteration: Bool
-
     /// Onboarding completion status
     var isComplete: Bool
-
-    /// Express mode (skip optional steps)
-    var isExpressMode: Bool
 
     // MARK: - Tracking Properties
 
@@ -146,24 +124,16 @@ final class OnboardingCoordinator {
             self.notificationPermission = savedState.notificationPermission
             self.selectedCalculationMethod = savedState.calculationMethod
             self.selectedTheme = savedState.theme
-            self.enableQadhaCounter = savedState.enableQadhaCounter
-            self.useHijriCalendar = savedState.useHijriCalendar
-            self.showTransliteration = savedState.showTransliteration
             self.isComplete = savedState.isComplete
-            self.isExpressMode = savedState.isExpressMode
             self.startTime = savedState.startTime
         } else {
             // Initialize with defaults
-            self.currentStep = .welcome
+            self.currentStep = .welcomePermissions
             self.locationPermission = .notRequested
             self.notificationPermission = .notRequested
             self.selectedCalculationMethod = "ISNA"
             self.selectedTheme = "light"
-            self.enableQadhaCounter = true
-            self.useHijriCalendar = false
-            self.showTransliteration = false
             self.isComplete = false
-            self.isExpressMode = false
             self.startTime = Date()
         }
 
@@ -243,7 +213,6 @@ final class OnboardingCoordinator {
     // MARK: - Permission Management
 
     /// Update location permission status
-    /// Note: Views are responsible for calling advance() after permission is granted
     func updateLocationPermission(_ status: PermissionState) {
         locationPermission = status
         saveState()
@@ -255,7 +224,6 @@ final class OnboardingCoordinator {
     }
 
     /// Update notification permission status
-    /// Note: Views are responsible for calling advance() after permission is granted
     func updateNotificationPermission(_ status: PermissionState) {
         notificationPermission = status
         saveState()
@@ -316,11 +284,7 @@ final class OnboardingCoordinator {
             notificationPermission: notificationPermission,
             calculationMethod: selectedCalculationMethod,
             theme: selectedTheme,
-            enableQadhaCounter: enableQadhaCounter,
-            useHijriCalendar: useHijriCalendar,
-            showTransliteration: showTransliteration,
             isComplete: isComplete,
-            isExpressMode: isExpressMode,
             startTime: startTime
         )
         storage.save(state)
@@ -358,8 +322,7 @@ final class OnboardingCoordinator {
             "location_permission": locationPermission.description,
             "notification_permission": notificationPermission.description,
             "calculation_method": selectedCalculationMethod,
-            "theme": selectedTheme,
-            "express_mode": "\(isExpressMode)"
+            "theme": selectedTheme
         ])
     }
 }
@@ -372,11 +335,7 @@ struct OnboardingState: Codable {
     let notificationPermission: OnboardingCoordinator.PermissionState
     let calculationMethod: String
     let theme: String
-    let enableQadhaCounter: Bool
-    let useHijriCalendar: Bool
-    let showTransliteration: Bool
     let isComplete: Bool
-    let isExpressMode: Bool
     let startTime: Date
     let timestamp: Date
 
@@ -386,11 +345,7 @@ struct OnboardingState: Codable {
         notificationPermission: OnboardingCoordinator.PermissionState,
         calculationMethod: String,
         theme: String,
-        enableQadhaCounter: Bool,
-        useHijriCalendar: Bool,
-        showTransliteration: Bool,
         isComplete: Bool,
-        isExpressMode: Bool,
         startTime: Date
     ) {
         self.currentStep = currentStep
@@ -398,11 +353,7 @@ struct OnboardingState: Codable {
         self.notificationPermission = notificationPermission
         self.calculationMethod = calculationMethod
         self.theme = theme
-        self.enableQadhaCounter = enableQadhaCounter
-        self.useHijriCalendar = useHijriCalendar
-        self.showTransliteration = showTransliteration
         self.isComplete = isComplete
-        self.isExpressMode = isExpressMode
         self.startTime = startTime
         self.timestamp = Date()
     }
@@ -432,7 +383,6 @@ enum AnalyticsEvent {
     case onboardingSkipped
     case onboardingCompleted
     case onboardingNavigatedBack
-    case onboardingExpressModeSelected
     case permissionChanged
     case themeSelected
     case calculationMethodSelected
@@ -445,7 +395,6 @@ enum AnalyticsEvent {
         case .onboardingSkipped: return "onboarding_skipped"
         case .onboardingCompleted: return "onboarding_completed"
         case .onboardingNavigatedBack: return "onboarding_navigated_back"
-        case .onboardingExpressModeSelected: return "onboarding_express_mode_selected"
         case .permissionChanged: return "permission_changed"
         case .themeSelected: return "theme_selected"
         case .calculationMethodSelected: return "calculation_method_selected"

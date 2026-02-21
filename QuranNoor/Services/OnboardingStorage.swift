@@ -27,7 +27,7 @@ final class OnboardingStorage: OnboardingStorageProtocol {
     // MARK: - Constants
 
     private let userDefaults: UserDefaults
-    private let stateKey = "onboarding_state_v2"
+    private let stateKey = "onboarding_state_v3"
     private let completionKey = "hasCompletedOnboarding"
     private let maxStateAge: TimeInterval = 7 * 24 * 60 * 60 // 7 days
 
@@ -109,6 +109,8 @@ final class OnboardingStorage: OnboardingStorageProtocol {
     /// Clear saved onboarding state
     func clearState() {
         userDefaults.removeObject(forKey: stateKey)
+        // Also clean up old v2 key if present
+        userDefaults.removeObject(forKey: "onboarding_state_v2")
 
         #if DEBUG
         print("🗑️ Onboarding state cleared")
@@ -135,8 +137,9 @@ final class UserDefaultsMigrator {
         case v1 = 1  // Initial version
         case v2 = 2  // Added permission persistence
         case v3 = 3  // Added resume state and express mode
+        case v4 = 4  // Simplified 3-screen onboarding
 
-        static let current: Version = .v3
+        static let current: Version = .v4
     }
 
     private let userDefaults: UserDefaults
@@ -164,6 +167,10 @@ final class UserDefaultsMigrator {
             migrateToV3()
         }
 
+        if currentVersion < Version.v4.rawValue {
+            migrateToV4()
+        }
+
         // Save new version
         userDefaults.set(targetVersion, forKey: versionKey)
     }
@@ -176,7 +183,11 @@ final class UserDefaultsMigrator {
 
     private func migrateToV3() {
         // No specific migration needed - new fields have defaults
-        // Old OnboardingState will decode with missing fields as nil
+    }
+
+    private func migrateToV4() {
+        // Clear old v2 onboarding state (incompatible with new 3-step model)
+        userDefaults.removeObject(forKey: "onboarding_state_v2")
     }
 }
 
@@ -235,30 +246,9 @@ final class OnboardingPreferences {
         set { userDefaults.set(newValue, forKey: "themeMode") }
     }
 
-    /// Enable Qadha counter
-    var enableQadhaCounter: Bool {
-        get { userDefaults.bool(forKey: "enableQadhaCounter") }
-        set { userDefaults.set(newValue, forKey: "enableQadhaCounter") }
-    }
-
-    /// Use Hijri calendar by default
-    var useHijriCalendar: Bool {
-        get { userDefaults.bool(forKey: "useHijriCalendar") }
-        set { userDefaults.set(newValue, forKey: "useHijriCalendar") }
-    }
-
-    /// Show transliteration
-    var showTransliteration: Bool {
-        get { userDefaults.bool(forKey: "showTransliteration") }
-        set { userDefaults.set(newValue, forKey: "showTransliteration") }
-    }
-
     /// Clear all onboarding preferences
     func clearAll() {
         userDefaults.removeObject(forKey: "prayerCalculationMethod")
         userDefaults.removeObject(forKey: "themeMode")
-        userDefaults.removeObject(forKey: "enableQadhaCounter")
-        userDefaults.removeObject(forKey: "useHijriCalendar")
-        userDefaults.removeObject(forKey: "showTransliteration")
     }
 }
