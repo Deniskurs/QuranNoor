@@ -408,10 +408,9 @@ class QuranAudioService: NSObject {
     ///   - verse: The verse to play
     ///   - preserveQueue: If true, keeps the existing playingVerses queue (used by playVerses/playNextVerse)
     func play(verse: Verse, preserveQueue: Bool = false) async throws {
-        ensureAudioSessionReady()
-
         // If already playing the same verse, just resume
         if currentVerse?.id == verse.id, case .paused = playbackState {
+            ensureAudioSessionReady()
             resume()
             return
         }
@@ -425,6 +424,9 @@ class QuranAudioService: NSObject {
             playingVerses = [verse]
             currentVerseIndex = 0
         }
+
+        // Activate audio session AFTER stop() so it doesn't get released immediately
+        ensureAudioSessionReady()
 
         playbackState = .loading
         isLoading = true
