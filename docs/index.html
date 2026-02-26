@@ -1,26 +1,583 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="scroll-smooth">
 <head>
   <meta charset="UTF-8" />
-  <meta http-equiv="refresh" content="0; url=privacy/" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Qur'an Noor</title>
-  <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
-      background: #1A2332;
-      color: #F8F4EA;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      margin: 0;
-      text-align: center;
+  <meta name="description" content="Qur'an Noor — Your complete Islamic companion for iOS. Prayer times, Quran reading, Qibla compass, Adhkar and more. Free, no ads, no tracking." />
+  <meta name="theme-color" content="#0D7377" />
+  <meta property="og:title" content="Qur'an Noor — Islamic Companion for iOS" />
+  <meta property="og:description" content="Prayer Times, Quran & Qibla. Free. No ads. No tracking." />
+  <meta property="og:image" content="https://raw.githubusercontent.com/Deniskurs/QuranNoor/main/QuranNoor/Assets.xcassets/AppIcon.appiconset/appicon-1024.png" />
+  <meta property="og:url" content="https://deniskurs.github.io/QuranNoor/" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <title>Qur'an Noor — Prayer Times, Quran & Qibla for iOS</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'media',
+      theme: {
+        extend: {
+          colors: {
+            emerald:           '#0D7377',
+            'emerald-dark':    '#0a5a5d',
+            'emerald-light':   '#1a9499',
+            teal:              '#14FFEC',
+            gold:              '#C7A566',
+            'gold-light':      '#d9bc8a',
+            midnight:          '#1A2332',
+            'midnight-light':  '#243040',
+            cream:             '#F8F4EA',
+          },
+          fontFamily: {
+            sans: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Display"', '"SF Pro Text"', '"Helvetica Neue"', 'Arial', 'sans-serif'],
+          },
+          backgroundImage: {
+            'hero-gradient': 'linear-gradient(160deg, #1A2332 0%, #0D7377 60%, #1A2332 100%)',
+            'card-gradient': 'linear-gradient(135deg, rgba(13,115,119,0.08) 0%, rgba(199,165,102,0.06) 100%)',
+          },
+        }
+      }
     }
-    a { color: #14FFEC; }
+  </script>
+  <style>
+    ::selection { background: rgba(13,115,119,0.25); }
+    :focus-visible { outline: 2px solid #14FFEC; outline-offset: 3px; border-radius: 4px; }
+
+    /* Phone frame glow */
+    .phone-glow {
+      filter: drop-shadow(0 24px 48px rgba(13,115,119,0.35)) drop-shadow(0 4px 16px rgba(0,0,0,0.4));
+    }
+
+    /* Gradient text */
+    .text-gradient {
+      background: linear-gradient(135deg, #F8F4EA 0%, #C7A566 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .text-gradient-emerald {
+      background: linear-gradient(135deg, #0D7377 0%, #14FFEC 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* Subtle noise texture overlay on hero */
+    .hero-noise::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+    }
+
+    /* Screenshot scroll container */
+    .screenshots-scroll::-webkit-scrollbar { display: none; }
+    .screenshots-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+
+    /* Feature card hover */
+    .feature-card {
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .feature-card:hover {
+      transform: translateY(-3px);
+    }
+
+    /* Badge pill */
+    .badge { display: inline-flex; align-items: center; gap: 6px; }
   </style>
 </head>
-<body>
-  <p>Redirecting to <a href="privacy/">Privacy Policy</a>&hellip;</p>
+
+<body class="bg-cream dark:bg-midnight text-midnight dark:text-cream font-sans antialiased">
+
+  <!-- ============================================================
+       NAV
+  ============================================================ -->
+  <header class="fixed top-0 inset-x-0 z-50 bg-cream/80 dark:bg-midnight/80 backdrop-blur-xl border-b border-black/5 dark:border-white/5">
+    <div class="max-w-6xl mx-auto px-5 h-14 flex items-center justify-between">
+      <div class="flex items-center gap-2.5">
+        <img
+          src="https://raw.githubusercontent.com/Deniskurs/QuranNoor/main/QuranNoor/Assets.xcassets/AppIcon.appiconset/appicon-1024.png"
+          alt="Qur'an Noor app icon"
+          class="w-7 h-7 rounded-[8px] shadow-sm"
+        />
+        <span class="font-semibold text-[15px] tracking-tight text-midnight dark:text-cream">Qur'an Noor</span>
+      </div>
+      <nav class="hidden sm:flex items-center gap-6 text-[13px] font-medium text-midnight/60 dark:text-cream/60">
+        <a href="#features" class="hover:text-emerald dark:hover:text-teal transition-colors">Features</a>
+        <a href="#screenshots" class="hover:text-emerald dark:hover:text-teal transition-colors">Screenshots</a>
+        <a href="#privacy" class="hover:text-emerald dark:hover:text-teal transition-colors">Privacy</a>
+        <a href="https://github.com/Deniskurs/QuranNoor" target="_blank" rel="noopener" class="hover:text-emerald dark:hover:text-teal transition-colors">GitHub</a>
+      </nav>
+      <a
+        id="nav-app-store"
+        href="#"
+        class="flex items-center gap-1.5 bg-midnight dark:bg-cream text-cream dark:text-midnight text-[12px] font-semibold px-3.5 py-1.5 rounded-full hover:opacity-80 transition-opacity"
+      >
+        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98l-.09.06c-.22.14-2.2 1.28-2.18 3.81.02 3.02 2.65 4.03 2.68 4.04l-.05.17M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+        Download
+      </a>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- ============================================================
+         HERO
+    ============================================================ -->
+    <section class="relative overflow-hidden bg-hero-gradient hero-noise min-h-[100svh] flex flex-col items-center justify-center px-5 pt-28 pb-20">
+
+      <!-- Background radial glows -->
+      <div class="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-emerald/20 rounded-full blur-[120px] pointer-events-none" aria-hidden="true"></div>
+      <div class="absolute bottom-0 right-1/4 w-[300px] h-[300px] bg-gold/10 rounded-full blur-[80px] pointer-events-none" aria-hidden="true"></div>
+
+      <div class="relative z-10 flex flex-col items-center text-center max-w-2xl mx-auto">
+
+        <!-- App icon -->
+        <div class="mb-7">
+          <img
+            src="https://raw.githubusercontent.com/Deniskurs/QuranNoor/main/QuranNoor/Assets.xcassets/AppIcon.appiconset/appicon-1024.png"
+            alt="Qur'an Noor app icon"
+            class="w-28 h-28 rounded-[28px] shadow-2xl ring-1 ring-white/10"
+          />
+        </div>
+
+        <!-- Arabic name -->
+        <p class="text-gold text-xl font-light tracking-widest mb-1" dir="rtl" lang="ar">قرآن نور</p>
+
+        <!-- English name -->
+        <h1 class="text-gradient text-5xl sm:text-6xl font-bold tracking-tight mb-4 leading-none">
+          Qur'an Noor
+        </h1>
+
+        <!-- Subtitle -->
+        <p class="text-cream/80 text-lg sm:text-xl font-light mb-2 leading-relaxed">
+          Light of the Quran
+        </p>
+        <p class="text-cream/50 text-base sm:text-lg mb-10 leading-relaxed">
+          Your Islamic Companion for iOS — Prayer Times, Quran &amp; Qibla
+        </p>
+
+        <!-- App Store button -->
+        <a
+          id="app-store-link"
+          href="#"
+          class="inline-block mb-4 hover:opacity-85 active:scale-95 transition-all"
+          aria-label="Download on the App Store"
+        >
+          <img
+            src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg"
+            alt="Download on the App Store"
+            class="h-[50px] w-auto"
+          />
+        </a>
+
+        <!-- Requirements note -->
+        <p class="text-cream/35 text-[13px]">Requires iOS 26 or later. Free with no in-app purchases.</p>
+
+        <!-- Trust pills -->
+        <div class="flex flex-wrap justify-center gap-2 mt-8">
+          <span class="badge text-cream/60 text-[12px] bg-white/5 border border-white/10 rounded-full px-3 py-1">
+            <svg class="w-3 h-3 text-teal" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+            No Ads
+          </span>
+          <span class="badge text-cream/60 text-[12px] bg-white/5 border border-white/10 rounded-full px-3 py-1">
+            <svg class="w-3 h-3 text-teal" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+            No Tracking
+          </span>
+          <span class="badge text-cream/60 text-[12px] bg-white/5 border border-white/10 rounded-full px-3 py-1">
+            <svg class="w-3 h-3 text-teal" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+            100% Free
+          </span>
+          <span class="badge text-cream/60 text-[12px] bg-white/5 border border-white/10 rounded-full px-3 py-1">
+            <svg class="w-3 h-3 text-teal" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+            Open Source
+          </span>
+        </div>
+      </div>
+
+      <!-- Scroll cue -->
+      <div class="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1" aria-hidden="true">
+        <span class="text-cream/30 text-[11px] uppercase tracking-widest">Scroll</span>
+        <svg class="w-4 h-4 text-cream/30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         SCREENSHOTS
+    ============================================================ -->
+    <section id="screenshots" class="py-24 bg-cream dark:bg-midnight overflow-hidden">
+      <div class="max-w-6xl mx-auto px-5 mb-12 text-center">
+        <h2 class="text-3xl sm:text-4xl font-bold tracking-tight text-midnight dark:text-cream mb-3">
+          Designed for your daily practice
+        </h2>
+        <p class="text-midnight/50 dark:text-cream/50 text-base sm:text-lg max-w-xl mx-auto">
+          A clean, purposeful interface built around the way Muslims actually use their phones throughout the day.
+        </p>
+      </div>
+
+      <!-- Horizontal scroll on mobile, centered flex on desktop -->
+      <div class="screenshots-scroll flex gap-5 overflow-x-auto px-5 sm:px-0 sm:justify-center sm:flex-wrap pb-4">
+
+        <!-- Screenshot 1: Home -->
+        <div class="flex-none flex flex-col items-center gap-3">
+          <div class="phone-glow w-[200px] sm:w-[220px] rounded-[36px] overflow-hidden ring-1 ring-midnight/10 dark:ring-white/10 bg-midnight">
+            <img
+              src="https://raw.githubusercontent.com/Deniskurs/QuranNoor/main/screenshots/01_home.png"
+              alt="Qur'an Noor home screen showing prayer times and daily verse"
+              class="w-full h-auto block"
+              loading="lazy"
+            />
+          </div>
+          <span class="text-[12px] font-medium text-midnight/40 dark:text-cream/40 tracking-wide uppercase">Home</span>
+        </div>
+
+        <!-- Screenshot 2: Quran -->
+        <div class="flex-none flex flex-col items-center gap-3">
+          <div class="phone-glow w-[200px] sm:w-[220px] rounded-[36px] overflow-hidden ring-1 ring-midnight/10 dark:ring-white/10 bg-midnight">
+            <img
+              src="https://raw.githubusercontent.com/Deniskurs/QuranNoor/main/screenshots/02_quran.png"
+              alt="Qur'an Noor Quran browser showing list of surahs"
+              class="w-full h-auto block"
+              loading="lazy"
+            />
+          </div>
+          <span class="text-[12px] font-medium text-midnight/40 dark:text-cream/40 tracking-wide uppercase">Quran</span>
+        </div>
+
+        <!-- Screenshot 3: Prayer -->
+        <div class="flex-none flex flex-col items-center gap-3">
+          <div class="phone-glow w-[200px] sm:w-[220px] rounded-[36px] overflow-hidden ring-1 ring-midnight/10 dark:ring-white/10 bg-midnight">
+            <img
+              src="https://raw.githubusercontent.com/Deniskurs/QuranNoor/main/screenshots/03_prayer.png"
+              alt="Qur'an Noor prayer times screen"
+              class="w-full h-auto block"
+              loading="lazy"
+            />
+          </div>
+          <span class="text-[12px] font-medium text-midnight/40 dark:text-cream/40 tracking-wide uppercase">Prayer Times</span>
+        </div>
+
+        <!-- Screenshot 4: Surah reader -->
+        <div class="flex-none flex flex-col items-center gap-3">
+          <div class="phone-glow w-[200px] sm:w-[220px] rounded-[36px] overflow-hidden ring-1 ring-midnight/10 dark:ring-white/10 bg-midnight">
+            <img
+              src="https://raw.githubusercontent.com/Deniskurs/QuranNoor/main/screenshots/05_surah_reader.png"
+              alt="Qur'an Noor surah reader with Arabic text and translation"
+              class="w-full h-auto block"
+              loading="lazy"
+            />
+          </div>
+          <span class="text-[12px] font-medium text-midnight/40 dark:text-cream/40 tracking-wide uppercase">Surah Reader</span>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ============================================================
+         FEATURES
+    ============================================================ -->
+    <section id="features" class="py-24 bg-white dark:bg-midnight-light">
+      <div class="max-w-6xl mx-auto px-5">
+
+        <!-- Header -->
+        <div class="text-center mb-16">
+          <p class="text-emerald dark:text-teal text-[13px] font-semibold uppercase tracking-widest mb-3">Features</p>
+          <h2 class="text-3xl sm:text-4xl font-bold tracking-tight text-midnight dark:text-cream mb-4">
+            Everything you need for your<br class="hidden sm:block" /> spiritual journey
+          </h2>
+          <p class="text-midnight/50 dark:text-cream/50 text-base sm:text-lg max-w-xl mx-auto">
+            Built from the ground up as an Islamic companion — not an afterthought. Every feature designed with purpose.
+          </p>
+        </div>
+
+        <!-- Feature grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+
+          <!-- 1. Complete Quran -->
+          <div class="feature-card group bg-cream dark:bg-midnight rounded-2xl p-7 border border-black/5 dark:border-white/5 hover:shadow-xl dark:hover:shadow-emerald/5 hover:border-emerald/20 dark:hover:border-teal/10">
+            <div class="w-11 h-11 rounded-xl bg-emerald/10 dark:bg-emerald/20 flex items-center justify-center mb-5 group-hover:bg-emerald/15 dark:group-hover:bg-emerald/25 transition-colors">
+              <!-- Book icon -->
+              <svg class="w-5 h-5 text-emerald dark:text-teal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M4 19.5A2.5 2.5 0 016.5 17H20"/>
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>
+              </svg>
+            </div>
+            <h3 class="text-[17px] font-semibold text-midnight dark:text-cream mb-2 tracking-tight">Complete Quran</h3>
+            <p class="text-midnight/55 dark:text-cream/55 text-[14px] leading-relaxed">
+              All 114 surahs with Uthmanic script, multiple translations, and verse-by-verse audio from renowned reciters.
+            </p>
+          </div>
+
+          <!-- 2. Prayer Times -->
+          <div class="feature-card group bg-cream dark:bg-midnight rounded-2xl p-7 border border-black/5 dark:border-white/5 hover:shadow-xl dark:hover:shadow-emerald/5 hover:border-emerald/20 dark:hover:border-teal/10">
+            <div class="w-11 h-11 rounded-xl bg-emerald/10 dark:bg-emerald/20 flex items-center justify-center mb-5 group-hover:bg-emerald/15 dark:group-hover:bg-emerald/25 transition-colors">
+              <!-- Clock icon -->
+              <svg class="w-5 h-5 text-emerald dark:text-teal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+              </svg>
+            </div>
+            <h3 class="text-[17px] font-semibold text-midnight dark:text-cream mb-2 tracking-tight">Prayer Times</h3>
+            <p class="text-midnight/55 dark:text-cream/55 text-[14px] leading-relaxed">
+              Precise calculations for your location. Multiple methods. Customizable notifications with authentic Adhan.
+            </p>
+          </div>
+
+          <!-- 3. Qibla Compass -->
+          <div class="feature-card group bg-cream dark:bg-midnight rounded-2xl p-7 border border-black/5 dark:border-white/5 hover:shadow-xl dark:hover:shadow-emerald/5 hover:border-emerald/20 dark:hover:border-teal/10">
+            <div class="w-11 h-11 rounded-xl bg-emerald/10 dark:bg-emerald/20 flex items-center justify-center mb-5 group-hover:bg-emerald/15 dark:group-hover:bg-emerald/25 transition-colors">
+              <!-- Compass icon -->
+              <svg class="w-5 h-5 text-emerald dark:text-teal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"/>
+                <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>
+              </svg>
+            </div>
+            <h3 class="text-[17px] font-semibold text-midnight dark:text-cream mb-2 tracking-tight">Qibla Compass</h3>
+            <p class="text-midnight/55 dark:text-cream/55 text-[14px] leading-relaxed">
+              Real-time direction to the Kaaba with smooth animations. Distance to Makkah. Works offline.
+            </p>
+          </div>
+
+          <!-- 4. Adhkar & Duas -->
+          <div class="feature-card group bg-cream dark:bg-midnight rounded-2xl p-7 border border-black/5 dark:border-white/5 hover:shadow-xl dark:hover:shadow-emerald/5 hover:border-emerald/20 dark:hover:border-teal/10">
+            <div class="w-11 h-11 rounded-xl bg-gold/10 dark:bg-gold/15 flex items-center justify-center mb-5 group-hover:bg-gold/15 dark:group-hover:bg-gold/20 transition-colors">
+              <!-- Hands / supplication icon -->
+              <svg class="w-5 h-5 text-gold" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M18 11V6a2 2 0 00-2-2 2 2 0 00-2 2"/>
+                <path d="M14 10V4a2 2 0 00-2-2 2 2 0 00-2 2v2"/>
+                <path d="M10 10.5V6a2 2 0 00-2-2 2 2 0 00-2 2v8"/>
+                <path d="M6 14a4 4 0 001 4c1 1.5 2.5 3 5 4 2.5-1 4-2.5 5-4a4 4 0 001-4v-3a2 2 0 00-2-2 2 2 0 00-2 2v-1a2 2 0 00-2-2z"/>
+              </svg>
+            </div>
+            <h3 class="text-[17px] font-semibold text-midnight dark:text-cream mb-2 tracking-tight">Adhkar &amp; Duas</h3>
+            <p class="text-midnight/55 dark:text-cream/55 text-[14px] leading-relaxed">
+              Morning and evening adhkar. Fortress of the Muslim. 99 Names of Allah. Digital Tasbih counter.
+            </p>
+          </div>
+
+          <!-- 5. Islamic Calendar -->
+          <div class="feature-card group bg-cream dark:bg-midnight rounded-2xl p-7 border border-black/5 dark:border-white/5 hover:shadow-xl dark:hover:shadow-emerald/5 hover:border-emerald/20 dark:hover:border-teal/10">
+            <div class="w-11 h-11 rounded-xl bg-gold/10 dark:bg-gold/15 flex items-center justify-center mb-5 group-hover:bg-gold/15 dark:group-hover:bg-gold/20 transition-colors">
+              <!-- Calendar icon -->
+              <svg class="w-5 h-5 text-gold" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
+            </div>
+            <h3 class="text-[17px] font-semibold text-midnight dark:text-cream mb-2 tracking-tight">Islamic Calendar</h3>
+            <p class="text-midnight/55 dark:text-cream/55 text-[14px] leading-relaxed">
+              Hijri dates, Ramadan tracker, Suhoor &amp; Iftar times, and important Islamic occasions.
+            </p>
+          </div>
+
+          <!-- 6. Beautiful Themes -->
+          <div class="feature-card group bg-cream dark:bg-midnight rounded-2xl p-7 border border-black/5 dark:border-white/5 hover:shadow-xl dark:hover:shadow-emerald/5 hover:border-emerald/20 dark:hover:border-teal/10">
+            <div class="w-11 h-11 rounded-xl bg-gold/10 dark:bg-gold/15 flex items-center justify-center mb-5 group-hover:bg-gold/15 dark:group-hover:bg-gold/20 transition-colors">
+              <!-- Palette icon -->
+              <svg class="w-5 h-5 text-gold" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="13.5" cy="6.5" r="0.5" fill="currentColor"/>
+                <circle cx="17.5" cy="10.5" r="0.5" fill="currentColor"/>
+                <circle cx="8.5" cy="7.5" r="0.5" fill="currentColor"/>
+                <circle cx="6.5" cy="12.5" r="0.5" fill="currentColor"/>
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10c1.1 0 2-.9 2-2v-.5c0-.55.45-1 1-1h.5c3.31 0 6-2.69 6-6 0-4.96-4.03-9-9-9z"/>
+              </svg>
+            </div>
+            <h3 class="text-[17px] font-semibold text-midnight dark:text-cream mb-2 tracking-tight">Beautiful Themes</h3>
+            <p class="text-midnight/55 dark:text-cream/55 text-[14px] leading-relaxed">
+              Light, Dark, Night, and Sepia themes. Dynamic Type support. Built for extended reading comfort.
+            </p>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         PRIVACY SECTION
+    ============================================================ -->
+    <section id="privacy" class="py-24 bg-cream dark:bg-midnight">
+      <div class="max-w-3xl mx-auto px-5 text-center">
+
+        <!-- Lock icon -->
+        <div class="w-14 h-14 rounded-2xl bg-emerald/10 dark:bg-emerald/20 flex items-center justify-center mx-auto mb-7">
+          <svg class="w-7 h-7 text-emerald dark:text-teal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+            <path d="M7 11V7a5 5 0 0110 0v4"/>
+          </svg>
+        </div>
+
+        <p class="text-emerald dark:text-teal text-[13px] font-semibold uppercase tracking-widest mb-3">Privacy</p>
+        <h2 class="text-3xl sm:text-4xl font-bold tracking-tight text-midnight dark:text-cream mb-5">
+          Your privacy is sacred
+        </h2>
+        <p class="text-midnight/55 dark:text-cream/55 text-base sm:text-lg leading-relaxed mb-10 max-w-2xl mx-auto">
+          Qur'an Noor is built on a simple principle: your data belongs to you. We do not collect, store, or transmit any personal information. Prayer calculations happen entirely on-device. There are no accounts, no analytics, no third-party SDKs.
+        </p>
+
+        <!-- Privacy commitment pills -->
+        <div class="flex flex-wrap justify-center gap-3 mb-10">
+          <span class="badge bg-emerald/8 dark:bg-emerald/15 text-emerald dark:text-teal text-[13px] font-medium border border-emerald/15 dark:border-teal/20 rounded-full px-4 py-2">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+            No data collection
+          </span>
+          <span class="badge bg-emerald/8 dark:bg-emerald/15 text-emerald dark:text-teal text-[13px] font-medium border border-emerald/15 dark:border-teal/20 rounded-full px-4 py-2">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+            No ads or tracking
+          </span>
+          <span class="badge bg-emerald/8 dark:bg-emerald/15 text-emerald dark:text-teal text-[13px] font-medium border border-emerald/15 dark:border-teal/20 rounded-full px-4 py-2">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+            No analytics SDKs
+          </span>
+          <span class="badge bg-emerald/8 dark:bg-emerald/15 text-emerald dark:text-teal text-[13px] font-medium border border-emerald/15 dark:border-teal/20 rounded-full px-4 py-2">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+            Works offline
+          </span>
+        </div>
+
+        <a
+          href="https://deniskurs.github.io/QuranNoor/privacy/"
+          class="inline-flex items-center gap-2 text-emerald dark:text-teal text-[14px] font-semibold hover:underline underline-offset-4"
+        >
+          Read the full Privacy Policy
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+        </a>
+
+      </div>
+    </section>
+
+    <!-- ============================================================
+         OPEN SOURCE SECTION
+    ============================================================ -->
+    <section id="open-source" class="py-24 bg-white dark:bg-midnight-light">
+      <div class="max-w-3xl mx-auto px-5 text-center">
+
+        <!-- GitHub icon -->
+        <div class="w-14 h-14 rounded-2xl bg-midnight/8 dark:bg-white/8 flex items-center justify-center mx-auto mb-7">
+          <svg class="w-7 h-7 text-midnight/70 dark:text-cream/70" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+          </svg>
+        </div>
+
+        <p class="text-midnight/40 dark:text-cream/40 text-[13px] font-semibold uppercase tracking-widest mb-3">Open Source</p>
+        <h2 class="text-3xl sm:text-4xl font-bold tracking-tight text-midnight dark:text-cream mb-5">
+          Built in the open
+        </h2>
+        <p class="text-midnight/55 dark:text-cream/55 text-base sm:text-lg leading-relaxed mb-10 max-w-2xl mx-auto">
+          Qur'an Noor is open source and available on GitHub. Contributions, bug reports, and suggestions are welcome. The community makes it better for everyone.
+        </p>
+
+        <!-- Tech stack pills -->
+        <div class="flex flex-wrap justify-center gap-2.5 mb-10">
+          <span class="text-[12px] font-semibold text-midnight/60 dark:text-cream/60 bg-midnight/6 dark:bg-white/6 border border-midnight/10 dark:border-white/10 rounded-full px-3.5 py-1.5">Swift</span>
+          <span class="text-[12px] font-semibold text-midnight/60 dark:text-cream/60 bg-midnight/6 dark:bg-white/6 border border-midnight/10 dark:border-white/10 rounded-full px-3.5 py-1.5">SwiftUI</span>
+          <span class="text-[12px] font-semibold text-midnight/60 dark:text-cream/60 bg-midnight/6 dark:bg-white/6 border border-midnight/10 dark:border-white/10 rounded-full px-3.5 py-1.5">iOS 26</span>
+          <span class="text-[12px] font-semibold text-midnight/60 dark:text-cream/60 bg-midnight/6 dark:bg-white/6 border border-midnight/10 dark:border-white/10 rounded-full px-3.5 py-1.5">MVVM</span>
+          <span class="text-[12px] font-semibold text-midnight/60 dark:text-cream/60 bg-midnight/6 dark:bg-white/6 border border-midnight/10 dark:border-white/10 rounded-full px-3.5 py-1.5">MIT License</span>
+        </div>
+
+        <a
+          href="https://github.com/Deniskurs/QuranNoor"
+          target="_blank"
+          rel="noopener"
+          class="inline-flex items-center gap-2.5 bg-midnight dark:bg-cream text-cream dark:text-midnight text-[14px] font-semibold px-6 py-3 rounded-full hover:opacity-80 transition-opacity"
+        >
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+          </svg>
+          View on GitHub
+        </a>
+
+      </div>
+    </section>
+
+    <!-- ============================================================
+         DOWNLOAD CTA (pre-footer)
+    ============================================================ -->
+    <section class="py-24 bg-hero-gradient relative overflow-hidden">
+      <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[300px] bg-emerald/25 rounded-full blur-[100px] pointer-events-none" aria-hidden="true"></div>
+      <div class="relative z-10 max-w-2xl mx-auto px-5 text-center">
+        <p class="text-gold text-base mb-2" dir="rtl" lang="ar">بسم الله الرحمن الرحيم</p>
+        <h2 class="text-3xl sm:text-4xl font-bold tracking-tight text-cream mb-4">
+          Begin your journey today
+        </h2>
+        <p class="text-cream/60 text-base sm:text-lg mb-10">
+          Free. No ads. No tracking. Just a clean, beautiful app built for Muslims.
+        </p>
+        <a
+          href="#"
+          class="inline-block hover:opacity-85 active:scale-95 transition-all"
+          aria-label="Download Qur'an Noor on the App Store"
+        >
+          <img
+            src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg"
+            alt="Download on the App Store"
+            class="h-[52px] w-auto mx-auto"
+          />
+        </a>
+        <p class="text-cream/30 text-[13px] mt-4">Requires iOS 26 or later. Free with no in-app purchases.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ============================================================
+       FOOTER
+  ============================================================ -->
+  <footer class="bg-midnight text-cream/50 text-[13px]">
+    <div class="max-w-6xl mx-auto px-5 py-12">
+
+      <!-- Top row -->
+      <div class="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-8 pb-10 border-b border-white/8">
+
+        <!-- Brand -->
+        <div class="flex flex-col items-center sm:items-start gap-2">
+          <div class="flex items-center gap-2.5">
+            <img
+              src="https://raw.githubusercontent.com/Deniskurs/QuranNoor/main/QuranNoor/Assets.xcassets/AppIcon.appiconset/appicon-1024.png"
+              alt="Qur'an Noor"
+              class="w-8 h-8 rounded-[9px]"
+            />
+            <div>
+              <p class="text-cream font-semibold text-[15px] leading-none">Qur'an Noor</p>
+              <p class="text-cream/40 text-[12px] leading-none mt-0.5" dir="rtl" lang="ar">قرآن نور</p>
+            </div>
+          </div>
+          <p class="text-cream/35 text-[12px] mt-1 max-w-[220px] text-center sm:text-left leading-relaxed">
+            Your Islamic companion for prayer, Quran, and daily spiritual growth.
+          </p>
+        </div>
+
+        <!-- Links -->
+        <nav class="flex flex-col sm:flex-row gap-4 sm:gap-8 items-center sm:items-start" aria-label="Footer navigation">
+          <div class="flex flex-col gap-2.5 items-center sm:items-start">
+            <p class="text-cream/30 text-[11px] uppercase tracking-widest font-semibold">App</p>
+            <a href="#" class="hover:text-cream transition-colors">Download</a>
+            <a href="#features" class="hover:text-cream transition-colors">Features</a>
+            <a href="#screenshots" class="hover:text-cream transition-colors">Screenshots</a>
+          </div>
+          <div class="flex flex-col gap-2.5 items-center sm:items-start">
+            <p class="text-cream/30 text-[11px] uppercase tracking-widest font-semibold">Info</p>
+            <a href="https://deniskurs.github.io/QuranNoor/privacy/" class="hover:text-cream transition-colors">Privacy Policy</a>
+            <a href="https://github.com/Deniskurs/QuranNoor" target="_blank" rel="noopener" class="hover:text-cream transition-colors">GitHub</a>
+            <a href="mailto:denis@magnatecore.com" class="hover:text-cream transition-colors">Contact</a>
+          </div>
+        </nav>
+
+      </div>
+
+      <!-- Bottom row -->
+      <div class="pt-8 flex flex-col items-center gap-3 text-center">
+        <p class="text-gold/70 text-[14px]" dir="rtl" lang="ar">سبحان الله وبحمده، سبحان الله العظيم</p>
+        <p class="text-cream/25 text-[12px]">Built with devotion and care</p>
+        <p class="text-cream/25 text-[12px]">&copy; 2026 Qur'an Noor. Released under the MIT License.</p>
+      </div>
+
+    </div>
+  </footer>
+
 </body>
 </html>
