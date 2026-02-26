@@ -17,51 +17,71 @@ struct QuickActionsGrid: View {
     @State private var showQibla = false
 
     var body: some View {
-        // Grid of individual action cards
-        LazyVGrid(columns: gridColumns, spacing: Spacing.gridSpacing) {
-            // Continue Reading
-            QuickActionButton(
-                icon: "book.fill",
-                title: "Continue Reading",
-                subtitle: lastReadLocation ?? "Start reading",
-                gradient: [themeManager.currentTheme.accent, themeManager.currentTheme.accentMuted],
-                action: {
-                    selectedTab = 1 // Quran tab
-                }
-            )
+        VStack(alignment: .leading, spacing: Spacing.xs) {
+            // Section header matching SpiritualNourishmentCarousel pattern
+            HStack(spacing: Spacing.xs) {
+                Image(systemName: "square.grid.2x2.fill")
+                    .font(.system(size: 18))
+                    .foregroundStyle(.linearGradient(
+                        colors: [themeManager.currentTheme.accent, themeManager.currentTheme.accentMuted],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ))
 
-            // Find Qibla (opens as sheet since it's no longer a tab)
-            QuickActionButton(
-                icon: "location.north.fill",
-                title: "Find Qibla",
-                subtitle: "Prayer direction",
-                gradient: [themeManager.currentTheme.accentMuted, themeManager.currentTheme.accent],
-                action: {
-                    showQibla = true
-                }
-            )
+                Text("Quick Actions")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(themeManager.currentTheme.textPrimary)
 
-            // Prayer Times
-            QuickActionButton(
-                icon: "clock.fill",
-                title: "Prayer Times",
-                subtitle: "View all prayers",
-                gradient: [themeManager.currentTheme.accentMuted, themeManager.currentTheme.accent],
-                action: {
-                    selectedTab = 2 // Prayer tab
-                }
-            )
+                Spacer()
+            }
 
-            // More
-            QuickActionButton(
-                icon: "ellipsis.circle.fill",
-                title: "More",
-                subtitle: "Adhkar & tools",
-                gradient: [themeManager.currentTheme.textPrimary, themeManager.currentTheme.accent],
-                action: {
-                    selectedTab = 3 // More tab
-                }
-            )
+            // Grid of individual action cards
+            LazyVGrid(columns: gridColumns, spacing: Spacing.gridSpacing) {
+                // Continue Reading — primary action, teal/green gradient, prominent card
+                QuickActionButton(
+                    icon: "book.fill",
+                    title: "Continue Reading",
+                    subtitle: lastReadLocation ?? "Start reading",
+                    gradient: [themeManager.currentTheme.accent, Color(hex: "#14FFEC")],
+                    isProminent: true,
+                    action: {
+                        selectedTab = 1 // Quran tab
+                    }
+                )
+
+                // Find Qibla — gold gradient, opens as sheet
+                QuickActionButton(
+                    icon: "location.north.fill",
+                    title: "Find Qibla",
+                    subtitle: "Prayer direction",
+                    gradient: [Color(hex: "#C7A566"), Color(hex: "#D4A847")],
+                    action: {
+                        showQibla = true
+                    }
+                )
+
+                // Prayer Times — emerald gradient
+                QuickActionButton(
+                    icon: "clock.fill",
+                    title: "Prayer Times",
+                    subtitle: "View all prayers",
+                    gradient: [themeManager.currentTheme.accent, themeManager.currentTheme.accentMuted],
+                    action: {
+                        selectedTab = 2 // Prayer tab
+                    }
+                )
+
+                // More — muted secondary gradient
+                QuickActionButton(
+                    icon: "ellipsis.circle.fill",
+                    title: "More",
+                    subtitle: "Adhkar & tools",
+                    gradient: [themeManager.currentTheme.textSecondary, themeManager.currentTheme.accentMuted],
+                    action: {
+                        selectedTab = 3 // More tab
+                    }
+                )
+            }
         }
         .sheet(isPresented: $showQibla) {
             NavigationStack {
@@ -95,6 +115,7 @@ struct QuickActionButton: View {
     let title: String
     let subtitle: String
     let gradient: [Color]
+    var isProminent: Bool = false
     let action: () -> Void
 
     var body: some View {
@@ -105,7 +126,7 @@ struct QuickActionButton: View {
 
             action()
         }) {
-            CardView(intensity: .moderate) {
+            CardView(intensity: isProminent ? .prominent : .moderate) {
                 VStack(alignment: .leading, spacing: Spacing.sm) {
                     // Icon with gradient background
                     ZStack {

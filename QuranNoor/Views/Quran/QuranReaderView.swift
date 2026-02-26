@@ -64,15 +64,25 @@ struct QuranReaderView: View {
                                 .padding(.top, 16)
                         }
 
-                        // Content: verse search results or surah list
+                        // Content: verse reference banner, verse search results, or surah list
+                        if !viewModel.searchQuery.isEmpty && searchScope == .surahs,
+                           let ref = viewModel.parsedVerseRef {
+                            // Verse reference detected — show quick navigation
+                            verseReferenceBanner(ref)
+                                .padding(.horizontal)
+                                .padding(.top, Spacing.sm)
+                        }
+
                         if !viewModel.searchQuery.isEmpty && searchScope == .verses {
                             verseSearchResultsView
                                 .padding(.top, Spacing.xs)
                         } else {
                             // Filter controls
-                            filterControls
-                                .padding(.horizontal)
-                                .padding(.top, Spacing.sm)
+                            if viewModel.searchQuery.isEmpty {
+                                filterControls
+                                    .padding(.horizontal)
+                                    .padding(.top, Spacing.sm)
+                            }
 
                             // Surah list
                             surahList
@@ -89,7 +99,7 @@ struct QuranReaderView: View {
             .searchable(
                 text: $viewModel.searchQuery,
                 placement: .navigationBarDrawer(displayMode: .always),
-                prompt: searchScope == .surahs ? "Search surahs..." : "Search verses in English..."
+                prompt: searchScope == .surahs ? "Search surahs or type 2:255..." : "Search verses in English..."
             )
             .onChange(of: viewModel.searchQuery) { oldValue, newValue in
                 if searchScope == .surahs {
@@ -251,6 +261,73 @@ struct QuranReaderView: View {
         .buttonStyle(.plain)
     }
 
+    // MARK: - Search Tip Row
+
+    private func searchTip(icon: String, text: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: 11))
+                .foregroundColor(themeManager.currentTheme.accentMuted)
+                .frame(width: 16)
+
+            Text(text)
+                .font(.system(size: 12))
+                .foregroundColor(themeManager.currentTheme.textTertiary)
+        }
+    }
+
+    // MARK: - Verse Reference Banner
+
+    private func verseReferenceBanner(_ ref: ParsedVerseRef) -> some View {
+        let theme = themeManager.currentTheme
+        let surah = viewModel.surahs.first { $0.id == ref.surahNumber }
+        let surahName = surah?.englishName ?? "Surah \(ref.surahNumber)"
+        let label = ref.verseNumber != nil
+            ? "Go to \(surahName), Verse \(ref.verseNumber!)"
+            : "Go to \(surahName)"
+
+        return Button {
+            if let surah {
+                viewModel.selectSurah(surah)
+                navigateToVerse = ref.verseNumber
+                showingVerseReader = true
+            }
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "arrow.right.circle.fill")
+                    .font(.system(size: 20))
+                    .foregroundColor(theme.accent)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(label)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(theme.textPrimary)
+
+                    if let surah {
+                        Text("\(surah.name) · \(surah.numberOfVerses) verses")
+                            .font(.system(size: 12))
+                            .foregroundColor(theme.textTertiary)
+                    }
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(theme.textTertiary)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(theme.accent.opacity(0.08))
+            .cornerRadius(10)
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(theme.accent.opacity(0.3), lineWidth: 0.5)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
     // MARK: - Verse Search Helpers
 
     private func triggerVerseSearch(_ query: String) {
@@ -365,8 +442,8 @@ struct QuranReaderView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.top, Spacing.xl)
             } else if viewModel.verseSearchResults.isEmpty {
-                // Empty state
-                VStack(spacing: Spacing.xs) {
+                // Empty state with search tips
+                VStack(spacing: Spacing.sm) {
                     Image(systemName: "text.magnifyingglass")
                         .font(.system(size: 36, weight: .light))
                         .foregroundColor(theme.textTertiary.opacity(0.6))
@@ -378,6 +455,14 @@ struct QuranReaderView: View {
                     Text("Try different keywords in English")
                         .font(.system(size: FontSizes.sm))
                         .foregroundColor(theme.textTertiary)
+
+                    // Search tips
+                    VStack(alignment: .leading, spacing: 6) {
+                        searchTip(icon: "magnifyingglass", text: "\"mercy\" or \"merciful\"")
+                        searchTip(icon: "number", text: "\"2:255\" to go to a verse")
+                        searchTip(icon: "character.textbox", text: "\"throne\" or \"light\"")
+                    }
+                    .padding(.top, Spacing.xs)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.top, Spacing.xl)

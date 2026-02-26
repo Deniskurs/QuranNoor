@@ -37,26 +37,32 @@ struct IslamicCalendarView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                // Current Hijri Date Card
-                currentDateCard
+        ZStack {
+            themeManager.currentTheme.backgroundColor
+                .ignoresSafeArea()
+            GradientBackground(style: .serenity, opacity: 0.15)
 
-                // Ramadan Tracker Button (if in Ramadan)
-                if calendarService.isRamadan() {
-                    ramadanTrackerButton
+            ScrollView {
+                VStack(spacing: 20) {
+                    // Current Hijri Date Card
+                    currentDateCard
+
+                    // Ramadan Tracker Button (if in Ramadan)
+                    if calendarService.isRamadan() {
+                        ramadanTrackerButton
+                    }
+
+                    // Upcoming Events
+                    upcomingEventsSection
+
+                    // Category Filter
+                    categoryFilterSection
+
+                    // Events List
+                    eventsListSection
                 }
-
-                // Upcoming Events
-                upcomingEventsSection
-
-                // Category Filter
-                categoryFilterSection
-
-                // Events List
-                eventsListSection
+                .padding()
             }
-            .padding()
         }
         .navigationTitle("Islamic Calendar")
         .navigationBarTitleDisplayMode(.large)
@@ -179,8 +185,8 @@ struct IslamicCalendarView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text("Upcoming Events")
-                    .font(.title3)
-                    .fontWeight(.semibold)
+                    .sectionHeaderStyle()
+                    .foregroundColor(themeManager.currentTheme.textTertiary)
 
                 Spacer()
             }
@@ -246,8 +252,8 @@ struct IslamicCalendarView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text(selectedFilter?.displayName ?? "All Events")
-                    .font(.title3)
-                    .fontWeight(.semibold)
+                    .sectionHeaderStyle()
+                    .foregroundColor(themeManager.currentTheme.textTertiary)
 
                 Spacer()
 

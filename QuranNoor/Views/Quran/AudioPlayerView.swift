@@ -91,62 +91,71 @@ struct AudioPlayerView: View {
             }
     }
 
-    // MARK: - Player Content (fixed layout, no ScrollView)
+    // MARK: - Player Content
 
     private func playerContent(verse: Verse, theme: ThemeMode) -> some View {
         VStack(spacing: 0) {
             // Top bar: drag indicator + close
             topBar(theme: theme)
 
-            Spacer(minLength: Spacing.sm)
+            // Scrollable content area for Arabic + info + translation
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(spacing: 0) {
+                    Spacer(minLength: Spacing.sm)
+                        .frame(height: Spacing.sm)
 
-            // Arabic text artwork card
-            SurahArtworkBadge(
-                surahNumber: verse.surahNumber,
-                arabicText: verse.text,
-                size: .full,
-                animationNamespace: animationNamespace
-            )
-            .animation(.easeInOut(duration: 0.3), value: verse.id)
+                    // Arabic text artwork card
+                    SurahArtworkBadge(
+                        surahNumber: verse.surahNumber,
+                        arabicText: verse.text,
+                        size: .full,
+                        animationNamespace: animationNamespace
+                    )
+                    .animation(.easeInOut(duration: 0.3), value: verse.id)
 
-            // Verse info
-            verseInfo(verse: verse, theme: theme)
-                .padding(.top, Spacing.sm)
+                    // Verse info
+                    verseInfo(verse: verse, theme: theme)
+                        .padding(.top, Spacing.sm)
 
-            // Error banner
-            errorBanner(verse: verse, theme: theme)
+                    // Error banner
+                    errorBanner(verse: verse, theme: theme)
+                        .padding(.horizontal, Spacing.screenHorizontal)
+
+                    // Translation (full text, no truncation)
+                    translationText(theme: theme)
+                        .padding(.top, Spacing.xs)
+                        .padding(.horizontal, Spacing.screenHorizontal)
+
+                    Spacer(minLength: Spacing.md)
+                        .frame(height: Spacing.md)
+                }
+            }
+
+            // Fixed bottom controls
+            VStack(spacing: 0) {
+                // Progress bar with scrubber
+                AudioProgressBar(
+                    style: .full,
+                    progress: audioService.duration > 0
+                        ? audioService.currentTime / audioService.duration
+                        : 0,
+                    currentTime: audioService.currentTime,
+                    duration: audioService.duration,
+                    onSeek: { time in audioService.seek(to: time) },
+                    animationNamespace: animationNamespace
+                )
                 .padding(.horizontal, Spacing.screenHorizontal)
 
-            // Translation (3 lines max with fade)
-            translationText(theme: theme)
-                .padding(.top, Spacing.xxs)
-                .padding(.horizontal, Spacing.screenHorizontal)
+                // Transport controls
+                transportControls(theme: theme)
+                    .padding(.top, Spacing.sm)
 
-            Spacer(minLength: Spacing.sm)
-
-            // Progress bar with scrubber
-            AudioProgressBar(
-                style: .full,
-                progress: audioService.duration > 0
-                    ? audioService.currentTime / audioService.duration
-                    : 0,
-                currentTime: audioService.currentTime,
-                duration: audioService.duration,
-                onSeek: { time in audioService.seek(to: time) },
-                animationNamespace: animationNamespace
-            )
-            .padding(.horizontal, Spacing.screenHorizontal)
-
-            // Transport controls
-            transportControls(theme: theme)
-                .padding(.top, Spacing.sm)
-
-            // Bottom pills row
-            bottomRow(theme: theme)
-                .padding(.top, Spacing.xs)
-                .padding(.horizontal, Spacing.screenHorizontal)
-
-            Spacer(minLength: Spacing.sm)
+                // Bottom pills row
+                bottomRow(theme: theme)
+                    .padding(.top, Spacing.xs)
+                    .padding(.horizontal, Spacing.screenHorizontal)
+            }
+            .padding(.bottom, Spacing.sm)
         }
     }
 
@@ -205,8 +214,7 @@ struct AudioPlayerView: View {
                     .foregroundColor(theme.textSecondary)
                     .multilineTextAlignment(.center)
                     .lineSpacing(6)
-                    .lineLimit(3)
-                    .truncationMode(.tail)
+                    .fixedSize(horizontal: false, vertical: true)
                     .transition(.opacity)
                     .animation(.easeInOut(duration: 0.3), value: currentTranslation?.id)
             }

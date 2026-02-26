@@ -140,7 +140,9 @@ class APIClient {
         configuration.requestCachePolicy = .useProtocolCachePolicy
 
         // User-Agent header for API identification
-        configuration.httpAdditionalHeaders = ["User-Agent": "QuranNoor/1.0.0 (iOS; com.qurannoor.app)"]
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
+        let bundleId = Bundle.main.bundleIdentifier ?? "com.qurannoor.app"
+        configuration.httpAdditionalHeaders = ["User-Agent": "QuranNoor/\(version) (iOS; \(bundleId))"]
 
         // Performance: Limit concurrent connections
         configuration.httpMaximumConnectionsPerHost = 4

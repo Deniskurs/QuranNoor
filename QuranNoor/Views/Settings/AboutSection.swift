@@ -96,7 +96,7 @@ struct AboutSection: View {
     }
 
     private func openPrivacyPolicy() {
-        if let url = URL(string: "https://qurannoor.app/privacy") {
+        if let url = URL(string: "https://deniskurs.github.io/QuranNoor/privacy") {
             #if os(iOS)
             UIApplication.shared.open(url)
             #endif

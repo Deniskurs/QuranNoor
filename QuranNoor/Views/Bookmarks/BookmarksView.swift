@@ -20,6 +20,8 @@ struct BookmarksView: View {
             themeManager.currentTheme.backgroundColor
                 .ignoresSafeArea()
 
+            GradientBackground(style: .serenity, opacity: 0.15)
+
             // Main content
             VStack(spacing: 0) {
                 // Search bar

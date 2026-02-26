@@ -104,18 +104,50 @@ class QuranViewModel {
         await quranService.preloadQuranData()
     }
 
-    /// Search surahs by name
+    /// Parsed verse reference from current search query (e.g. "2:255")
+    var parsedVerseRef: ParsedVerseRef?
+
+    /// Search surahs by name with fuzzy matching, transliteration normalization, and verse reference parsing
     func searchSurahs(_ query: String) {
         searchQuery = query
 
         if query.isEmpty {
             filteredSurahs = surahs
-        } else {
+            parsedVerseRef = nil
+            return
+        }
+
+        // Check for verse reference first (e.g. "2:255", "surah 36 verse 12", "baqarah 255")
+        parsedVerseRef = FuzzySearchUtility.parseVerseReference(query, surahs: surahs)
+        if let ref = parsedVerseRef {
+            // Show only the referenced surah
+            filteredSurahs = surahs.filter { $0.id == ref.surahNumber }
+            return
+        }
+
+        // Check if query is a plain number (surah number)
+        if let surahNum = Int(query.trimmingCharacters(in: .whitespaces)), surahNum >= 1, surahNum <= 114 {
+            filteredSurahs = surahs.filter { $0.id == surahNum }
+            return
+        }
+
+        // Fuzzy search with transliteration normalization
+        let results = FuzzySearchUtility.searchMultipleFields(
+            surahs,
+            query: query,
+            keyPaths: [\.englishName, \.name, \.englishNameTranslation],
+            threshold: 0.3
+        )
+
+        if results.isEmpty {
+            // Fallback to simple contains (catches Arabic text matching)
             filteredSurahs = surahs.filter { surah in
                 surah.englishName.localizedCaseInsensitiveContains(query) ||
                 surah.englishNameTranslation.localizedCaseInsensitiveContains(query) ||
                 surah.name.contains(query)
             }
+        } else {
+            filteredSurahs = results.map(\.item)
         }
     }
 

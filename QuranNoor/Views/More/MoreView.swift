@@ -11,12 +11,16 @@ struct MoreView: View {
     @Environment(ThemeManager.self) var themeManager: ThemeManager
     var prayerVM: PrayerViewModel
 
+    private var theme: ThemeMode { themeManager.currentTheme }
+
     var body: some View {
         NavigationStack {
             ZStack {
                 // Background
                 themeManager.currentTheme.backgroundColor
                     .ignoresSafeArea()
+
+                GradientBackground(style: .serenity, opacity: 0.15)
 
                 ScrollView {
                     VStack(spacing: Spacing.md) {
@@ -31,12 +35,16 @@ struct MoreView: View {
                                 MoreMenuItem(
                                     icon: "sparkles",
                                     title: "Adhkar",
-                                    subtitle: "Daily remembrances"
+                                    subtitle: "Daily remembrances",
+                                    iconColor: theme.accentMuted
                                 )
                             }
-                            .buttonStyle(PlainButtonStyle())
+                            .buttonStyle(MenuItemButtonStyle())
 
-                            Divider().padding(.horizontal, Spacing.sm)
+                            Rectangle()
+                                .fill(theme.divider)
+                                .frame(height: 0.5)
+                                .padding(.horizontal, Spacing.sm)
 
                             NavigationLink {
                                 NamesOfAllahView()
@@ -44,12 +52,16 @@ struct MoreView: View {
                                 MoreMenuItem(
                                     icon: "text.book.closed.fill",
                                     title: "99 Names of Allah",
-                                    subtitle: "Al-Asma al-Husna"
+                                    subtitle: "Al-Asma al-Husna",
+                                    iconColor: theme.accentMuted
                                 )
                             }
-                            .buttonStyle(PlainButtonStyle())
+                            .buttonStyle(MenuItemButtonStyle())
 
-                            Divider().padding(.horizontal, Spacing.sm)
+                            Rectangle()
+                                .fill(theme.divider)
+                                .frame(height: 0.5)
+                                .padding(.horizontal, Spacing.sm)
 
                             NavigationLink {
                                 TasbihCounterView()
@@ -57,12 +69,16 @@ struct MoreView: View {
                                 MoreMenuItem(
                                     icon: "hand.tap.fill",
                                     title: "Tasbih Counter",
-                                    subtitle: "Digital dhikr counter"
+                                    subtitle: "Digital dhikr counter",
+                                    iconColor: theme.accentMuted
                                 )
                             }
-                            .buttonStyle(PlainButtonStyle())
+                            .buttonStyle(MenuItemButtonStyle())
 
-                            Divider().padding(.horizontal, Spacing.sm)
+                            Rectangle()
+                                .fill(theme.divider)
+                                .frame(height: 0.5)
+                                .padding(.horizontal, Spacing.sm)
 
                             NavigationLink {
                                 FortressDuasView()
@@ -70,10 +86,11 @@ struct MoreView: View {
                                 MoreMenuItem(
                                     icon: "shield.fill",
                                     title: "Fortress of the Muslim",
-                                    subtitle: "Authentic daily supplications"
+                                    subtitle: "Authentic daily supplications",
+                                    iconColor: theme.accentMuted
                                 )
                             }
-                            .buttonStyle(PlainButtonStyle())
+                            .buttonStyle(MenuItemButtonStyle())
                         }
 
                         // MARK: Daily Tools
@@ -87,9 +104,12 @@ struct MoreView: View {
                                     subtitle: "Find direction to Makkah"
                                 )
                             }
-                            .buttonStyle(PlainButtonStyle())
+                            .buttonStyle(MenuItemButtonStyle())
 
-                            Divider().padding(.horizontal, Spacing.sm)
+                            Rectangle()
+                                .fill(theme.divider)
+                                .frame(height: 0.5)
+                                .padding(.horizontal, Spacing.sm)
 
                             NavigationLink {
                                 IslamicCalendarView()
@@ -100,9 +120,12 @@ struct MoreView: View {
                                     subtitle: "Hijri dates & events"
                                 )
                             }
-                            .buttonStyle(PlainButtonStyle())
+                            .buttonStyle(MenuItemButtonStyle())
 
-                            Divider().padding(.horizontal, Spacing.sm)
+                            Rectangle()
+                                .fill(theme.divider)
+                                .frame(height: 0.5)
+                                .padding(.horizontal, Spacing.sm)
 
                             NavigationLink {
                                 BookmarksView()
@@ -114,7 +137,7 @@ struct MoreView: View {
                                     badge: bookmarkBadge
                                 )
                             }
-                            .buttonStyle(PlainButtonStyle())
+                            .buttonStyle(MenuItemButtonStyle())
                         }
 
                         // MARK: App
@@ -125,12 +148,16 @@ struct MoreView: View {
                                 MoreMenuItem(
                                     icon: "gearshape.fill",
                                     title: "Settings",
-                                    subtitle: "Preferences and customization"
+                                    subtitle: "Preferences and customization",
+                                    iconColor: theme.textSecondary
                                 )
                             }
-                            .buttonStyle(PlainButtonStyle())
+                            .buttonStyle(MenuItemButtonStyle())
 
-                            Divider().padding(.horizontal, Spacing.sm)
+                            Rectangle()
+                                .fill(theme.divider)
+                                .frame(height: 0.5)
+                                .padding(.horizontal, Spacing.sm)
 
                             NavigationLink {
                                 AboutView()
@@ -138,12 +165,16 @@ struct MoreView: View {
                                 MoreMenuItem(
                                     icon: "info.circle.fill",
                                     title: "About",
-                                    subtitle: "App information"
+                                    subtitle: "App information",
+                                    iconColor: theme.textSecondary
                                 )
                             }
-                            .buttonStyle(PlainButtonStyle())
+                            .buttonStyle(MenuItemButtonStyle())
 
-                            Divider().padding(.horizontal, Spacing.sm)
+                            Rectangle()
+                                .fill(theme.divider)
+                                .frame(height: 0.5)
+                                .padding(.horizontal, Spacing.sm)
 
                             NavigationLink {
                                 HelpView()
@@ -151,33 +182,41 @@ struct MoreView: View {
                                 MoreMenuItem(
                                     icon: "questionmark.circle.fill",
                                     title: "Help & Support",
-                                    subtitle: "Get assistance"
+                                    subtitle: "Get assistance",
+                                    iconColor: theme.textSecondary
                                 )
                             }
-                            .buttonStyle(PlainButtonStyle())
+                            .buttonStyle(MenuItemButtonStyle())
                         }
                     }
                     .padding(.vertical, Spacing.md)
                 }
             }
-            .navigationTitle("More")
-            .navigationBarTitleDisplayMode(.large)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Spacer()
+                }
+            }
         }
     }
 
     // MARK: - Header Section
 
     private var headerSection: some View {
-        VStack(spacing: Spacing.xxxs) {
-            Text("Qur'an Noor")
-                .font(.system(size: FontSizes.lg + 2, weight: .bold))
-                .foregroundColor(themeManager.currentTheme.textPrimary)
+        VStack(spacing: 6) {
+            Text("نور القرآن")
+                .font(.system(size: 34, weight: .regular, design: .default))
+                .foregroundColor(theme.accent)
 
-            Text("Light of the Qur'an")
-                .font(.system(size: FontSizes.sm))
-                .foregroundColor(themeManager.currentTheme.textSecondary)
+            Text("LIGHT OF THE QURAN")
+                .font(.system(size: 13, weight: .regular))
+                .foregroundColor(theme.textTertiary)
+                .tracking(1.5)
+                .textCase(.uppercase)
         }
-        .padding(.vertical, Spacing.sm)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 4)
     }
 
     // MARK: - Section Card Helper
@@ -190,16 +229,15 @@ struct MoreView: View {
             // Section header
             Text(title)
                 .font(.system(size: FontSizes.sm, weight: .semibold))
-                .foregroundColor(themeManager.currentTheme.textSecondary)
+                .foregroundColor(theme.textTertiary)
                 .textCase(.uppercase)
                 .padding(.horizontal, Spacing.screenHorizontal + Spacing.xs)
 
-            VStack(spacing: Spacing.sm) {
-                content()
+            CardView(intensity: .subtle) {
+                VStack(spacing: Spacing.sm) {
+                    content()
+                }
             }
-            .padding(Spacing.sm)
-            .background(themeManager.currentTheme.cardColor)
-            .cornerRadius(BorderRadius.xl)
             .padding(.horizontal, Spacing.screenHorizontal)
         }
     }
@@ -215,6 +253,17 @@ struct MoreView: View {
     }
 }
 
+// MARK: - Menu Item Button Style
+
+private struct MenuItemButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
+            .opacity(configuration.isPressed ? 0.7 : 1.0)
+            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: configuration.isPressed)
+    }
+}
+
 // MARK: - More Menu Item
 
 private struct MoreMenuItem: View {
@@ -224,29 +273,32 @@ private struct MoreMenuItem: View {
     let title: String
     let subtitle: String
     var badge: Int? = nil
+    var iconColor: Color? = nil
+
+    private var theme: ThemeMode { themeManager.currentTheme }
 
     var body: some View {
         HStack(spacing: Spacing.sm) {
             // Icon
             ZStack {
                 Circle()
-                    .fill(themeManager.currentTheme.accentTint)
+                    .fill((iconColor ?? theme.accent).opacity(0.12))
                     .frame(width: Spacing.xxl, height: Spacing.xxl)
 
                 Image(systemName: icon)
                     .font(.system(size: FontSizes.lg + 2))
-                    .foregroundColor(themeManager.currentTheme.accent)
+                    .foregroundColor(iconColor ?? theme.accent)
             }
 
             // Text
             VStack(alignment: .leading, spacing: Spacing.xxxs) {
                 Text(title)
                     .font(.system(size: FontSizes.base, weight: .semibold))
-                    .foregroundColor(themeManager.currentTheme.textPrimary)
+                    .foregroundColor(theme.textPrimary)
 
                 Text(subtitle)
                     .font(.system(size: FontSizes.sm - 1))
-                    .foregroundColor(themeManager.currentTheme.textSecondary)
+                    .foregroundColor(theme.textSecondary)
             }
 
             Spacer()
@@ -260,13 +312,13 @@ private struct MoreMenuItem: View {
                     .padding(.vertical, Spacing.xxxs)
                     .background(
                         Capsule()
-                            .fill(themeManager.currentTheme.accentMuted)
+                            .fill(theme.accentMuted)
                     )
             }
 
             Image(systemName: "chevron.right")
                 .font(.system(size: FontSizes.sm, weight: .semibold))
-                .foregroundColor(themeManager.currentTheme.textTertiary)
+                .foregroundColor(theme.textTertiary)
         }
         .padding(Spacing.xs)
         .contentShape(Rectangle())
@@ -278,56 +330,319 @@ private struct MoreMenuItem: View {
 struct AboutView: View {
     @Environment(ThemeManager.self) var themeManager: ThemeManager
 
+    private var theme: ThemeMode { themeManager.currentTheme }
+
     var body: some View {
         ZStack {
-            themeManager.currentTheme.backgroundColor
+            theme.backgroundColor
                 .ignoresSafeArea()
 
-            VStack(spacing: Spacing.lg) {
-                Text("About Qur'an Noor")
-                    .font(.system(size: FontSizes.xl, weight: .bold))
-                    .foregroundColor(themeManager.currentTheme.textPrimary)
+            GradientBackground(style: .serenity, opacity: 0.15)
 
-                Text("Version 1.0.0")
-                    .font(.system(size: FontSizes.base))
-                    .foregroundColor(themeManager.currentTheme.textSecondary)
+            ScrollView {
+                VStack(spacing: Spacing.md) {
+                    // Hero section
+                    heroSection
 
-                Text("A premium Islamic companion app for prayer times, Qur'an reading, and spiritual growth.")
-                    .font(.system(size: FontSizes.sm))
-                    .multilineTextAlignment(.center)
-                    .foregroundColor(themeManager.currentTheme.textSecondary)
-                    .padding(.horizontal, Spacing.lg)
+                    // Description card
+                    descriptionCard
+
+                    // Features card
+                    featuresCard
+
+                    // Footer
+                    footerSection
+                }
+                .padding(.vertical, Spacing.md)
             }
         }
         .navigationTitle("About")
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    // MARK: - Hero Section
+
+    private var heroSection: some View {
+        VStack(spacing: Spacing.sm) {
+            // App icon representation
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [theme.accent, theme.accentMuted],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 80, height: 80)
+                    .shadow(color: theme.accent.opacity(0.3), radius: 16)
+
+                Image(systemName: "moon.stars.fill")
+                    .font(.system(size: 36, weight: .medium))
+                    .foregroundColor(.white)
+            }
+
+            Text("Qur'an Noor")
+                .font(.system(size: FontSizes.xxl, weight: .bold, design: .rounded))
+                .foregroundColor(theme.textPrimary)
+                .tracking(1.0)
+
+            Text("نور القرآن")
+                .font(.custom("KFGQPCHAFSUthmanicScript-Regular", size: 24, relativeTo: .title2))
+                .foregroundColor(theme.accent)
+
+            // Version badge
+            Text("Version 1.0.0")
+                .font(.system(size: FontSizes.xs, weight: .semibold))
+                .foregroundColor(theme.accentMuted)
+                .padding(.horizontal, Spacing.xs)
+                .padding(.vertical, Spacing.xxxs)
+                .background(
+                    Capsule()
+                        .fill(theme.accentTint)
+                )
+        }
+        .padding(.top, Spacing.md)
+    }
+
+    // MARK: - Description Card
+
+    private var descriptionCard: some View {
+        CardView(intensity: .subtle) {
+            VStack(spacing: Spacing.sm) {
+                Text("About")
+                    .font(.system(size: FontSizes.base, weight: .semibold))
+                    .foregroundColor(theme.textPrimary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                Text("A premium Islamic companion app designed for Muslims worldwide. Qur'an Noor provides accurate prayer times, complete Quran with translations and audio recitations, Qibla direction, daily adhkar, and tools for spiritual growth — all in a clean, ad-free experience.")
+                    .font(.system(size: FontSizes.sm))
+                    .foregroundColor(theme.textSecondary)
+                    .lineSpacing(4)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(.horizontal, Spacing.screenHorizontal)
+    }
+
+    // MARK: - Features Card
+
+    private var featuresCard: some View {
+        CardView(intensity: .subtle) {
+            VStack(spacing: Spacing.sm) {
+                Text("Features")
+                    .font(.system(size: FontSizes.base, weight: .semibold))
+                    .foregroundColor(theme.textPrimary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                featureRow(icon: "book.fill", title: "Complete Quran", subtitle: "With translations and audio recitations")
+
+                Rectangle()
+                    .fill(theme.divider)
+                    .frame(height: 0.5)
+
+                featureRow(icon: "clock.fill", title: "Prayer Times", subtitle: "Accurate calculations for your location")
+
+                Rectangle()
+                    .fill(theme.divider)
+                    .frame(height: 0.5)
+
+                featureRow(icon: "location.north.fill", title: "Qibla Compass", subtitle: "Find the direction to Makkah")
+
+                Rectangle()
+                    .fill(theme.divider)
+                    .frame(height: 0.5)
+
+                featureRow(icon: "sparkles", title: "Adhkar & Duas", subtitle: "Daily remembrances and supplications")
+            }
+        }
+        .padding(.horizontal, Spacing.screenHorizontal)
+    }
+
+    private func featureRow(icon: String, title: String, subtitle: String) -> some View {
+        HStack(spacing: Spacing.sm) {
+            ZStack {
+                Circle()
+                    .fill(theme.accentTint)
+                    .frame(width: 36, height: 36)
+
+                Image(systemName: icon)
+                    .font(.system(size: FontSizes.sm + 1))
+                    .foregroundColor(theme.accent)
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: FontSizes.sm, weight: .semibold))
+                    .foregroundColor(theme.textPrimary)
+
+                Text(subtitle)
+                    .font(.system(size: FontSizes.xs))
+                    .foregroundColor(theme.textTertiary)
+            }
+
+            Spacer()
+        }
+    }
+
+    // MARK: - Footer
+
+    private var footerSection: some View {
+        VStack(spacing: Spacing.xxs) {
+            Text("Made with love for the Ummah")
+                .font(.system(size: FontSizes.xs, weight: .medium))
+                .foregroundColor(theme.textTertiary)
+
+            Text("بسم الله الرحمن الرحيم")
+                .font(.custom("KFGQPCHAFSUthmanicScript-Regular", size: 16, relativeTo: .caption))
+                .foregroundColor(theme.accentMuted)
+        }
+        .padding(.vertical, Spacing.md)
     }
 }
 
 struct HelpView: View {
     @Environment(ThemeManager.self) var themeManager: ThemeManager
 
+    private var theme: ThemeMode { themeManager.currentTheme }
+
     var body: some View {
         ZStack {
-            themeManager.currentTheme.backgroundColor
+            theme.backgroundColor
                 .ignoresSafeArea()
 
-            VStack(spacing: Spacing.md) {
-                Text("Help & Support")
-                    .font(.system(size: FontSizes.xl, weight: .bold))
-                    .foregroundColor(themeManager.currentTheme.textPrimary)
+            GradientBackground(style: .serenity, opacity: 0.15)
 
-                Text("For assistance, please contact:")
-                    .font(.system(size: FontSizes.sm))
-                    .foregroundColor(themeManager.currentTheme.textSecondary)
+            ScrollView {
+                VStack(spacing: Spacing.md) {
+                    // FAQ Section
+                    faqSection
 
-                Text("support@qurannoor.app")
-                    .font(.system(size: FontSizes.base, weight: .medium))
-                    .foregroundColor(themeManager.currentTheme.accent)
+                    // Contact Section
+                    contactSection
+                }
+                .padding(.vertical, Spacing.md)
             }
         }
         .navigationTitle("Help & Support")
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    // MARK: - FAQ Section
+
+    private var faqSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.xs) {
+            Text("Frequently Asked Questions")
+                .sectionHeaderStyle()
+                .foregroundColor(theme.textTertiary)
+                .padding(.horizontal, Spacing.screenHorizontal + Spacing.xs)
+
+            CardView(intensity: .subtle) {
+                VStack(spacing: Spacing.sm) {
+                    faqItem(
+                        question: "How do I change the prayer calculation method?",
+                        answer: "Go to Settings > Prayer Settings and select your preferred calculation method from the available options."
+                    )
+
+                    Rectangle().fill(theme.divider).frame(height: 0.5)
+
+                    faqItem(
+                        question: "How do I bookmark a verse?",
+                        answer: "While reading the Quran, tap the bookmark icon on any verse to save it. Access your bookmarks from the More tab."
+                    )
+
+                    Rectangle().fill(theme.divider).frame(height: 0.5)
+
+                    faqItem(
+                        question: "Can I listen to Quran offline?",
+                        answer: "Yes, downloaded surahs are available for offline listening. Playback will use cached audio when available."
+                    )
+
+                    Rectangle().fill(theme.divider).frame(height: 0.5)
+
+                    faqItem(
+                        question: "How do I change the app theme?",
+                        answer: "Go to Settings > Appearance to choose between Light, Dark, Night (OLED), and Sepia themes."
+                    )
+                }
+            }
+            .padding(.horizontal, Spacing.screenHorizontal)
+        }
+    }
+
+    private func faqItem(question: String, answer: String) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.xxs) {
+            HStack(alignment: .top, spacing: Spacing.xxs) {
+                Image(systemName: "questionmark.circle.fill")
+                    .font(.system(size: FontSizes.sm))
+                    .foregroundColor(theme.accent)
+                    .padding(.top, 2)
+
+                Text(question)
+                    .font(.system(size: FontSizes.sm, weight: .semibold))
+                    .foregroundColor(theme.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Text(answer)
+                .font(.system(size: FontSizes.sm - 1))
+                .foregroundColor(theme.textSecondary)
+                .lineSpacing(3)
+                .padding(.leading, FontSizes.sm + Spacing.xxs)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    // MARK: - Contact Section
+
+    private var contactSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.xs) {
+            Text("Contact Us")
+                .sectionHeaderStyle()
+                .foregroundColor(theme.textTertiary)
+                .padding(.horizontal, Spacing.screenHorizontal + Spacing.xs)
+
+            CardView(intensity: .subtle) {
+                VStack(spacing: Spacing.sm) {
+                    HStack(spacing: Spacing.sm) {
+                        ZStack {
+                            Circle()
+                                .fill(theme.accentTint)
+                                .frame(width: 36, height: 36)
+
+                            Image(systemName: "envelope.fill")
+                                .font(.system(size: FontSizes.sm + 1))
+                                .foregroundColor(theme.accent)
+                        }
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Email Support")
+                                .font(.system(size: FontSizes.sm, weight: .semibold))
+                                .foregroundColor(theme.textPrimary)
+
+                            Text("support@qurannoor.app")
+                                .font(.system(size: FontSizes.sm - 1))
+                                .foregroundColor(theme.accent)
+                        }
+
+                        Spacer()
+
+                        Image(systemName: "arrow.up.right")
+                            .font(.system(size: FontSizes.xs, weight: .semibold))
+                            .foregroundColor(theme.textTertiary)
+                    }
+
+                    Rectangle().fill(theme.divider).frame(height: 0.5)
+
+                    Text("We value your feedback and strive to make Qur'an Noor the best Islamic companion app. Don't hesitate to reach out with suggestions or questions.")
+                        .font(.system(size: FontSizes.sm - 1))
+                        .foregroundColor(theme.textSecondary)
+                        .lineSpacing(3)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .padding(.horizontal, Spacing.screenHorizontal)
+        }
     }
 }
 

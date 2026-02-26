@@ -23,6 +23,18 @@ struct HomeHeaderView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.md) {
+            // Arabic calligraphy header
+            VStack(spacing: 6) {
+                Text("بسم الله الرحمن الرحيم")
+                    .font(.system(size: 28, weight: .regular))
+                    .foregroundColor(themeManager.currentTheme.accent)
+                Text("IN THE NAME OF ALLAH")
+                    .font(.system(size: 11, weight: .regular))
+                    .foregroundColor(themeManager.currentTheme.textTertiary)
+                    .tracking(1.5)
+            }
+            .frame(maxWidth: .infinity)
+
             // Greeting - Bold & Modern (iOS 26 style)
             Text(greeting)
                 .font(.system(size: 40, weight: .heavy))
@@ -32,9 +44,8 @@ struct HomeHeaderView: View {
                 .minimumScaleFactor(0.5)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-            // Clean divider separator
-            Divider()
-                .background(themeManager.currentTheme.textTertiary.opacity(0.3))
+            // Islamic crescent divider separator
+            IslamicDivider(style: .crescent)
 
             // Dates stacked vertically (Modern Split style)
             VStack(alignment: .leading, spacing: Spacing.xs) {
@@ -43,7 +54,7 @@ struct HomeHeaderView: View {
                     if let hijri = hijriDate {
                         Image(systemName: "calendar.badge.clock")
                             .font(.system(size: 14))
-                            .foregroundColor(themeManager.currentTheme.accentMuted)
+                            .foregroundColor(themeManager.currentTheme.accent)
 
                         Text(hijri.formattedDate)
                             .font(.system(size: 15, weight: .medium))
@@ -51,7 +62,7 @@ struct HomeHeaderView: View {
                     } else {
                         Image(systemName: "calendar")
                             .font(.system(size: 14))
-                            .foregroundColor(themeManager.currentTheme.accentMuted)
+                            .foregroundColor(themeManager.currentTheme.accent)
 
                         Text("Loading...")
                             .font(.system(size: 15, weight: .medium))

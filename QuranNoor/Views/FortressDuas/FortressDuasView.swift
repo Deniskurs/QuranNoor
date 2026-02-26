@@ -33,24 +33,30 @@ struct FortressDuasView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                // Header
-                headerSection
+        ZStack {
+            themeManager.currentTheme.backgroundColor
+                .ignoresSafeArea()
+            GradientBackground(style: .serenity, opacity: 0.15)
 
-                // Statistics Card
-                statisticsCard
+            ScrollView {
+                VStack(spacing: 20) {
+                    // Header
+                    headerSection
 
-                // Toggle between categories and search results
-                if searchText.isEmpty && !showingFavorites {
-                    // Categories Grid
-                    categoriesSection
-                } else {
-                    // Search Results or Favorites
-                    resultsSection
+                    // Statistics Card
+                    statisticsCard
+
+                    // Toggle between categories and search results
+                    if searchText.isEmpty && !showingFavorites {
+                        // Categories Grid
+                        categoriesSection
+                    } else {
+                        // Search Results or Favorites
+                        resultsSection
+                    }
                 }
+                .padding()
             }
-            .padding()
         }
         .navigationTitle("Fortress of the Muslim")
         .navigationBarTitleDisplayMode(.large)
@@ -70,9 +76,6 @@ struct FortressDuasView: View {
                 }
             }
         }
-        .navigationDestination(for: DuaCategory.self) { category in
-            DuaCategoryView(category: category, duaService: duaService)
-        }
     }
 
     // MARK: - Header Section
@@ -82,7 +85,7 @@ struct FortressDuasView: View {
             Image(systemName: "book.closed.fill")
                 .font(.system(size: 50))
                 .foregroundStyle(.linearGradient(
-                    colors: [.green, .teal],
+                    colors: [themeManager.currentTheme.accent, themeManager.currentTheme.accentMuted],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 ))
@@ -93,7 +96,7 @@ struct FortressDuasView: View {
 
             Text("Authentic supplications from the Quran and Sunnah")
                 .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(themeManager.currentTheme.textSecondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)
         }
@@ -136,7 +139,7 @@ struct FortressDuasView: View {
         .padding()
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(.ultraThinMaterial)
+                .fill(themeManager.currentTheme.cardColor)
         )
     }
 
@@ -145,8 +148,8 @@ struct FortressDuasView: View {
     private var categoriesSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Categories")
-                .font(.title3)
-                .fontWeight(.semibold)
+                .sectionHeaderStyle()
+                .foregroundColor(themeManager.currentTheme.textTertiary)
                 .padding(.horizontal, 4)
 
             LazyVGrid(columns: [
@@ -154,7 +157,9 @@ struct FortressDuasView: View {
                 GridItem(.flexible())
             ], spacing: 12) {
                 ForEach(categoriesWithCount, id: \.category) { item in
-                    NavigationLink(value: item.category) {
+                    NavigationLink {
+                        DuaCategoryView(category: item.category, duaService: duaService)
+                    } label: {
                         DuaCategoryCard(
                             category: item.category,
                             count: item.count
@@ -171,8 +176,8 @@ struct FortressDuasView: View {
     private var resultsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(showingFavorites ? "Favorite Duas" : "Search Results")
-                .font(.title3)
-                .fontWeight(.semibold)
+                .sectionHeaderStyle()
+                .foregroundColor(themeManager.currentTheme.textTertiary)
                 .padding(.horizontal, 4)
 
             if filteredDuas.isEmpty {
@@ -180,7 +185,9 @@ struct FortressDuasView: View {
             } else {
                 LazyVStack(spacing: 12) {
                     ForEach(filteredDuas) { dua in
-                        NavigationLink(value: dua.category) {
+                        NavigationLink {
+                            DuaCategoryView(category: dua.category, duaService: duaService)
+                        } label: {
                             FortressDuaCard(dua: dua, duaService: duaService)
                         }
                         .buttonStyle(.plain)
@@ -194,14 +201,14 @@ struct FortressDuasView: View {
         VStack(spacing: 12) {
             Image(systemName: showingFavorites ? "heart.slash" : "magnifyingglass")
                 .font(.system(size: 50))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(themeManager.currentTheme.textSecondary)
 
             Text(showingFavorites ? "No Favorite Duas" : "No Results Found")
                 .font(.headline)
 
             Text(showingFavorites ? "Mark duas as favorites to see them here" : "Try a different search term")
                 .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(themeManager.currentTheme.textSecondary)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 40)
@@ -246,7 +253,7 @@ struct DuaCategoryCard: View {
         .frame(height: 120)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(.ultraThinMaterial)
+                .fill(themeManager.currentTheme.cardColor)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 12)
@@ -260,6 +267,7 @@ struct DuaCategoryCard: View {
 }
 
 struct FortressDuaCard: View {
+    @Environment(ThemeManager.self) var themeManager
     let dua: FortressDua
     @Bindable var duaService: FortressDuaService
 
@@ -302,7 +310,7 @@ struct FortressDuaCard: View {
         .padding()
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(.ultraThinMaterial)
+                .fill(themeManager.currentTheme.cardColor)
         )
     }
 }

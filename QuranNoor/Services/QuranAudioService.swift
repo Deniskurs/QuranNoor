@@ -76,6 +76,22 @@ enum Reciter: String, CaseIterable, Identifiable, Codable {
             return "Saudi Arabia"
         }
     }
+
+    /// Folder name on the EveryAyah / QuranicAudio CDN
+    var audioFolder: String {
+        switch self {
+        case .misharyRashid:
+            return "Alafasy_128kbps"
+        case .abdulBasit:
+            return "Abdul_Basit_Murattal_192kbps"
+        case .saudAlShuraym:
+            return "Saood_ash-Shuraym_128kbps"
+        case .mahmoudKhalil:
+            return "Husary_128kbps"
+        case .mahirAlMuaiqly:
+            return "MaherAlMuaiqly128kbps"
+        }
+    }
 }
 
 // MARK: - Playback State
@@ -204,13 +220,10 @@ class QuranAudioService: NSObject {
     }
 
     private func ensureAudioSessionReady() {
-        if !hasSetupAudioSession {
-            hasSetupAudioSession = true
-            setupRemoteCommandCenter()
-        }
-        // Always (re-)activate the audio session — stop() releases it,
-        // so we must re-activate before every play.
+        guard !hasSetupAudioSession else { return }
+        hasSetupAudioSession = true
         setupAudioSession()
+        setupRemoteCommandCenter()
     }
 
     // MARK: - Idle Timer Management
@@ -231,7 +244,9 @@ class QuranAudioService: NSObject {
     // MARK: - Audio Session Setup
     private func setupAudioSession() {
         do {
-            // Use centralized audio session manager to prevent conflicts
+            // Configure category and mode once — AVPlayer auto-activates
+            // the session when playback starts, so we don't need to call
+            // setActive(true) on every play.
             try AudioSessionManager.shared.configureSession(for: .quranRecitation)
 
             // Handle audio interruptions (phone calls, Siri, other apps)
@@ -408,9 +423,10 @@ class QuranAudioService: NSObject {
     ///   - verse: The verse to play
     ///   - preserveQueue: If true, keeps the existing playingVerses queue (used by playVerses/playNextVerse)
     func play(verse: Verse, preserveQueue: Bool = false) async throws {
+        ensureAudioSessionReady()
+
         // If already playing the same verse, just resume
         if currentVerse?.id == verse.id, case .paused = playbackState {
-            ensureAudioSessionReady()
             resume()
             return
         }
@@ -424,9 +440,6 @@ class QuranAudioService: NSObject {
             playingVerses = [verse]
             currentVerseIndex = 0
         }
-
-        // Activate audio session AFTER stop() so it doesn't get released immediately
-        ensureAudioSessionReady()
 
         playbackState = .loading
         isLoading = true
@@ -665,48 +678,14 @@ class QuranAudioService: NSObject {
             return cached
         }
 
-        // Use AlQuran.cloud API to get audio URL
-        let editionId = selectedReciter.rawValue
-        let urlString = "https://api.alquran.cloud/v1/ayah/\(verse.surahNumber):\(verse.verseNumber)/\(editionId)"
+        // Construct URL directly from CDN — no API call needed.
+        // Format: {surah 3-digit}{verse 3-digit}.mp3
+        let fileName = String(format: "%03d%03d.mp3", verse.surahNumber, verse.verseNumber)
+        let folder = selectedReciter.audioFolder
+        let cdnURLString = "https://everyayah.com/data/\(folder)/\(fileName)"
 
-        guard let url = URL(string: urlString) else {
+        guard let audioURL = URL(string: cdnURLString) else {
             throw AudioError.invalidURL
-        }
-
-        // Parse response
-        struct AudioResponse: Codable {
-            let data: AudioData
-
-            struct AudioData: Codable {
-                let audio: String?
-            }
-        }
-
-        // Network fetch with single retry on failure
-        let data: Data
-        do {
-            let (responseData, response) = try await URLSession.shared.data(from: url)
-            guard let httpResponse = response as? HTTPURLResponse,
-                  (200...299).contains(httpResponse.statusCode) else {
-                throw AudioError.networkError
-            }
-            data = responseData
-        } catch {
-            // Retry once after 1 second
-            try await Task.sleep(nanoseconds: 1_000_000_000)
-            let (responseData, response) = try await URLSession.shared.data(from: url)
-            guard let httpResponse = response as? HTTPURLResponse,
-                  (200...299).contains(httpResponse.statusCode) else {
-                throw AudioError.networkError
-            }
-            data = responseData
-        }
-
-        let audioResponse = try Self.decoder.decode(AudioResponse.self, from: data)
-
-        guard let audioURLString = audioResponse.data.audio,
-              let audioURL = URL(string: audioURLString) else {
-            throw AudioError.noAudioAvailable
         }
 
         // Store in cache

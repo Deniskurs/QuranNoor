@@ -30,7 +30,7 @@ struct ContentView: View {
             TabView(selection: $selectedTab) {
                 // Home Tab
                 HomeView(selectedTab: $selectedTab, prayerVM: prayerVM, quranVM: quranVM)
-                    .miniPlayerInset(audioService: audioService, animationNamespace: playerNamespace)
+                    .miniPlayerInset(audioService: audioService, animationNamespace: selectedTab == 0 ? playerNamespace : nil)
                     .tabItem {
                         Label(NSLocalizedString("Home", comment: "Home tab label"), systemImage: "sun.horizon.fill")
                     }
@@ -38,7 +38,7 @@ struct ContentView: View {
 
                 // Quran Tab
                 QuranReaderView(viewModel: quranVM)
-                    .miniPlayerInset(audioService: audioService, animationNamespace: playerNamespace)
+                    .miniPlayerInset(audioService: audioService, animationNamespace: selectedTab == 1 ? playerNamespace : nil)
                     .tabItem {
                         Label(NSLocalizedString("Quran", comment: "Quran tab label"), systemImage: "text.book.closed.fill")
                     }
@@ -46,7 +46,7 @@ struct ContentView: View {
 
                 // Prayer Tab
                 PrayerTimesView(viewModel: prayerVM)
-                    .miniPlayerInset(audioService: audioService, animationNamespace: playerNamespace)
+                    .miniPlayerInset(audioService: audioService, animationNamespace: selectedTab == 2 ? playerNamespace : nil)
                     .tabItem {
                         Label(NSLocalizedString("Prayer", comment: "Prayer tab label"), systemImage: "moon.stars.fill")
                     }
@@ -54,7 +54,7 @@ struct ContentView: View {
 
                 // More Tab (includes Adhkar, Qibla, Settings, etc.)
                 MoreView(prayerVM: prayerVM)
-                    .miniPlayerInset(audioService: audioService, animationNamespace: playerNamespace)
+                    .miniPlayerInset(audioService: audioService, animationNamespace: selectedTab == 3 ? playerNamespace : nil)
                     .tabItem {
                         Label(NSLocalizedString("More", comment: "More tab label"), systemImage: "square.grid.2x2.fill")
                     }
@@ -127,7 +127,7 @@ struct ContentView: View {
 /// safe area — naturally above the iOS 26 floating tab bar.
 private struct MiniPlayerInsetModifier: ViewModifier {
     var audioService: QuranAudioService
-    var animationNamespace: Namespace.ID
+    var animationNamespace: Namespace.ID?
 
     func body(content: Content) -> some View {
         content
@@ -145,7 +145,7 @@ private struct MiniPlayerInsetModifier: ViewModifier {
 }
 
 extension View {
-    func miniPlayerInset(audioService: QuranAudioService, animationNamespace: Namespace.ID) -> some View {
+    func miniPlayerInset(audioService: QuranAudioService, animationNamespace: Namespace.ID?) -> some View {
         modifier(MiniPlayerInsetModifier(audioService: audioService, animationNamespace: animationNamespace))
     }
 }

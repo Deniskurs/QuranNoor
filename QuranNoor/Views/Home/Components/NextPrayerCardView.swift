@@ -15,9 +15,6 @@ struct NextPrayerCardView: View {
     var prayerVM: PrayerViewModel
     @Binding var selectedTab: Int
 
-    /// Dynamic update interval based on prayer state (Performance: reduce updates when not urgent)
-    @State private var updateInterval: TimeInterval = 1.0
-
     /// Track view visibility to pause updates when not visible
     @State private var isViewVisible: Bool = true
 
@@ -28,14 +25,18 @@ struct NextPrayerCardView: View {
 
     var body: some View {
         CardView(intensity: .prominent) {
-            VStack(spacing: Spacing.md) {
-                if let period = prayerVM.currentPrayerPeriod {
-                    unifiedContent(for: period)
-                        .onChange(of: period.state) { _, newState in
-                            updateInterval = PerformanceOptimizationService.shared.getOptimalUpdateInterval(for: newState)
-                        }
-                } else {
-                    loadingContent
+            ZStack {
+                // Subtle time-of-day gradient wash
+                timeOfDayGradient
+                    .clipShape(RoundedRectangle(cornerRadius: BorderRadius.xl))
+
+                // Existing content
+                VStack(spacing: Spacing.md) {
+                    if let period = prayerVM.currentPrayerPeriod {
+                        unifiedContent(for: period)
+                    } else {
+                        loadingContent
+                    }
                 }
             }
         }
@@ -46,9 +47,6 @@ struct NextPrayerCardView: View {
         }
         .onAppear {
             isViewVisible = true
-            if let state = prayerVM.currentPrayerPeriod?.state {
-                updateInterval = PerformanceOptimizationService.shared.getOptimalUpdateInterval(for: state)
-            }
         }
         .onDisappear {
             isViewVisible = false
@@ -80,7 +78,7 @@ struct NextPrayerCardView: View {
 
             // HERO COUNTDOWN - Narrow TimelineView wraps ONLY the countdown text
             // so the rest of the card doesn't rebuild every second
-            TimelineView(.periodic(from: .now, by: isViewVisible ? updateInterval : 60.0)) { context in
+            TimelineView(.periodic(from: .now, by: isViewVisible ? 1.0 : 60.0)) { context in
                 let deadline = period.state.nextEventTime
                 let interval = max(deadline.timeIntervalSince(context.date), 0)
                 let hours = Int(interval) / 3600
@@ -198,6 +196,112 @@ struct NextPrayerCardView: View {
                 .foregroundColor(themeManager.currentTheme.textSecondary)
         }
         .padding(Spacing.xl)
+    }
+
+    // MARK: - Time-of-Day Gradient
+
+    /// Subtle atmospheric gradient wash based on time of day and theme.
+    /// Returns Color.clear for sepia (no gradient overlay needed).
+    @ViewBuilder
+    private var timeOfDayGradient: some View {
+        let period = TimeOfDayPeriod.current()
+        let theme = themeManager.currentTheme
+
+        if theme == .sepia {
+            Color.clear
+        } else {
+            LinearGradient(
+                colors: gradientColors(for: period, theme: theme),
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .opacity(0.2)
+        }
+    }
+
+    /// Returns 2-3 color stops at low opacity for the given period and theme.
+    private func gradientColors(for period: TimeOfDayPeriod, theme: ThemeMode) -> [Color] {
+        switch theme {
+        case .light:
+            switch period {
+            case .preDawn, .night:
+                return [
+                    Color(hex: "#1A1A2E").opacity(0.8),
+                    Color(hex: "#2C3E50").opacity(0.5),
+                    Color.clear
+                ]
+            case .dawn:
+                return [
+                    Color(hex: "#E8C4A0").opacity(0.6),
+                    Color(hex: "#FFD4A0").opacity(0.4),
+                    Color.clear
+                ]
+            case .morning, .afternoon:
+                return [
+                    Color(hex: "#87CEEB").opacity(0.5),
+                    Color(hex: "#E0F6FF").opacity(0.3),
+                    Color.clear
+                ]
+            case .sunset:
+                return [
+                    Color(hex: "#5D4E6D").opacity(0.5),
+                    Color(hex: "#C88B4A").opacity(0.4),
+                    Color(hex: "#FFB366").opacity(0.3)
+                ]
+            }
+        case .dark:
+            switch period {
+            case .preDawn, .night:
+                return [
+                    Color(hex: "#0D7377").opacity(0.3),
+                    Color(hex: "#0D1419").opacity(0.5),
+                    Color.clear
+                ]
+            case .dawn:
+                return [
+                    Color(hex: "#C7A566").opacity(0.25),
+                    Color(hex: "#1A2332").opacity(0.4),
+                    Color.clear
+                ]
+            case .morning, .afternoon:
+                return [
+                    Color(hex: "#14FFEC").opacity(0.15),
+                    Color(hex: "#1A2332").opacity(0.3),
+                    Color.clear
+                ]
+            case .sunset:
+                return [
+                    Color(hex: "#C7A566").opacity(0.2),
+                    Color(hex: "#1A2332").opacity(0.4),
+                    Color.clear
+                ]
+            }
+        case .night:
+            switch period {
+            case .preDawn, .dawn:
+                return [
+                    Color(hex: "#FFD700").opacity(0.08),
+                    Color.clear,
+                    Color.clear
+                ]
+            case .morning, .afternoon:
+                return [
+                    Color(hex: "#14FFEC").opacity(0.06),
+                    Color.clear,
+                    Color.clear
+                ]
+            case .sunset:
+                return [
+                    Color(hex: "#FF6B6B").opacity(0.08),
+                    Color.clear,
+                    Color.clear
+                ]
+            case .night:
+                return [Color.clear, Color.clear]
+            }
+        case .sepia:
+            return [Color.clear]
+        }
     }
 
     // MARK: - Computed Properties

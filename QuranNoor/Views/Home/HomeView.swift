@@ -139,34 +139,40 @@ struct HomeView: View {
     private var regularContent: some View {
         ScrollView {
             LazyVStack(spacing: Spacing.sectionSpacing) {
-                // Header with greeting and Hijri date (always visible immediately)
+                // 1. Header with greeting and Hijri date (always visible immediately)
                 HomeHeaderView(
                     greeting: homeVM.greeting,
                     hijriDate: homeVM.currentHijriDate
                 )
 
-                // Next prayer card (HERO SECTION — shows loading state internally)
+                // 2. Next prayer card (HERO SECTION — shows loading state internally)
                 NextPrayerCardView(prayerVM: prayerVM, selectedTab: $selectedTab)
 
-                // Ramadan Suhoor/Iftar countdown card (shown only during Ramadan)
+                // 3. Islamic divider
+                IslamicDivider(style: .crescent)
+
+                // 4. Ramadan Suhoor/Iftar countdown card (shown only during Ramadan)
                 RamadanTimesCard(prayerTimes: prayerVM.todayPrayerTimes)
 
-                // Ramadan tracker card (shown only during Ramadan)
+                // 5. Ramadan tracker card (shown only during Ramadan)
                 RamadanHomeCard(prayerTimes: prayerVM.todayPrayerTimes)
 
-                // Spiritual nourishment carousel
+                // 6. Spiritual nourishment carousel
                 SpiritualNourishmentCarousel(
                     verseOfDay: homeVM.verseOfDay,
                     hadithOfDay: homeVM.hadithOfDay
                 )
 
-                // Quick actions grid (always show — uses default location if stats not ready)
+                // 7. Islamic divider
+                IslamicDivider(style: .ornamental)
+
+                // 8. Quick actions grid (always show — uses default location if stats not ready)
                 QuickActionsGrid(
                     selectedTab: $selectedTab,
                     lastReadLocation: homeVM.dailyStats?.lastReadLocation
                 )
 
-                // Reading progress card
+                // 9. Reading progress card
                 if let stats = homeVM.dailyStats {
                     ReadingProgressCard(stats: stats) {
                         selectedTab = 1
@@ -174,10 +180,19 @@ struct HomeView: View {
                     }
                 }
 
-                // Daily stats row
+                // 10. Daily stats row
                 if let stats = homeVM.dailyStats {
                     DailyStatsRow(stats: stats)
                 }
+
+                // 11. Islamic divider before Adhkar
+                IslamicDivider(style: .ornamental)
+
+                // 12. Adhkar Quick Access (integrated from orphaned component)
+                AdhkarQuickAccessCard()
+
+                // 13. Hijri Calendar Card (integrated from orphaned component)
+                HijriCalendarCard(hijriDate: homeVM.currentHijriDate)
             }
             .padding(.horizontal, Spacing.screenHorizontal)
             .padding(.vertical, Spacing.md)

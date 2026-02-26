@@ -134,6 +134,7 @@ extension DepletingProgressRing {
 
 // MARK: - Preview
 
+#if DEBUG
 #Preview("Urgency Progression") {
     VStack(spacing: 30) {
         ForEach(UrgencyLevel.allCases, id: \.rawValue) { level in
@@ -231,3 +232,4 @@ extension DepletingProgressRing {
     .padding()
     .background(Color(hex: "#F8F4EA"))
 }
+#endif

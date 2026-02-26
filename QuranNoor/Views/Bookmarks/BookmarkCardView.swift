@@ -187,6 +187,7 @@ struct QuranBookmarkCard: View {
 
 // MARK: - Preview
 
+#if DEBUG
 #Preview("Spiritual Bookmark") {
     VStack(spacing: 16) {
         SpiritualBookmarkCard(
@@ -213,3 +214,4 @@ struct QuranBookmarkCard: View {
     .background(Color(hex: "#F8F4EA"))
     .environment(ThemeManager())
 }
+#endif

@@ -16,21 +16,27 @@ struct AdhkarView: View {
     @State private var showingFortressDuas = false
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                // Header
-                headerSection
+        ZStack {
+            themeManager.currentTheme.backgroundColor
+                .ignoresSafeArea()
+            GradientBackground(style: .serenity, opacity: 0.15)
 
-                // Statistics Card
-                statisticsCard
+            ScrollView {
+                VStack(spacing: 20) {
+                    // Header
+                    headerSection
 
-                // Quick Access Section
-                quickAccessSection
+                    // Statistics Card
+                    statisticsCard
 
-                // Categories
-                categoriesSection
+                    // Quick Access Section
+                    quickAccessSection
+
+                    // Categories
+                    categoriesSection
+                }
+                .padding()
             }
-            .padding()
         }
         .navigationTitle("Adhkar")
         .navigationBarTitleDisplayMode(.large)
@@ -108,8 +114,8 @@ struct AdhkarView: View {
     private var quickAccessSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Quick Access")
-                .font(.headline)
-                .foregroundStyle(.secondary)
+                .sectionHeaderStyle()
+                .foregroundColor(themeManager.currentTheme.textTertiary)
                 .padding(.horizontal, 4)
 
             VStack(spacing: 12) {
@@ -266,8 +272,8 @@ struct AdhkarView: View {
     private var categoriesSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Categories")
-                .font(.title3)
-                .fontWeight(.semibold)
+                .sectionHeaderStyle()
+                .foregroundColor(themeManager.currentTheme.textTertiary)
                 .padding(.horizontal, 4)
 
             LazyVGrid(columns: [

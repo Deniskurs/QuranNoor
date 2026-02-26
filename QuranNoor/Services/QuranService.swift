@@ -1238,16 +1238,14 @@ class QuranService {
 
     // MARK: - Fuzzy Search
 
-    /// Search surahs by name (fuzzy matching)
-    /// - Parameter query: Search query
-    /// - Returns: Array of matching surahs sorted by relevance
+    /// Search surahs by name (fuzzy matching with transliteration awareness)
     func searchSurahs(query: String) async -> [SearchResult<Surah>] {
         guard !query.isEmpty else { return [] }
 
         do {
             let allSurahs = try await getSurahs()
 
-            // Search across multiple fields (English name, Arabic name, translation)
+            // Use enhanced multi-field search with transliteration normalization
             return FuzzySearchUtility.searchMultipleFields(
                 allSurahs,
                 query: query,
@@ -1311,15 +1309,7 @@ class QuranService {
         }
     }
 
-    /// Search translations by text content (fuzzy matching) with pagination
-    /// - Important: This method only searches within a specific surah to avoid excessive API calls.
-    ///              For full Quran translation search, use `smartSearch` which searches surah names first.
-    /// - Parameters:
-    ///   - query: Search query
-    ///   - edition: Translation edition to search
-    ///   - surahNumber: Surah number to search within (REQUIRED for performance)
-    ///   - limit: Maximum number of results to return (default: 30)
-    /// - Returns: Array of matching translations sorted by relevance (limited to `limit` results)
+    /// Search translations within a single surah using bulk fetch (1 API call per surah).
     func searchTranslations(
         query: String,
         edition: TranslationEdition = .sahihInternational,
@@ -1329,21 +1319,12 @@ class QuranService {
         guard !query.isEmpty else { return [] }
 
         do {
-            var translations: [Translation] = []
+            // Bulk fetch: single API call gets ALL translations for the surah
+            let translationMap = try await getTranslations(forSurah: surahNumber, edition: edition)
+            let translations = Array(translationMap.values)
 
-            // Only search within the specified surah to prevent API abuse
-            let verses = try await getVerses(forSurah: surahNumber)
-
-            // Limit the number of API calls
-            let versesToSearch = Array(verses.prefix(min(verses.count, 300)))
-
-            for verse in versesToSearch {
-                let translation = try await getTranslation(forVerse: verse, edition: edition)
-                translations.append(translation)
-            }
-
-            // Search translation text
-            let results = FuzzySearchUtility.wordSearch(
+            // Use improved token-based word search
+            let results = FuzzySearchUtility.tokenWordSearch(
                 translations,
                 query: query,
                 keyPath: \.text,
@@ -1356,13 +1337,8 @@ class QuranService {
         }
     }
 
-    /// Search translations across multiple surahs (limited scope for performance)
-    /// - Parameters:
-    ///   - query: Search query
-    ///   - edition: Translation edition to search
-    ///   - surahNumbers: Array of surah numbers to search (max 10 surahs for performance)
-    ///   - limit: Maximum number of results to return (default: 50)
-    /// - Returns: Array of matching translations sorted by relevance
+    /// Search translations across multiple surahs.
+    /// Uses bulk fetch (1 API call per surah) and supports Task cancellation.
     func searchTranslationsMultipleSurahs(
         query: String,
         edition: TranslationEdition = .sahihInternational,
@@ -1371,11 +1347,12 @@ class QuranService {
     ) async -> [SearchResult<Translation>] {
         guard !query.isEmpty else { return [] }
 
-        // Limit to max 10 surahs to prevent excessive API calls
-        let limitedSurahs = Array(surahNumbers.prefix(10))
         var allResults: [SearchResult<Translation>] = []
 
-        for surahNumber in limitedSurahs {
+        for surahNumber in surahNumbers {
+            // Respect Task cancellation for responsive typing
+            guard !Task.isCancelled else { break }
+
             let results = await searchTranslations(
                 query: query,
                 edition: edition,
@@ -1384,43 +1361,31 @@ class QuranService {
             )
             allResults.append(contentsOf: results)
 
-            // Early termination if we have enough results
+            // Early termination once we have enough high-quality results
             if allResults.count >= limit {
                 break
             }
         }
 
-        // Sort by score and limit
         allResults.sort { $0.score > $1.score }
         return Array(allResults.prefix(limit))
     }
 
     /// Smart search that searches surahs first, then translations in matching surahs
-    /// - Parameters:
-    ///   - query: Search query
-    ///   - edition: Translation edition to search
-    ///   - translationLimit: Maximum translation results (default: 30)
-    /// - Returns: Tuple of surah results and translation results
     func smartSearch(
         query: String,
         edition: TranslationEdition = .sahihInternational,
         translationLimit: Int = 30
     ) async -> (surahs: [SearchResult<Surah>], translations: [SearchResult<Translation>]) {
-        // First, search surah names (fast operation)
         let surahResults = await searchSurahs(query: query)
 
-        // If we found matching surahs, search translations only in those surahs
-        // Otherwise, search in first 5 surahs as a fallback (Al-Fatiha to Al-Ma'idah)
         let surahsToSearch: [Int]
         if !surahResults.isEmpty {
-            // Search in matched surahs (max 5 for performance)
             surahsToSearch = Array(surahResults.prefix(5).map { $0.item.id })
         } else {
-            // Fallback: search in commonly read surahs
-            surahsToSearch = [1, 2, 18, 36, 67] // Al-Fatiha, Al-Baqarah, Al-Kahf, Ya-Sin, Al-Mulk
+            surahsToSearch = [1, 2, 18, 36, 67]
         }
 
-        // Search translations in selected surahs
         let translationResults = await searchTranslationsMultipleSurahs(
             query: query,
             edition: edition,

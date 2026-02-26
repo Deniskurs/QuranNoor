@@ -1015,13 +1015,18 @@ struct VerseReaderView: View {
         loadError = nil
 
         do {
-            // Load Arabic text first — this is the critical path for display
-            verses = try await quranService.getVerses(forSurah: surah.id)
+            // Concurrent loading: both API calls start in parallel
+            async let versesTask = quranService.getVerses(forSurah: surah.id)
+            async let translationsTask = quranService.getTranslations(
+                forSurah: surah.id,
+                edition: selectedTranslation
+            )
+
+            let (fetchedVerses, fetchedTranslations) = try await (versesTask, translationsTask)
+            verses = fetchedVerses
+            translations = fetchedTranslations
             isLoading = false
             loadVerseReadStates()
-
-            // Load translations in the background — don't block verse display
-            await loadTranslations()
         } catch {
             loadError = error
             isLoading = false

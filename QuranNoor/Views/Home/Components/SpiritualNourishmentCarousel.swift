@@ -28,11 +28,19 @@ struct SpiritualNourishmentCarousel: View {
             HStack(spacing: Spacing.xs) { // Add spacing
                 Image(systemName: "book.closed.fill")
                     .font(.system(size: 18)) // More consistent sizing
-                    .foregroundColor(themeManager.currentTheme.accent)
+                    .foregroundStyle(.linearGradient(
+                        colors: [themeManager.currentTheme.accent, themeManager.currentTheme.accentMuted],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ))
 
                 Text("Daily Inspiration")
                     .font(.system(size: 20, weight: .bold)) // Enhanced from headline
                     .foregroundColor(themeManager.currentTheme.textPrimary)
+
+                Text("إلهام")
+                    .font(.system(size: 18, weight: .regular))
+                    .foregroundColor(themeManager.currentTheme.textTertiary)
 
                 Spacer()
             }
