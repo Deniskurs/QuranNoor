@@ -4,7 +4,7 @@
 
 <br>
 
-<img src="QuranNoor/Resources/Assets.xcassets/AppIcon.appiconset/appicon-1024.png" width="180" height="180" style="border-radius: 36px;" alt="Qur'an Noor">
+<img src="QuranNoor/Assets.xcassets/AppIcon.appiconset/appicon-1024.png" width="180" height="180" style="border-radius: 36px;" alt="Qur'an Noor">
 
 <br><br>
 
