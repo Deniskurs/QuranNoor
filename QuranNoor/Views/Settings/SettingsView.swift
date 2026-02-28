@@ -210,8 +210,8 @@ struct SettingsView: View {
                         ThemedText.caption("Contact")
                             .foregroundColor(themeManager.currentTheme.accent)
                         VStack(alignment: .leading, spacing: 8) {
-                            Link("Website", destination: URL(string: "https://qurannoor.app")!)
-                            Link("Support Email", destination: URL(string: "mailto:support@qurannoor.app")!)
+                            Link("Website", destination: URL(string: "https://deniskurs.github.io/QuranNoor/")!)
+                            Link("Support Email", destination: URL(string: "mailto:denis@magnatecore.com")!)
                         }
                     }
                     .padding()

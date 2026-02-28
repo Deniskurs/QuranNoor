@@ -7,10 +7,30 @@
   <meta name="theme-color" content="#0D7377" />
   <meta property="og:title" content="Qur'an Noor — Islamic Companion for iOS" />
   <meta property="og:description" content="Prayer Times, Quran & Qibla. Free. No ads. No tracking." />
-  <meta property="og:image" content="https://raw.githubusercontent.com/Deniskurs/QuranNoor/main/QuranNoor/Assets.xcassets/AppIcon.appiconset/appicon-1024.png" />
+  <meta property="og:image" content="https://deniskurs.github.io/QuranNoor/images/appicon.png" />
   <meta property="og:url" content="https://deniskurs.github.io/QuranNoor/" />
-  <meta name="twitter:card" content="summary_large_image" />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Qur'an Noor — Islamic Companion for iOS" />
+  <meta name="twitter:description" content="Prayer Times, Quran & Qibla. Free. No ads. No tracking." />
+  <meta name="twitter:image" content="https://deniskurs.github.io/QuranNoor/images/appicon.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/QuranNoor/favicon-32.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/QuranNoor/apple-touch-icon.png" />
   <title>Qur'an Noor — Prayer Times, Quran & Qibla for iOS</title>
+  <!-- Structured data for app -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "MobileApplication",
+    "name": "Qur'an Noor",
+    "operatingSystem": "iOS 26+",
+    "applicationCategory": "ReferenceApplication",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+    "description": "Your complete Islamic companion for iOS. Prayer times, Quran reading, Qibla compass, Adhkar and more.",
+    "screenshot": "https://deniskurs.github.io/QuranNoor/images/01_home.jpg",
+    "image": "https://deniskurs.github.io/QuranNoor/images/appicon.png"
+  }
+  </script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -97,29 +117,62 @@
   <header class="fixed top-0 inset-x-0 z-50 bg-cream/80 dark:bg-midnight/80 backdrop-blur-xl border-b border-black/5 dark:border-white/5">
     <div class="max-w-6xl mx-auto px-5 h-14 flex items-center justify-between">
       <div class="flex items-center gap-2.5">
-        <img
-          src="https://raw.githubusercontent.com/Deniskurs/QuranNoor/main/QuranNoor/Assets.xcassets/AppIcon.appiconset/appicon-1024.png"
-          alt="Qur'an Noor app icon"
-          class="w-7 h-7 rounded-[8px] shadow-sm"
-        />
+        <img src="images/appicon.png" alt="Qur'an Noor app icon" class="w-7 h-7 rounded-[8px] shadow-sm" />
         <span class="font-semibold text-[15px] tracking-tight text-midnight dark:text-cream">Qur'an Noor</span>
       </div>
+      <!-- Desktop nav -->
       <nav class="hidden sm:flex items-center gap-6 text-[13px] font-medium text-midnight/60 dark:text-cream/60">
         <a href="#features" class="hover:text-emerald dark:hover:text-teal transition-colors">Features</a>
         <a href="#screenshots" class="hover:text-emerald dark:hover:text-teal transition-colors">Screenshots</a>
         <a href="#privacy" class="hover:text-emerald dark:hover:text-teal transition-colors">Privacy</a>
         <a href="https://github.com/Deniskurs/QuranNoor" target="_blank" rel="noopener" class="hover:text-emerald dark:hover:text-teal transition-colors">GitHub</a>
       </nav>
-      <a
-        id="nav-app-store"
-        href="#"
-        class="flex items-center gap-1.5 bg-midnight dark:bg-cream text-cream dark:text-midnight text-[12px] font-semibold px-3.5 py-1.5 rounded-full hover:opacity-80 transition-opacity"
-      >
-        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98l-.09.06c-.22.14-2.2 1.28-2.18 3.81.02 3.02 2.65 4.03 2.68 4.04l-.05.17M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
-        Download
-      </a>
+      <div class="flex items-center gap-3">
+        <a id="nav-app-store" href="#" class="hidden sm:flex items-center gap-1.5 bg-midnight dark:bg-cream text-cream dark:text-midnight text-[12px] font-semibold px-3.5 py-1.5 rounded-full hover:opacity-80 transition-opacity">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98l-.09.06c-.22.14-2.2 1.28-2.18 3.81.02 3.02 2.65 4.03 2.68 4.04l-.05.17M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+          Download
+        </a>
+        <!-- Mobile hamburger -->
+        <button id="menu-toggle" class="sm:hidden w-9 h-9 flex items-center justify-center rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors" aria-label="Toggle menu" aria-expanded="false">
+          <svg id="menu-icon-open" class="w-5 h-5 text-midnight dark:text-cream" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          <svg id="menu-icon-close" class="w-5 h-5 text-midnight dark:text-cream hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
     </div>
+    <!-- Mobile menu dropdown -->
+    <nav id="mobile-menu" class="sm:hidden hidden border-t border-black/5 dark:border-white/5 bg-cream/95 dark:bg-midnight/95 backdrop-blur-xl">
+      <div class="px-5 py-4 flex flex-col gap-3 text-[15px] font-medium text-midnight/70 dark:text-cream/70">
+        <a href="#features" class="py-1.5 hover:text-emerald dark:hover:text-teal transition-colors">Features</a>
+        <a href="#screenshots" class="py-1.5 hover:text-emerald dark:hover:text-teal transition-colors">Screenshots</a>
+        <a href="#privacy" class="py-1.5 hover:text-emerald dark:hover:text-teal transition-colors">Privacy</a>
+        <a href="https://github.com/Deniskurs/QuranNoor" target="_blank" rel="noopener" class="py-1.5 hover:text-emerald dark:hover:text-teal transition-colors">GitHub</a>
+        <a href="#" class="mt-1 flex items-center justify-center gap-1.5 bg-midnight dark:bg-cream text-cream dark:text-midnight text-[14px] font-semibold px-4 py-2.5 rounded-full">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98l-.09.06c-.22.14-2.2 1.28-2.18 3.81.02 3.02 2.65 4.03 2.68 4.04l-.05.17M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+          Download on App Store
+        </a>
+      </div>
+    </nav>
   </header>
+
+  <!-- Mobile menu toggle script -->
+  <script>
+    const toggle = document.getElementById('menu-toggle');
+    const menu = document.getElementById('mobile-menu');
+    const iconOpen = document.getElementById('menu-icon-open');
+    const iconClose = document.getElementById('menu-icon-close');
+    toggle.addEventListener('click', () => {
+      const open = menu.classList.toggle('hidden');
+      iconOpen.classList.toggle('hidden');
+      iconClose.classList.toggle('hidden');
+      toggle.setAttribute('aria-expanded', !menu.classList.contains('hidden'));
+    });
+    menu.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
+      menu.classList.add('hidden');
+      iconOpen.classList.remove('hidden');
+      iconClose.classList.add('hidden');
+      toggle.setAttribute('aria-expanded', 'false');
+    }));
+  </script>
 
   <main>
 
@@ -137,7 +190,7 @@
         <!-- App icon -->
         <div class="mb-7">
           <img
-            src="https://raw.githubusercontent.com/Deniskurs/QuranNoor/main/QuranNoor/Assets.xcassets/AppIcon.appiconset/appicon-1024.png"
+            src="images/appicon.png"
             alt="Qur'an Noor app icon"
             class="w-28 h-28 rounded-[28px] shadow-2xl ring-1 ring-white/10"
           />
@@ -224,7 +277,7 @@
         <div class="flex-none flex flex-col items-center gap-3">
           <div class="phone-glow w-[200px] sm:w-[220px] rounded-[36px] overflow-hidden ring-1 ring-midnight/10 dark:ring-white/10 bg-midnight">
             <img
-              src="https://raw.githubusercontent.com/Deniskurs/QuranNoor/main/screenshots/01_home.png"
+              src="images/01_home.jpg"
               alt="Qur'an Noor home screen showing prayer times and daily verse"
               class="w-full h-auto block"
               loading="lazy"
@@ -237,7 +290,7 @@
         <div class="flex-none flex flex-col items-center gap-3">
           <div class="phone-glow w-[200px] sm:w-[220px] rounded-[36px] overflow-hidden ring-1 ring-midnight/10 dark:ring-white/10 bg-midnight">
             <img
-              src="https://raw.githubusercontent.com/Deniskurs/QuranNoor/main/screenshots/02_quran.png"
+              src="images/02_quran.jpg"
               alt="Qur'an Noor Quran browser showing list of surahs"
               class="w-full h-auto block"
               loading="lazy"
@@ -250,7 +303,7 @@
         <div class="flex-none flex flex-col items-center gap-3">
           <div class="phone-glow w-[200px] sm:w-[220px] rounded-[36px] overflow-hidden ring-1 ring-midnight/10 dark:ring-white/10 bg-midnight">
             <img
-              src="https://raw.githubusercontent.com/Deniskurs/QuranNoor/main/screenshots/03_prayer.png"
+              src="images/03_prayer.jpg"
               alt="Qur'an Noor prayer times screen"
               class="w-full h-auto block"
               loading="lazy"
@@ -263,7 +316,7 @@
         <div class="flex-none flex flex-col items-center gap-3">
           <div class="phone-glow w-[200px] sm:w-[220px] rounded-[36px] overflow-hidden ring-1 ring-midnight/10 dark:ring-white/10 bg-midnight">
             <img
-              src="https://raw.githubusercontent.com/Deniskurs/QuranNoor/main/screenshots/05_surah_reader.png"
+              src="images/05_surah_reader.jpg"
               alt="Qur'an Noor surah reader with Arabic text and translation"
               class="w-full h-auto block"
               loading="lazy"
@@ -537,7 +590,7 @@
         <div class="flex flex-col items-center sm:items-start gap-2">
           <div class="flex items-center gap-2.5">
             <img
-              src="https://raw.githubusercontent.com/Deniskurs/QuranNoor/main/QuranNoor/Assets.xcassets/AppIcon.appiconset/appicon-1024.png"
+              src="images/appicon.png"
               alt="Qur'an Noor"
               class="w-8 h-8 rounded-[9px]"
             />

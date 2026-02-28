@@ -620,7 +620,7 @@ struct HelpView: View {
                                 .font(.system(size: FontSizes.sm, weight: .semibold))
                                 .foregroundColor(theme.textPrimary)
 
-                            Text("support@qurannoor.app")
+                            Text("denis@magnatecore.com")
                                 .font(.system(size: FontSizes.sm - 1))
                                 .foregroundColor(theme.accent)
                         }
