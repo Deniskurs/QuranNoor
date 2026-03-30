@@ -190,6 +190,7 @@ enum CalculationMethod: String, CaseIterable, Identifiable, Codable {
     case karachi = "University of Islamic Sciences, Karachi"
     case dubai = "Dubai"
     case moonsightingCommittee = "Moonsighting Committee Worldwide"
+    case tehran = "Institute of Geophysics, Tehran"
 
     var id: String { rawValue }
 
@@ -206,6 +207,7 @@ enum CalculationMethod: String, CaseIterable, Identifiable, Codable {
         case .karachi: return "Karachi"
         case .dubai: return "Dubai"
         case .moonsightingCommittee: return "Moonsighting"
+        case .tehran: return "Tehran"
         }
     }
 
@@ -226,6 +228,8 @@ enum CalculationMethod: String, CaseIterable, Identifiable, Codable {
             return "Dubai, UAE"
         case .moonsightingCommittee:
             return "Worldwide (follows closest sunrise/sunset)"
+        case .tehran:
+            return "Iran, Afghanistan"
         }
     }
 }

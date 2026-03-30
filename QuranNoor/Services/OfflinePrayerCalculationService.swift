@@ -48,6 +48,8 @@ final class OfflinePrayerCalculationService {
                 return MethodParameters(fajrAngle: 18.2, ishaAngle: 18.2, ishaInterval: nil)
             case .moonsightingCommittee:
                 return MethodParameters(fajrAngle: 18.0, ishaAngle: 18.0, ishaInterval: nil)
+            case .tehran:
+                return MethodParameters(fajrAngle: 17.7, ishaAngle: 14.0, ishaInterval: nil)
             }
         }
     }
@@ -65,7 +67,8 @@ final class OfflinePrayerCalculationService {
         coordinates: LocationCoordinates,
         date: Date = Date(),
         method: CalculationMethod = .muslimWorldLeague,
-        madhab: Madhab = .shafi
+        madhab: Madhab = .shafi,
+        timeZone: TimeZone = .current
     ) throws -> DailyPrayerTimes {
 
         let params = MethodParameters.forMethod(method)
@@ -80,7 +83,7 @@ final class OfflinePrayerCalculationService {
 
         let lat = coordinates.latitude
         let lng = coordinates.longitude
-        let timeZoneOffset = Double(TimeZone.current.secondsFromGMT(for: date)) / 3600.0
+        let timeZoneOffset = Double(timeZone.secondsFromGMT(for: date)) / 3600.0
 
         // Julian date for the given day
         let jd = julianDate(year: year, month: month, day: day)
@@ -92,12 +95,26 @@ final class OfflinePrayerCalculationService {
         // Dhuhr (solar noon) in hours
         let dhuhrHours = 12.0 + timeZoneOffset - lng / 15.0 - equationOfTime
 
-        // Sunrise and Sunset
-        let sunriseHours = dhuhrHours - hourAngle(lat: lat, decl: sunDeclination, angle: 0.833) / 15.0
-        let sunsetHours = dhuhrHours + hourAngle(lat: lat, decl: sunDeclination, angle: 0.833) / 15.0
+        // Sunrise and Sunset (0.833° accounts for atmospheric refraction)
+        guard let sunriseHA = hourAngle(lat: lat, decl: sunDeclination, angle: 0.833),
+              let sunsetHA = hourAngle(lat: lat, decl: sunDeclination, angle: 0.833) else {
+            // Permanent polar day or night — cannot compute any prayer times
+            throw PrayerTimeError.calculationFailed
+        }
+        let sunriseHours = dhuhrHours - sunriseHA / 15.0
+        let sunsetHours = dhuhrHours + sunsetHA / 15.0
 
-        // Fajr
-        let fajrHours = dhuhrHours - hourAngle(lat: lat, decl: sunDeclination, angle: params.fajrAngle) / 15.0
+        // Night duration for high-latitude fallback (1/7th of night rule)
+        let nightDuration = 24.0 - sunsetHours + sunriseHours
+
+        // Fajr — with high-latitude fallback
+        let fajrHours: Double
+        if let fajrHA = hourAngle(lat: lat, decl: sunDeclination, angle: params.fajrAngle) {
+            fajrHours = dhuhrHours - fajrHA / 15.0
+        } else {
+            // 1/7th of night rule: Fajr = Sunrise - (nightDuration / 7)
+            fajrHours = sunriseHours - nightDuration / 7.0
+        }
 
         // Asr - shadow ratio depends on madhab
         let shadowRatio: Double = madhab == .hanafi ? 2.0 : 1.0
@@ -106,21 +123,29 @@ final class OfflinePrayerCalculationService {
         // Maghrib = sunset
         let maghribHours = sunsetHours
 
-        // Isha
+        // Isha — with high-latitude fallback
         let ishaHours: Double
         if let ishaAngle = params.ishaAngle {
-            ishaHours = dhuhrHours + hourAngle(lat: lat, decl: sunDeclination, angle: ishaAngle) / 15.0
+            if let ishaHA = hourAngle(lat: lat, decl: sunDeclination, angle: ishaAngle) {
+                ishaHours = dhuhrHours + ishaHA / 15.0
+            } else {
+                // 1/7th of night rule: Isha = Sunset + (nightDuration / 7)
+                ishaHours = sunsetHours + nightDuration / 7.0
+            }
         } else if let ishaInterval = params.ishaInterval {
             ishaHours = maghribHours + ishaInterval / 60.0
         } else {
-            ishaHours = dhuhrHours + hourAngle(lat: lat, decl: sunDeclination, angle: 17.0) / 15.0
+            if let ishaHA = hourAngle(lat: lat, decl: sunDeclination, angle: 17.0) {
+                ishaHours = dhuhrHours + ishaHA / 15.0
+            } else {
+                ishaHours = sunsetHours + nightDuration / 7.0
+            }
         }
 
         // Imsak = 10 minutes before Fajr
         let imsakHours = fajrHours - 10.0 / 60.0
 
         // Islamic midnight = midpoint between sunset and sunrise (next day)
-        let nightDuration = 24.0 - sunsetHours + sunriseHours
         let midnightHours = sunsetHours + nightDuration / 2.0
 
         // Night thirds
@@ -140,13 +165,11 @@ final class OfflinePrayerCalculationService {
             return baseDate.addingTimeInterval(totalSeconds)
         }
 
-        // Validate: all times should be reasonable
-        guard fajrHours > 0, fajrHours < 24,
-              sunriseHours > 0, sunriseHours < 24,
+        // Validate: core times should be reasonable
+        guard sunriseHours > 0, sunriseHours < 24,
               dhuhrHours > 0, dhuhrHours < 24,
               asrHours > 0, asrHours < 24,
-              maghribHours > 0, maghribHours < 24,
-              ishaHours > 0, ishaHours < 48 else {
+              maghribHours > 0, maghribHours < 24 else {
             throw PrayerTimeError.calculationFailed
         }
 
@@ -276,8 +299,8 @@ final class OfflinePrayerCalculationService {
     ///   - lat: Observer latitude in degrees
     ///   - decl: Sun declination in degrees
     ///   - angle: Sun angle below horizon in degrees (positive = below)
-    /// - Returns: Hour angle in degrees
-    private func hourAngle(lat: Double, decl: Double, angle: Double) -> Double {
+    /// - Returns: Hour angle in degrees, or nil if angle is unreachable at this latitude
+    private func hourAngle(lat: Double, decl: Double, angle: Double) -> Double? {
         let latRad = lat.radians
         let declRad = decl.radians
         let angleRad = angle.radians
@@ -285,9 +308,11 @@ final class OfflinePrayerCalculationService {
         let cosH = (sin(-angleRad) - sin(latRad) * sin(declRad)) /
                    (cos(latRad) * cos(declRad))
 
-        // Clamp to valid range for acos
-        let clampedCosH = max(-1.0, min(1.0, cosH))
-        return acos(clampedCosH).degrees
+        // If cosH is outside [-1, 1], the angle is unreachable at this latitude
+        guard cosH >= -1.0 && cosH <= 1.0 else {
+            return nil
+        }
+        return acos(cosH).degrees
     }
 
     /// Calculate the hour angle for Asr prayer

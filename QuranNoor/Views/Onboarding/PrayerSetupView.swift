@@ -248,36 +248,27 @@ struct PrayerSetupView: View {
     private func detectCountryFromLocation() async {
         guard let location = locationService.currentLocation else { return }
 
-        let coordinate = CLLocationCoordinate2D(
+        let clLocation = CLLocation(
             latitude: location.latitude,
             longitude: location.longitude
         )
 
-        let request = MKLocalSearch.Request()
-        request.region = MKCoordinateRegion(
-            center: coordinate,
-            latitudinalMeters: 1000,
-            longitudinalMeters: 1000
-        )
-
-        let search = MKLocalSearch(request: request)
+        // Use CLGeocoder to get the actual country from GPS coordinates
+        // (not Locale.current.region which returns the device's locale setting)
+        let geocoder = CLGeocoder()
 
         do {
-            let response = try await search.start()
+            let placemarks = try await geocoder.reverseGeocodeLocation(clLocation)
 
-            if !response.mapItems.isEmpty {
-                let countryCode = Locale.current.region?.identifier
-
-                if let countryCode {
-                    await MainActor.run {
-                        detectedCountry = countryCode
-                        let recommended = coordinator.recommendedCalculationMethod(for: countryCode)
-                        coordinator.selectedCalculationMethod = recommended
-                    }
+            if let countryCode = placemarks.first?.isoCountryCode {
+                await MainActor.run {
+                    detectedCountry = countryCode
+                    let recommended = coordinator.recommendedCalculationMethod(for: countryCode)
+                    coordinator.selectedCalculationMethod = recommended
                 }
             }
         } catch {
-            AppLogger.prayer.error("MapKit search error: \(error.localizedDescription, privacy: .public)")
+            AppLogger.prayer.error("Reverse geocoding error: \(error.localizedDescription, privacy: .public)")
         }
     }
 }

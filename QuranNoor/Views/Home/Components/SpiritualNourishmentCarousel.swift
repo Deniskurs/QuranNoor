@@ -118,8 +118,8 @@ struct SpiritualContentCard: View {
 
     // Dynamic Type support with @ScaledMetric
     @ScaledMetric(relativeTo: .body) private var cardWidth: CGFloat = 310
-    @ScaledMetric(relativeTo: .body) private var cardHeight: CGFloat = 380
-    @ScaledMetric(relativeTo: .body) private var contentAreaHeight: CGFloat = 220
+    @ScaledMetric(relativeTo: .body) private var cardHeight: CGFloat = 410
+    @ScaledMetric(relativeTo: .body) private var contentAreaHeight: CGFloat = 200
 
     var body: some View {
         CardView(intensity: .moderate) {
@@ -141,65 +141,69 @@ struct SpiritualContentCard: View {
                 .frame(height: 28) // Reduced from 32pt for tighter layout
 
                 // Content text area with better spacing
-                VStack(alignment: .leading, spacing: Spacing.xs) {
-                    // Content text - enhanced readability with Dynamic Type support
-                    Text(content.text)
-                        .font(.body) // Dynamic Type support
-                        .lineSpacing(9)
-                        .lineLimit(maxLines) // Dynamic line limit based on text size
-                        .multilineTextAlignment(.leading)
-                        .foregroundColor(themeManager.currentTheme.textPrimary)
-                        .dynamicTypeSize(...DynamicTypeSize.xxxLarge) // Cap at xxxLarge
+                VStack(spacing: 0) {
+                    // Text content with gradient fade
+                    ZStack(alignment: .bottom) {
+                        VStack(alignment: .leading, spacing: Spacing.xs) {
+                            // Content text - enhanced readability with Dynamic Type support
+                            Text(content.text)
+                                .font(.body) // Dynamic Type support
+                                .lineSpacing(9)
+                                .lineLimit(maxLines) // Dynamic line limit based on text size
+                                .multilineTextAlignment(.leading)
+                                .foregroundColor(themeManager.currentTheme.textPrimary)
+                                .dynamicTypeSize(...DynamicTypeSize.xxxLarge) // Cap at xxxLarge
 
-                    Spacer(minLength: 0)
+                            Spacer(minLength: 0)
 
-                    // Source reference
-                    Text(content.source)
-                        .font(.subheadline) // Dynamic Type support
-                        .italic()
-                        .foregroundColor(themeManager.currentTheme.textSecondary)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .frame(height: min(contentAreaHeight, 280)) // Dynamic height with cap
-                .overlay(alignment: .bottom) {
-                    // Fade gradient overlay when text is truncated
-                    if isTextTruncated {
-                        VStack(spacing: 0) {
-                            // Smart gradient with delayed fade start
+                            // Source reference
+                            Text(content.source)
+                                .font(.subheadline) // Dynamic Type support
+                                .italic()
+                                .foregroundColor(themeManager.currentTheme.textSecondary)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                        // Gradient fade overlay (no button — button is below)
+                        if isTextTruncated {
                             LinearGradient(
                                 gradient: Gradient(stops: [
                                     .init(color: .clear, location: 0.0),
-                                    .init(color: .clear, location: 0.5),
-                                    .init(color: themeManager.currentTheme.cardColor.opacity(0.7), location: 0.85),
+                                    .init(color: .clear, location: 0.4),
+                                    .init(color: themeManager.currentTheme.cardColor.opacity(0.85), location: 0.8),
                                     .init(color: themeManager.currentTheme.cardColor, location: 1.0)
                                 ]),
                                 startPoint: .top,
                                 endPoint: .bottom
                             )
-                            .frame(height: 80) // Increased from 60pt for smoother transition
-                            .allowsHitTesting(false) // Don't interfere with taps
-
-                            // "Read More" badge positioned outside gradient flow
-                            HStack(spacing: 6) {
-                                Image(systemName: "arrow.down.circle.fill")
-                                    .font(.system(size: 13))
-                                Text("Read Full Content")
-                                    .font(.system(size: 12, weight: .semibold))
-                            }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 8)
-                            .background(
-                                Capsule()
-                                    .fill(accentColor.opacity(0.12))
-                                    .overlay(
-                                        Capsule()
-                                            .strokeBorder(accentColor.opacity(0.35), lineWidth: 1)
-                                    )
-                            )
-                            .foregroundColor(accentColor)
-                            .shadow(color: accentColor.opacity(0.15), radius: 4, y: 2)
-                            .offset(y: -12) // Lift into gradient area
+                            .frame(height: 60)
+                            .allowsHitTesting(false)
                         }
+                    }
+                    .frame(height: min(contentAreaHeight, 280)) // Dynamic height with cap
+
+                    // "Read Full Content" button in normal layout flow, below text
+                    if isTextTruncated {
+                        HStack(spacing: 6) {
+                            Image(systemName: "arrow.down.circle.fill")
+                                .font(.system(size: 13))
+                            Text("Read Full Content")
+                                .font(.system(size: 12, weight: .semibold))
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(
+                            Capsule()
+                                .fill(accentColor.opacity(0.12))
+                                .overlay(
+                                    Capsule()
+                                        .strokeBorder(accentColor.opacity(0.35), lineWidth: 1)
+                                )
+                        )
+                        .foregroundColor(accentColor)
+                        .shadow(color: accentColor.opacity(0.15), radius: 4, y: 2)
+                        .padding(.top, 8)
+                        .frame(maxWidth: .infinity)
                     }
                 }
 
@@ -315,13 +319,13 @@ struct SpiritualContentCard: View {
         // Adjust card height based on Dynamic Type size
         switch dynamicTypeSize {
         case .xSmall, .small, .medium, .large, .xLarge:
-            return 380
+            return 410
         case .xxLarge:
-            return 440
+            return 470
         case .xxxLarge:
-            return 500
+            return 530
         default:
-            return 380
+            return 410
         }
     }
 

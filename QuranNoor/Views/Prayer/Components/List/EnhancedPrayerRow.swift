@@ -49,24 +49,18 @@ struct EnhancedPrayerRow: View {
 
                 // Prayer info
                 VStack(alignment: .leading, spacing: 6) {
-                    // Name and badges
-                    HStack(spacing: 8) {
-                        Text(prayer.name.displayName)
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(textColor(isCompleted: isCompleted))
-
-                        if isCurrentPrayer {
-                            statusBadge(text: "IN PROGRESS", color: themeManager.currentTheme.accent)
-                        } else if isNextPrayer {
-                            statusBadge(text: "NEXT", color: themeManager.currentTheme.accentMuted)
+                    // Name and badges — responsive layout
+                    ViewThatFits(in: .horizontal) {
+                        // Full layout: name + badges in one row
+                        HStack(spacing: 8) {
+                            prayerNameText(isCompleted: isCompleted)
+                            prayerBadges
                         }
 
-                        if PrayerTimeAdjustmentService.shared.isAdjusted(prayer.name) {
-                            let adjustment = PrayerTimeAdjustmentService.shared.getAdjustment(for: prayer.name)
-                            statusBadge(
-                                text: "\(adjustment > 0 ? "+" : "")\(adjustment)m",
-                                color: .orange
-                            )
+                        // Compact fallback: name on top, badges below
+                        VStack(alignment: .leading, spacing: 4) {
+                            prayerNameText(isCompleted: isCompleted)
+                            prayerBadges
                         }
                     }
 
@@ -108,6 +102,35 @@ struct EnhancedPrayerRow: View {
         .accessibilityAddTraits(isCurrentPrayer ? .isSelected : [])
     }
 
+    // MARK: - Prayer Name & Badges
+
+    private func prayerNameText(isCompleted: Bool) -> some View {
+        Text(prayer.name.displayName)
+            .font(.system(size: 18, weight: .semibold))
+            .foregroundColor(textColor(isCompleted: isCompleted))
+            .lineLimit(1)
+            .fixedSize()
+    }
+
+    @ViewBuilder
+    private var prayerBadges: some View {
+        HStack(spacing: 6) {
+            if isCurrentPrayer {
+                statusBadge(text: "IN PROGRESS", color: themeManager.currentTheme.accent)
+            } else if isNextPrayer {
+                statusBadge(text: "NEXT", color: themeManager.currentTheme.accentMuted)
+            }
+
+            if PrayerTimeAdjustmentService.shared.isAdjusted(prayer.name) {
+                let adjustment = PrayerTimeAdjustmentService.shared.getAdjustment(for: prayer.name)
+                statusBadge(
+                    text: "\(adjustment > 0 ? "+" : "")\(adjustment)m",
+                    color: .orange
+                )
+            }
+        }
+    }
+
     // MARK: - Prayer Icon
 
     private func prayerIcon(isCompleted: Bool) -> some View {
@@ -141,6 +164,7 @@ struct EnhancedPrayerRow: View {
             .padding(.horizontal, 8)
             .padding(.vertical, 3)
             .background(Capsule().fill(color))
+            .fixedSize()
     }
 
     // MARK: - Special Times Section
@@ -157,12 +181,15 @@ struct EnhancedPrayerRow: View {
                     Text(specialTime.type.displayName)
                         .font(.system(size: 12, weight: .medium))
                         .foregroundColor(themeManager.currentTheme.textTertiary)
+                        .lineLimit(1)
 
                     Text(specialTime.displayTime)
                         .font(.system(size: 12, weight: .regular, design: .rounded))
                         .foregroundColor(themeManager.currentTheme.accent)
                         .opacity(isCompleted ? 0.5 : 0.7)
+                        .lineLimit(1)
                 }
+                .fixedSize()
             }
 
             // Show more button if multiple special times

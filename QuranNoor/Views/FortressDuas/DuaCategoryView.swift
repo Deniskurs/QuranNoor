@@ -13,7 +13,6 @@ struct DuaCategoryView: View {
     @Bindable var duaService: FortressDuaService
 
     @State private var selectedDua: FortressDua?
-    @State private var showingDetail = false
 
     private var duas: [FortressDua] {
         duaService.getDuas(for: category)
@@ -33,7 +32,6 @@ struct DuaCategoryView: View {
                             duaService: duaService,
                             onTap: {
                                 selectedDua = dua
-                                showingDetail = true
                             }
                         )
                     }
@@ -43,10 +41,8 @@ struct DuaCategoryView: View {
         }
         .navigationTitle(category.displayName)
         .navigationBarTitleDisplayMode(.large)
-        .sheet(isPresented: $showingDetail) {
-            if let dua = selectedDua {
-                DuaDetailView(dua: dua, duaService: duaService)
-            }
+        .sheet(item: $selectedDua) { (dua: FortressDua) in
+            DuaDetailView(dua: dua, duaService: duaService)
         }
     }
 

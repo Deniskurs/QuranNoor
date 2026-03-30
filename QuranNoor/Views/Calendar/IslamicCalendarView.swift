@@ -11,7 +11,6 @@ struct IslamicCalendarView: View {
     @Environment(ThemeManager.self) var themeManager
     @State private var calendarService = IslamicCalendarService()
     @State private var selectedEvent: IslamicEvent?
-    @State private var showingEventDetail = false
     @State private var showingRamadanTracker = false
     @State private var searchText = ""
     @State private var selectedFilter: EventCategory?
@@ -67,10 +66,8 @@ struct IslamicCalendarView: View {
         .navigationTitle("Islamic Calendar")
         .navigationBarTitleDisplayMode(.large)
         .searchable(text: $searchText, prompt: "Search events...")
-        .sheet(isPresented: $showingEventDetail) {
-            if let event = selectedEvent {
-                EventDetailView(event: event, calendarService: calendarService)
-            }
+        .sheet(item: $selectedEvent) { (event: IslamicEvent) in
+            EventDetailView(event: event, calendarService: calendarService)
         }
         .sheet(isPresented: $showingRamadanTracker) {
             RamadanTrackerView(calendarService: calendarService)
@@ -208,7 +205,6 @@ struct IslamicCalendarView: View {
                 ForEach(upcomingEvents) { event in
                     UpcomingEventCard(event: event, calendarService: calendarService) {
                         selectedEvent = event
-                        showingEventDetail = true
                     }
                 }
             }
@@ -270,7 +266,6 @@ struct IslamicCalendarView: View {
                     ForEach(filteredEvents) { event in
                         EventCard(event: event, calendarService: calendarService) {
                             selectedEvent = event
-                            showingEventDetail = true
                         }
                     }
                 }

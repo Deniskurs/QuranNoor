@@ -247,7 +247,7 @@ final class OnboardingCoordinator {
         case "US", "CA":
             return "ISNA"
         case "SA":
-            return "Umm al-Qura"
+            return "Makkah"
         case "EG", "SD":
             return "Egyptian"
         case "PK", "IN", "BD":

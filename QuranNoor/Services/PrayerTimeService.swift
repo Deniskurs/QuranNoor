@@ -100,12 +100,6 @@ final class PrayerTimeService {
 
     // MARK: - Cached Formatters (Performance: avoid repeated allocation)
     private static let decoder = JSONDecoder()
-    private static let timeFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.dateFormat = "HH:mm"
-        f.timeZone = TimeZone.current
-        return f
-    }()
 
     // MARK: - Published Properties
     private(set) var todayPrayerTimes: DailyPrayerTimes?
@@ -118,7 +112,7 @@ final class PrayerTimeService {
     private let userDefaults = UserDefaults.standard
     private let cacheKeyPrefix = "cachedPrayerTimes" // Will append date
     private let cacheVersionKey = "cacheVersion" // Add versioning for cache invalidation
-    private let currentCacheVersion = "3.1" // Updated for offline fallback support
+    private let currentCacheVersion = "3.2" // Fixed Moonsighting API code, added Tehran method
     private let cacheSettingsKey = "cachedPrayerSettings" // Store method + madhab used for cache
     private let offlineService = OfflinePrayerCalculationService.shared
 
@@ -285,20 +279,24 @@ final class PrayerTimeService {
         let timings = data.timings
         let calendar = Calendar.current
 
-        // Helper to parse time string and combine with specified date
+        // Helper to parse time string and combine with specified date.
+        // Parses hour:minute directly as integers to avoid timezone-dependent
+        // DateFormatter bugs (e.g., stale timezone after DST transitions).
         func parseTime(_ timeString: String) -> Date? {
             // Remove timezone info (e.g., "(PKT)" at the end)
             let cleanTime = timeString.components(separatedBy: " ").first ?? timeString
 
-            guard let time = Self.timeFormatter.date(from: cleanTime) else {
+            let parts = cleanTime.split(separator: ":")
+            guard parts.count == 2,
+                  let hour = Int(parts[0]),
+                  let minute = Int(parts[1]) else {
                 return nil
             }
 
-            // Combine specified date with the parsed time
-            let timeComponents = calendar.dateComponents([.hour, .minute], from: time)
+            // Combine specified date with parsed hour:minute in current timezone
             var components = calendar.dateComponents([.year, .month, .day], from: date)
-            components.hour = timeComponents.hour
-            components.minute = timeComponents.minute
+            components.hour = hour
+            components.minute = minute
             components.second = 0
 
             return calendar.date(from: components)
@@ -346,7 +344,8 @@ final class PrayerTimeService {
         case .ummAlQura: return 4
         case .karachi: return 1
         case .dubai: return 13
-        case .moonsightingCommittee: return 7
+        case .moonsightingCommittee: return 15
+        case .tehran: return 7
         }
     }
 

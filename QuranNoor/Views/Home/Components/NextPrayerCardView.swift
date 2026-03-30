@@ -9,6 +9,13 @@
 
 import SwiftUI
 
+// MARK: - Cached Formatter
+private let nextPrayerTimeFormatter: DateFormatter = {
+    let f = DateFormatter()
+    f.timeStyle = .short
+    return f
+}()
+
 struct NextPrayerCardView: View {
     @Environment(ThemeManager.self) var themeManager: ThemeManager
     @Environment(\.accessibilityReduceMotion) var reduceMotion
@@ -69,11 +76,17 @@ struct NextPrayerCardView: View {
             // Header row - status badge + depleting progress ring
             headerRow(period: period, urgency: urgency, theme: theme)
 
-            // Prayer name
+            // Prayer name + actual time
             if let nextPrayer = period.nextPrayer {
-                Text(nextPrayer.name.displayName)
-                    .font(.system(size: FontSizes.xl + 4, weight: .bold))
-                    .foregroundColor(theme.textPrimary)
+                VStack(spacing: Spacing.xxxs) {
+                    Text(nextPrayer.name.displayName)
+                        .font(.system(size: FontSizes.xl + 4, weight: .bold))
+                        .foregroundColor(theme.textPrimary)
+
+                    Text(nextPrayerTimeFormatter.string(from: nextPrayer.time))
+                        .font(.subheadline)
+                        .foregroundColor(theme.textSecondary)
+                }
             }
 
             // HERO COUNTDOWN - Narrow TimelineView wraps ONLY the countdown text
@@ -102,11 +115,6 @@ struct NextPrayerCardView: View {
                         }
                     }
             }
-
-            // Context label
-            Text(contextLabel(for: period))
-                .font(.subheadline)
-                .foregroundColor(theme.textSecondary)
 
             // Divider + Prayer completion row (ALWAYS visible)
             if let times = prayerVM.todayPrayerTimes {
@@ -324,30 +332,13 @@ struct NextPrayerCardView: View {
     private func statusBadgeText(for period: PrayerPeriod) -> String {
         switch period.state {
         case .beforeFajr:
-            return "Before Fajr"
-        case .inProgress(let prayer, _):
-            return "\(prayer.displayName) Period"
-        case .betweenPrayers(_, let next, _):
-            return "Until \(next.displayName)"
-        case .afterIsha:
-            return "After Isha"
-        }
-    }
-
-    /// Context label below countdown
-    private func contextLabel(for period: PrayerPeriod) -> String {
-        switch period.state {
-        case .beforeFajr:
-            return "until Fajr"
+            return "Next Prayer"
         case .inProgress:
-            if let next = period.nextPrayer {
-                return "until \(next.name.displayName)"
-            }
-            return "remaining"
-        case .betweenPrayers(_, let next, _):
-            return "until \(next.displayName)"
+            return "Current"
+        case .betweenPrayers:
+            return "Next Prayer"
         case .afterIsha:
-            return "until Fajr"
+            return "Next Prayer"
         }
     }
 

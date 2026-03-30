@@ -103,6 +103,8 @@ struct CalculationMethodPickerView: View {
             return "Used in Dubai and UAE"
         case .moonsightingCommittee:
             return "Moonsighting Committee Worldwide"
+        case .tehran:
+            return "Used in Iran and Afghanistan"
         }
     }
 }
