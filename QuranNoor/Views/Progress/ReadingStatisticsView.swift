@@ -40,6 +40,8 @@ struct ReadingStatisticsView: View {
                 themeManager.currentTheme.backgroundColor
                     .ignoresSafeArea()
 
+                GradientBackground(style: .quran, opacity: 0.3)
+
                 ScrollView {
                     VStack(spacing: Spacing.sectionSpacing) {
                         keyMetricsSection
@@ -92,79 +94,50 @@ struct ReadingStatisticsView: View {
     private var keyMetricsSection: some View {
         VStack(spacing: Spacing.sm) {
             // Primary stat: verses read with progress ring
-            HStack(spacing: Spacing.md) {
-                ProgressRing(
-                    progress: viewModel.overallCompletionPercentage / 100,
-                    lineWidth: 6,
-                    size: 64,
-                    showPercentage: true,
-                    color: themeManager.currentTheme.accent
-                )
+            CardView(showPattern: true, intensity: .moderate) {
+                HStack(spacing: Spacing.md) {
+                    ProgressRing(
+                        progress: viewModel.overallCompletionPercentage / 100,
+                        lineWidth: 6,
+                        size: 64,
+                        showPercentage: true,
+                        color: themeManager.currentTheme.accent
+                    )
 
-                VStack(alignment: .leading, spacing: Spacing.xxxs) {
-                    Text("\(viewModel.totalVersesRead)")
-                        .font(.system(size: FontSizes.xl, weight: .semibold))
-                        .foregroundColor(themeManager.currentTheme.textPrimary)
-                    Text("of 6,236 verses read")
-                        .font(.system(size: FontSizes.sm))
-                        .foregroundColor(themeManager.currentTheme.textTertiary)
+                    VStack(alignment: .leading, spacing: Spacing.xxxs) {
+                        Text("\(viewModel.totalVersesRead)")
+                            .font(.system(size: FontSizes.xl, weight: .semibold))
+                            .foregroundColor(themeManager.currentTheme.textPrimary)
+                        Text("of 6,236 verses read")
+                            .font(.system(size: FontSizes.sm))
+                            .foregroundColor(themeManager.currentTheme.textTertiary)
+                    }
+
+                    Spacer()
                 }
-
-                Spacer()
             }
-            .padding(Spacing.md)
-            .background(themeManager.currentTheme.cardColor)
-            .clipShape(RoundedRectangle(cornerRadius: BorderRadius.xl))
-            .overlay(
-                RoundedRectangle(cornerRadius: BorderRadius.xl)
-                    .stroke(themeManager.currentTheme.borderColor, lineWidth: 1)
-            )
 
             // Secondary stats row
             HStack(spacing: Spacing.xs) {
-                metricCard(
-                    value: "\(viewModel.currentStreak)",
-                    label: "Day Streak",
-                    icon: "flame.fill"
+                StatCard(
+                    icon: "flame.fill",
+                    title: "Day Streak",
+                    value: "\(viewModel.currentStreak)"
                 )
 
-                metricCard(
-                    value: "\(viewModel.completedSurahsCount)",
-                    label: "Surahs Done",
-                    icon: "checkmark.seal.fill"
+                StatCard(
+                    icon: "checkmark.seal.fill",
+                    title: "Surahs Done",
+                    value: "\(viewModel.completedSurahsCount)"
                 )
 
-                metricCard(
-                    value: String(format: "%.1f", viewModel.averageVersesPerDay),
-                    label: "Per Day",
-                    icon: "chart.line.uptrend.xyaxis"
+                StatCard(
+                    icon: "chart.line.uptrend.xyaxis",
+                    title: "Per Day",
+                    value: String(format: "%.1f", viewModel.averageVersesPerDay)
                 )
             }
         }
-    }
-
-    private func metricCard(value: String, label: String, icon: String) -> some View {
-        VStack(spacing: Spacing.xxs) {
-            Image(systemName: icon)
-                .font(.system(size: FontSizes.sm))
-                .foregroundColor(themeManager.currentTheme.accent)
-
-            Text(value)
-                .font(.system(size: FontSizes.lg, weight: .semibold))
-                .foregroundColor(themeManager.currentTheme.textPrimary)
-
-            Text(label)
-                .font(.system(size: 11))
-                .foregroundColor(themeManager.currentTheme.textTertiary)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, Spacing.sm)
-        .background(themeManager.currentTheme.cardColor)
-        .clipShape(RoundedRectangle(cornerRadius: BorderRadius.lg))
-        .overlay(
-            RoundedRectangle(cornerRadius: BorderRadius.lg)
-                .stroke(themeManager.currentTheme.borderColor, lineWidth: 1)
-        )
     }
 
     // MARK: - Streak Heatmap
@@ -175,42 +148,36 @@ struct ReadingStatisticsView: View {
                 .font(.system(size: FontSizes.lg, weight: .semibold))
                 .foregroundColor(themeManager.currentTheme.textPrimary)
 
-            VStack(spacing: Spacing.sm) {
-                streakHeatmap
+            CardView(intensity: .subtle) {
+                VStack(spacing: Spacing.sm) {
+                    streakHeatmap
 
-                IslamicDivider(style: .simple)
+                    IslamicDivider(style: .ornamental)
 
-                // Legend
-                HStack {
-                    Text("Less")
-                        .font(.system(size: 11))
-                        .foregroundColor(themeManager.currentTheme.textTertiary)
+                    // Legend
+                    HStack {
+                        Text("Less")
+                            .font(.system(size: 11))
+                            .foregroundColor(themeManager.currentTheme.textTertiary)
 
-                    ForEach(0..<5) { index in
-                        Rectangle()
-                            .fill(heatmapColor(for: index))
-                            .frame(width: 14, height: 14)
-                            .clipShape(RoundedRectangle(cornerRadius: 2))
+                        ForEach(0..<5) { index in
+                            RoundedRectangle(cornerRadius: 3, style: .continuous)
+                                .fill(heatmapColor(for: index))
+                                .frame(width: 14, height: 14)
+                        }
+
+                        Text("More")
+                            .font(.system(size: 11))
+                            .foregroundColor(themeManager.currentTheme.textTertiary)
+
+                        Spacer()
+
+                        Text("Last \(daysToShow) days")
+                            .font(.system(size: 11))
+                            .foregroundColor(themeManager.currentTheme.textTertiary)
                     }
-
-                    Text("More")
-                        .font(.system(size: 11))
-                        .foregroundColor(themeManager.currentTheme.textTertiary)
-
-                    Spacer()
-
-                    Text("Last \(daysToShow) days")
-                        .font(.system(size: 11))
-                        .foregroundColor(themeManager.currentTheme.textTertiary)
                 }
             }
-            .padding(Spacing.md)
-            .background(themeManager.currentTheme.cardColor)
-            .clipShape(RoundedRectangle(cornerRadius: BorderRadius.xl))
-            .overlay(
-                RoundedRectangle(cornerRadius: BorderRadius.xl)
-                    .stroke(themeManager.currentTheme.borderColor, lineWidth: 1)
-            )
         }
     }
 
@@ -226,10 +193,9 @@ struct ReadingStatisticsView: View {
                 let versesRead = calendar[date] ?? 0
                 let intensity = Double(versesRead) / Double(maxVerses)
 
-                Rectangle()
+                RoundedRectangle(cornerRadius: 3, style: .continuous)
                     .fill(heatmapColor(forIntensity: intensity))
                     .aspectRatio(1, contentMode: .fit)
-                    .clipShape(RoundedRectangle(cornerRadius: 2))
                     .accessibilityHint(tooltipText(for: date, verses: versesRead))
             }
         }
@@ -289,63 +255,54 @@ struct ReadingStatisticsView: View {
                 .font(.system(size: FontSizes.lg, weight: .semibold))
                 .foregroundColor(themeManager.currentTheme.textPrimary)
 
-            VStack(spacing: 0) {
-                // Reading velocity
-                insightRow(
-                    label: "Reading Pace",
-                    value: viewModel.readingVelocity,
-                    icon: "gauge.with.dots.needle.67percent"
-                )
-
-                IslamicDivider(style: .simple)
-                    .padding(.horizontal, Spacing.sm)
-
-                // Consistency
-                insightRow(
-                    label: "30-Day Consistency",
-                    value: "\(consistencyPercentage)%",
-                    icon: "calendar.badge.checkmark"
-                )
-
-                IslamicDivider(style: .simple)
-                    .padding(.horizontal, Spacing.sm)
-
-                // Most productive day
-                insightRow(
-                    label: "Best Day",
-                    value: mostProductiveDay,
-                    icon: "star.fill"
-                )
-
-                if viewModel.estimatedDaysToComplete > 0 {
-                    IslamicDivider(style: .simple)
-                        .padding(.horizontal, Spacing.sm)
-
-                    // Estimated completion
+            CardView(intensity: .subtle) {
+                VStack(spacing: 0) {
+                    // Reading velocity
                     insightRow(
-                        label: "Est. Completion",
-                        value: estimatedCompletionDate,
-                        icon: "flag.checkered"
+                        label: "Reading Pace",
+                        value: viewModel.readingVelocity,
+                        icon: "gauge.with.dots.needle.67percent"
                     )
 
                     IslamicDivider(style: .simple)
-                        .padding(.horizontal, Spacing.sm)
 
-                    // Verses remaining
+                    // Consistency
                     insightRow(
-                        label: "Verses Remaining",
-                        value: "\(versesRemaining)",
-                        icon: "book.closed"
+                        label: "30-Day Consistency",
+                        value: "\(consistencyPercentage)%",
+                        icon: "calendar.badge.checkmark"
                     )
+
+                    IslamicDivider(style: .simple)
+
+                    // Most productive day
+                    insightRow(
+                        label: "Best Day",
+                        value: mostProductiveDay,
+                        icon: "star.fill"
+                    )
+
+                    if viewModel.estimatedDaysToComplete > 0 {
+                        IslamicDivider(style: .simple)
+
+                        // Estimated completion
+                        insightRow(
+                            label: "Est. Completion",
+                            value: estimatedCompletionDate,
+                            icon: "flag.checkered"
+                        )
+
+                        IslamicDivider(style: .simple)
+
+                        // Verses remaining
+                        insightRow(
+                            label: "Verses Remaining",
+                            value: "\(versesRemaining)",
+                            icon: "book.closed"
+                        )
+                    }
                 }
             }
-            .padding(.vertical, Spacing.xs)
-            .background(themeManager.currentTheme.cardColor)
-            .clipShape(RoundedRectangle(cornerRadius: BorderRadius.xl))
-            .overlay(
-                RoundedRectangle(cornerRadius: BorderRadius.xl)
-                    .stroke(themeManager.currentTheme.borderColor, lineWidth: 1)
-            )
         }
     }
 
@@ -366,7 +323,6 @@ struct ReadingStatisticsView: View {
                 .font(.system(size: FontSizes.sm, weight: .medium))
                 .foregroundColor(themeManager.currentTheme.textPrimary)
         }
-        .padding(.horizontal, Spacing.sm)
         .padding(.vertical, Spacing.xs)
     }
 

@@ -104,7 +104,7 @@ struct AdhkarView: View {
         }
         .padding()
         .background(
-            RoundedRectangle(cornerRadius: CornerRadius.lg)
+            RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous)
                 .fill(themeManager.currentTheme.cardColor)
         )
     }
@@ -159,7 +159,7 @@ struct AdhkarView: View {
                     }
                     .padding()
                     .background(
-                        RoundedRectangle(cornerRadius: CornerRadius.md)
+                        RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                             .fill(themeManager.currentTheme.cardColor)
                     )
                 }
@@ -208,7 +208,7 @@ struct AdhkarView: View {
                     }
                     .padding()
                     .background(
-                        RoundedRectangle(cornerRadius: CornerRadius.md)
+                        RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                             .fill(themeManager.currentTheme.cardColor)
                     )
                 }
@@ -256,7 +256,7 @@ struct AdhkarView: View {
                     }
                     .padding()
                     .background(
-                        RoundedRectangle(cornerRadius: CornerRadius.md)
+                        RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                             .fill(themeManager.currentTheme.cardColor)
                     )
                 }
@@ -373,11 +373,11 @@ struct AdhkarCategoryCard: View {
         }
         .padding()
         .background(
-            RoundedRectangle(cornerRadius: CornerRadius.md)
+            RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                 .fill(themeManager.currentTheme.cardColor)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: CornerRadius.md)
+            RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                 .stroke(statistics.isFullyCompleted ? themeManager.currentTheme.accent : .clear, lineWidth: 2)
         )
     }

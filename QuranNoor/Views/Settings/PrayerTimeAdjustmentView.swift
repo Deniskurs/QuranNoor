@@ -196,7 +196,7 @@ struct PrayerTimeAdjustmentView: View {
                         .padding(.vertical, 14)
                         .background(Color.red.opacity(0.1))
                         .foregroundStyle(.red)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .clipShape(RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous))
                 }
             }
         }
@@ -251,7 +251,7 @@ struct PrayerTimeAdjustmentView: View {
 
     private func resetPrayerWithFeedback(_ prayer: PrayerName) {
         AudioHapticCoordinator.shared.playButtonPress()
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+        withAnimation(AppAnimation.fast) {
             localAdjustments[prayer] = 0
             adjustmentService.resetAdjustment(for: prayer)
         }
@@ -259,7 +259,7 @@ struct PrayerTimeAdjustmentView: View {
 
     private func resetAllWithFeedback() {
         AudioHapticCoordinator.shared.playSuccess()
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+        withAnimation(AppAnimation.fast) {
             adjustmentService.resetAllAdjustments()
             for prayer in PrayerName.allCases {
                 localAdjustments[prayer] = 0
@@ -386,7 +386,7 @@ struct PrayerAdjustmentRow: View {
                         .foregroundStyle(themeManager.currentTheme.accent)
                         .padding(.vertical, 8)
                         .background(themeManager.currentTheme.accent.opacity(0.1))
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .clipShape(RoundedRectangle(cornerRadius: BorderRadius.md, style: .continuous))
                     }
                 }
             }

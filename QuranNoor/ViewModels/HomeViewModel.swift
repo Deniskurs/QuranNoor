@@ -9,6 +9,8 @@
 import Foundation
 import Observation
 import SwiftUI
+import WidgetKit
+import os
 
 // Typealias to avoid HijriDate ambiguity in @Observable macro expansion
 typealias AppHijriDate = HijriDate
@@ -135,6 +137,9 @@ final class HomeViewModel {
             overallCompletion: progress.completionPercentage
         )
 
+        // Push reading progress to widget
+        WidgetUpdateService.shared.updateReadingWidget(stats: stats)
+
         return stats
     }
 
@@ -181,9 +186,7 @@ final class HomeViewModel {
         do {
             return try await hijriService.getCurrentHijriDate()
         } catch {
-            #if DEBUG
-            print("Failed to load Hijri date: \(error)")
-            #endif
+            AppLogger.general.error("Failed to load Hijri date: \(error.localizedDescription, privacy: .public)")
             return hijriService.getCachedHijriDate()
         }
     }
@@ -224,9 +227,7 @@ final class HomeViewModel {
                 relatedPrayer: verseRef.relatedPrayer
             )
         } catch {
-            #if DEBUG
-            print("Failed to load verse of the day: \(error)")
-            #endif
+            AppLogger.general.error("Failed to load verse of the day: \(error.localizedDescription, privacy: .public)")
             return nil
         }
     }
@@ -250,9 +251,7 @@ final class HomeViewModel {
 
         errorMessage = error.localizedDescription
         showError = true
-        #if DEBUG
-        print("HomeViewModel error: \(error)")
-        #endif
+        AppLogger.general.error("HomeViewModel error: \(error.localizedDescription, privacy: .public)")
     }
 
     // MARK: - Helper Methods

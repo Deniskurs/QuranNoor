@@ -17,7 +17,7 @@ struct VerseReadIndicator: View {
 
     var body: some View {
         Button(action: {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+            withAnimation(AppAnimation.bouncy) {
                 onToggle()
             }
         }) {
@@ -41,7 +41,7 @@ struct VerseReadIndicator: View {
                         )
                 }
                 .scaleEffect(isPressed ? 0.85 : 1.0)
-                .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isPressed)
+                .animation(AppAnimation.bouncy, value: isPressed)
 
                 // Relative date (if read)
                 if let date = readDate, isRead {

@@ -141,7 +141,7 @@ struct QadhaCounterView: View {
                     .padding(.vertical, 14)
                     .background(themeManager.currentTheme.cardColor)
                     .foregroundStyle(themeManager.currentTheme.textPrimary)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .clipShape(RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous))
             }
             .accessibilityLabel("View qadha history")
             .accessibilityHint("Shows timeline of your qadha prayer adjustments")
@@ -156,7 +156,7 @@ struct QadhaCounterView: View {
                     .padding(.vertical, 14)
                     .background(themeManager.currentTheme.cardColor)
                     .foregroundStyle(themeManager.currentTheme.textPrimary)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .clipShape(RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous))
             }
             .accessibilityLabel("View duas for qadha prayers")
             .accessibilityHint("Opens supplications for making up missed prayers")
@@ -172,7 +172,7 @@ struct QadhaCounterView: View {
                         .padding(.vertical, 14)
                         .background(Color.red.opacity(0.1))
                         .foregroundStyle(.red)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .clipShape(RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous))
                 }
                 .accessibilityLabel("Reset all qadha counters")
                 .accessibilityHint("Resets all qadha prayer counts to zero. This cannot be undone.")
@@ -223,7 +223,7 @@ struct QadhaCounterView: View {
 
     private func incrementWithFeedback(prayer: PrayerName) {
         AudioHapticCoordinator.shared.playButtonPress()
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+        withAnimation(AppAnimation.fast) {
             qadhaService.incrementQadha(for: prayer)
         }
     }
@@ -231,14 +231,14 @@ struct QadhaCounterView: View {
     private func decrementWithFeedback(prayer: PrayerName) {
         guard qadhaService.getQadhaCount(for: prayer) > 0 else { return }
         AudioHapticCoordinator.shared.playPrayerComplete()
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+        withAnimation(AppAnimation.fast) {
             qadhaService.decrementQadha(for: prayer)
         }
     }
 
     private func resetAllWithFeedback() {
         AudioHapticCoordinator.shared.playSuccess()
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+        withAnimation(AppAnimation.fast) {
             qadhaService.resetAllQadha()
         }
     }
@@ -338,7 +338,7 @@ struct PrayerQadhaRow: View {
             }
             .padding(16)
         }
-        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: count)
+        .animation(AppAnimation.fast, value: count)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("\(prayer.displayName) qadha counter")
         .accessibilityValue("\(count) prayer\(count != 1 ? "s" : "")")
@@ -405,7 +405,7 @@ struct CustomQadhaInputSheet: View {
                                     .padding(.vertical, 12)
                                     .background(themeManager.currentTheme.cardColor)
                                     .foregroundStyle(themeManager.currentTheme.textPrimary)
-                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                                    .clipShape(RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous))
                             }
                         }
                     }
@@ -424,7 +424,7 @@ struct CustomQadhaInputSheet: View {
                         .padding(.vertical, 16)
                         .background(themeManager.currentTheme.accent)
                         .foregroundStyle(.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .clipShape(RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous))
                 }
                 .padding(.horizontal, 24)
                 .disabled(customValue.isEmpty)

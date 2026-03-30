@@ -104,9 +104,9 @@ struct LocationPickerView: View {
                         .textFieldStyle(.plain)
                         .padding(12)
                         .background(themeManager.currentTheme.backgroundColor.opacity(0.5))
-                        .cornerRadius(8)
+                        .clipShape(RoundedRectangle(cornerRadius: BorderRadius.md, style: .continuous))
                         .overlay(
-                            RoundedRectangle(cornerRadius: 8)
+                            RoundedRectangle(cornerRadius: BorderRadius.md, style: .continuous)
                                 .stroke(themeManager.currentTheme.borderColor, lineWidth: 1)
                         )
                 }
@@ -119,9 +119,9 @@ struct LocationPickerView: View {
                         .textFieldStyle(.plain)
                         .padding(12)
                         .background(themeManager.currentTheme.backgroundColor.opacity(0.5))
-                        .cornerRadius(8)
+                        .clipShape(RoundedRectangle(cornerRadius: BorderRadius.md, style: .continuous))
                         .overlay(
-                            RoundedRectangle(cornerRadius: 8)
+                            RoundedRectangle(cornerRadius: BorderRadius.md, style: .continuous)
                                 .stroke(themeManager.currentTheme.borderColor, lineWidth: 1)
                         )
                     ThemedText.caption("Range: -90 to 90")
@@ -137,9 +137,9 @@ struct LocationPickerView: View {
                         .textFieldStyle(.plain)
                         .padding(12)
                         .background(themeManager.currentTheme.backgroundColor.opacity(0.5))
-                        .cornerRadius(8)
+                        .clipShape(RoundedRectangle(cornerRadius: BorderRadius.md, style: .continuous))
                         .overlay(
-                            RoundedRectangle(cornerRadius: 8)
+                            RoundedRectangle(cornerRadius: BorderRadius.md, style: .continuous)
                                 .stroke(themeManager.currentTheme.borderColor, lineWidth: 1)
                         )
                     ThemedText.caption("Range: -180 to 180")

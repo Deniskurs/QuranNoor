@@ -8,6 +8,7 @@
 //
 
 import SwiftUI
+import os
 
 // MARK: - Revelation Filter
 
@@ -39,7 +40,6 @@ struct QuranReaderView: View {
     @State private var verseSearchTask: Task<Void, Never>?
     @State private var navigateToSurah: Surah?
     @State private var navigateToVerse: Int?
-    @AppStorage("hideProgressBanner") private var hideProgressBanner = false
 
     // MARK: - Body
     var body: some View {
@@ -175,9 +175,7 @@ struct QuranReaderView: View {
 
     private func resetSurahProgress(_ surah: Surah) {
         QuranService.shared.resetSurahProgress(surahNumber: surah.id)
-        #if DEBUG
-        print("Reset progress for \(surah.englishName) from QuranReaderView")
-        #endif
+        AppLogger.quran.debug("Reset progress for \(surah.englishName, privacy: .public) from QuranReaderView")
     }
 
     private func applyFilter(_ filter: RevelationFilter) {
@@ -199,6 +197,7 @@ struct QuranReaderView: View {
             Text("القرآن الكريم")
                 .font(.system(size: 34, weight: .regular, design: .default))
                 .foregroundColor(themeManager.currentTheme.accent)
+                .environment(\.layoutDirection, .rightToLeft)
 
             Text("The Noble Quran")
                 .font(.system(size: 13, weight: .regular))
@@ -237,24 +236,16 @@ struct QuranReaderView: View {
 
                 Spacer()
 
-                if !hideProgressBanner {
-                    Button {
-                        hideProgressBanner = true
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 10, weight: .semibold))
-                            .foregroundColor(themeManager.currentTheme.textTertiary)
-                            .frame(width: 20, height: 20)
-                    }
-                    .buttonStyle(.plain)
-                }
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(themeManager.currentTheme.textTertiary)
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
             .background(themeManager.currentTheme.cardColor)
-            .cornerRadius(10)
+            .clipShape(RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 10)
+                RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                     .stroke(themeManager.currentTheme.borderColor, lineWidth: 0.5)
             )
         }
@@ -319,9 +310,9 @@ struct QuranReaderView: View {
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
             .background(theme.accent.opacity(0.08))
-            .cornerRadius(10)
+            .clipShape(RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 10)
+                RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                     .stroke(theme.accent.opacity(0.3), lineWidth: 0.5)
             )
         }
@@ -750,9 +741,9 @@ struct FilterButton: View {
                         ? themeManager.currentTheme.accent
                         : themeManager.currentTheme.textTertiary
                 )
-                .cornerRadius(8)
+                .clipShape(RoundedRectangle(cornerRadius: BorderRadius.md, style: .continuous))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 8)
+                    RoundedRectangle(cornerRadius: BorderRadius.md, style: .continuous)
                         .stroke(
                             isSelected
                                 ? themeManager.currentTheme.accent.opacity(0.4)

@@ -129,8 +129,9 @@ struct PrayerHeroSection: View {
 
             // Arabic name
             Text(currentPrayerArabic)
-                .font(.custom("KFGQPCHAFSUthmanicScript-Regular", size: 22, relativeTo: .title2))
+                .font(AppTypography.arabicScalable(size: 22))
                 .foregroundColor(heroTextColor.opacity(0.8))
+                .environment(\.layoutDirection, .rightToLeft)
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(currentPrayerName) prayer")

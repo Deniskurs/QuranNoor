@@ -129,7 +129,7 @@ struct SpiritualContentDetailSheet: View {
     // MARK: - Actions
 
     private func toggleBookmark() {
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+        withAnimation(AppAnimation.bouncy) {
             isBookmarked.toggle()
         }
 

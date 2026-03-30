@@ -51,7 +51,8 @@ class PrayerCompletionService {
         // Increment change counter to trigger reactive UI updates
         changeCounter += 1
 
-    
+        // Update widget with new completion state
+        WidgetUpdateService.shared.updatePrayerCompletions()
     }
 
     /// Toggle completion status for a prayer

@@ -28,7 +28,7 @@ struct NextPrayerCardView: View {
             ZStack {
                 // Subtle time-of-day gradient wash
                 timeOfDayGradient
-                    .clipShape(RoundedRectangle(cornerRadius: BorderRadius.xl))
+                    .clipShape(RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous))
 
                 // Existing content
                 VStack(spacing: Spacing.md) {
@@ -94,7 +94,7 @@ struct NextPrayerCardView: View {
                     .foregroundColor(urgency.countdownColor(for: theme))
                     .contentTransition(.numericText(countsDown: true))
                     .monospacedDigit()
-                    .animation(.linear(duration: 0.3), value: liveCountdown)
+                    .animation(AppAnimation.linear, value: liveCountdown)
                     .onChange(of: liveCountdown) { _, newValue in
                         // Only check for deadline crossing when countdown reaches zero
                         if newValue == "00:00" || newValue == "00:00:00" {
@@ -154,10 +154,10 @@ struct NextPrayerCardView: View {
         .padding(.horizontal, Spacing.xxs + 2)
         .padding(.vertical, Spacing.xxxs + 2)
         .background(
-            RoundedRectangle(cornerRadius: BorderRadius.md)
+            RoundedRectangle(cornerRadius: BorderRadius.md, style: .continuous)
                 .fill(urgency.badgeBackground(for: theme))
         )
-        .animation(.easeInOut(duration: 0.3), value: urgency)
+        .animation(AppAnimation.gentle, value: urgency)
     }
 
     // MARK: - Prayer Completion Row

@@ -119,7 +119,7 @@ struct DuaDetailView: View {
         .padding()
         .frame(maxWidth: .infinity)
         .background(
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous)
                 .fill(.ultraThinMaterial)
         )
     }
@@ -139,16 +139,18 @@ struct DuaDetailView: View {
             Text(dua.arabicText)
                 .font(.system(size: 28))
                 .lineSpacing(12)
+                .multilineTextAlignment(.trailing)
                 .frame(maxWidth: .infinity, alignment: .trailing)
+                .environment(\.layoutDirection, .rightToLeft)
                 .padding()
                 .background(
-                    RoundedRectangle(cornerRadius: 12)
+                    RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                         .fill(.green.opacity(0.05))
                 )
         }
         .padding()
         .background(
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous)
                 .fill(.ultraThinMaterial)
         )
     }
@@ -173,7 +175,7 @@ struct DuaDetailView: View {
         }
         .padding()
         .background(
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous)
                 .fill(themeManager.currentTheme.accentTint)
         )
     }
@@ -197,7 +199,7 @@ struct DuaDetailView: View {
         }
         .padding()
         .background(
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous)
                 .fill(.purple.opacity(0.1))
         )
     }
@@ -221,7 +223,7 @@ struct DuaDetailView: View {
         }
         .padding()
         .background(
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous)
                 .fill(.yellow.opacity(0.1))
         )
     }
@@ -265,7 +267,7 @@ struct DuaDetailView: View {
         }
         .padding()
         .background(
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous)
                 .fill(.green.opacity(0.1))
         )
     }
@@ -290,7 +292,7 @@ struct DuaDetailView: View {
                 .frame(maxWidth: .infinity)
                 .padding()
                 .background(
-                    RoundedRectangle(cornerRadius: 12)
+                    RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                         .fill(
                             .linearGradient(
                                 colors: [categoryColor, categoryColor.opacity(0.7)],
@@ -312,7 +314,7 @@ struct DuaDetailView: View {
                     .foregroundStyle(.primary)
                     .frame(width: 50, height: 50)
                     .background(
-                        RoundedRectangle(cornerRadius: 12)
+                        RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                             .fill(.ultraThinMaterial)
                     )
             }

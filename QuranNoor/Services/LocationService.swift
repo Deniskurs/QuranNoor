@@ -9,6 +9,7 @@ import Foundation
 import CoreLocation
 import MapKit
 import Observation
+import os
 
 // Using MapKit (MKReverseGeocodingRequest) for reverse geocoding to obtain city and country
 
@@ -154,9 +155,7 @@ class LocationService: NSObject {
                 return city
             }
         } catch {
-            #if DEBUG
-            print("⚠️ Reverse geocoding failed (will retry): \(error.localizedDescription)")
-            #endif
+            AppLogger.location.warning("Reverse geocoding failed (will retry): \(error.localizedDescription, privacy: .public)")
         }
         return nil
     }
@@ -183,9 +182,7 @@ class LocationService: NSObject {
     /// Start receiving compass heading updates
     func startHeadingUpdates() {
         guard CLLocationManager.headingAvailable() else {
-            #if DEBUG
-            print("⚠️ Heading not available on this device")
-            #endif
+            AppLogger.location.warning("Heading not available on this device")
             return
         }
         locationManager.startUpdatingHeading()

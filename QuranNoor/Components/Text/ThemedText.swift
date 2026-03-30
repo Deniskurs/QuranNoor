@@ -64,7 +64,7 @@ struct ThemedText: View {
         .heading: .title2.weight(.semibold),
         .body: .body,
         .caption: .subheadline,
-        .arabic: Font.custom("KFGQPC Uthmanic Script HAFS", size: 20, relativeTo: .title)
+        .arabic: AppTypography.arabicScalable(size: 20)
     ]
 
     // MARK: - Initializer

@@ -94,7 +94,7 @@ struct AdhkarCategoryView: View {
             }
             .padding()
             .background(
-                RoundedRectangle(cornerRadius: CornerRadius.md)
+                RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                     .fill(themeManager.currentTheme.cardColor)
             )
             .padding(.horizontal)
@@ -143,6 +143,7 @@ struct DhikrCard: View {
                 .fontWeight(.medium)
                 .multilineTextAlignment(.trailing)
                 .frame(maxWidth: .infinity, alignment: .trailing)
+                .environment(\.layoutDirection, .rightToLeft)
                 .padding(.bottom, 4)
 
             // Translation
@@ -180,11 +181,11 @@ struct DhikrCard: View {
         }
         .padding()
         .background(
-            RoundedRectangle(cornerRadius: CornerRadius.md)
+            RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                 .fill(themeManager.currentTheme.cardColor)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: CornerRadius.md)
+            RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                 .stroke(isCompleted ? themeManager.currentTheme.accent : .clear, lineWidth: 2)
         )
     }

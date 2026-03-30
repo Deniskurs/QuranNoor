@@ -8,6 +8,7 @@
 import Foundation
 import Observation
 import SwiftData
+import os
 
 // MARK: - API Response Models
 
@@ -118,6 +119,17 @@ struct QuranEditionResponse: Codable {
     let type: String
 }
 
+// MARK: - Fawazahmed0 API Response Models
+
+struct Fawazahmed0ChapterResponse: Codable {
+    let chapter: [Fawazahmed0Verse]
+}
+
+struct Fawazahmed0Verse: Codable {
+    let verse: Int
+    let text: String
+}
+
 // MARK: - Quran Service
 @Observable
 @MainActor
@@ -141,7 +153,9 @@ class QuranService {
     private let userDefaults = UserDefaults.standard
 
     // Default editions
-    private let arabicEdition = "quran-simple" // Simple Arabic text
+    private var arabicEdition: String {
+        QuranSettingsService.shared.mushafType.editionIdentifier
+    }
     private let audioEdition = "ar.alafasy" // Alafasy recitation
 
     // Translation preferences (stored in UserDefaults)
@@ -168,11 +182,47 @@ class QuranService {
     // Cache keys
     private let surahListCacheKey = "surah_list"
     private func surahCacheKey(_ number: Int) -> String {
-        return "surah_\(number)"
+        return "surah_\(number)_\(arabicEdition)"
     }
     private func translationCacheKey(_ surahNumber: Int, _ verseNumber: Int) -> String {
         return "translation_\(surahNumber)_\(verseNumber)"
     }
+
+    // MARK: - Surah Metadata Lookup Tables
+
+    /// Maps surah number to primary juz number (first juz the surah appears in)
+    private static let surahToJuz: [Int: Int] = [
+        1: 1, 2: 1, 3: 3, 4: 4, 5: 6, 6: 7, 7: 8, 8: 9, 9: 10, 10: 11,
+        11: 11, 12: 12, 13: 13, 14: 13, 15: 14, 16: 14, 17: 15, 18: 15, 19: 16, 20: 16,
+        21: 17, 22: 17, 23: 18, 24: 18, 25: 18, 26: 19, 27: 19, 28: 20, 29: 20, 30: 21,
+        31: 21, 32: 21, 33: 21, 34: 22, 35: 22, 36: 22, 37: 23, 38: 23, 39: 23, 40: 24,
+        41: 24, 42: 25, 43: 25, 44: 25, 45: 25, 46: 26, 47: 26, 48: 26, 49: 26, 50: 26,
+        51: 26, 52: 27, 53: 27, 54: 27, 55: 27, 56: 27, 57: 27, 58: 28, 59: 28, 60: 28,
+        61: 28, 62: 28, 63: 28, 64: 28, 65: 28, 66: 28, 67: 29, 68: 29, 69: 29, 70: 29,
+        71: 29, 72: 29, 73: 29, 74: 29, 75: 29, 76: 29, 77: 29, 78: 30, 79: 30, 80: 30,
+        81: 30, 82: 30, 83: 30, 84: 30, 85: 30, 86: 30, 87: 30, 88: 30, 89: 30, 90: 30,
+        91: 30, 92: 30, 93: 30, 94: 30, 95: 30, 96: 30, 97: 30, 98: 30, 99: 30, 100: 30,
+        101: 30, 102: 30, 103: 30, 104: 30, 105: 30, 106: 30, 107: 30, 108: 30, 109: 30,
+        110: 30, 111: 30, 112: 30, 113: 30, 114: 30
+    ]
+
+    /// Maps surah number to the absolute verse number of its first verse
+    private static let surahStartVerse: [Int: Int] = [
+        1: 1, 2: 8, 3: 294, 4: 494, 5: 670, 6: 790, 7: 956, 8: 1162, 9: 1236, 10: 1365,
+        11: 1474, 12: 1597, 13: 1708, 14: 1751, 15: 1803, 16: 1902, 17: 2030, 18: 2141,
+        19: 2251, 20: 2349, 21: 2484, 22: 2596, 23: 2674, 24: 2792, 25: 2856, 26: 2933,
+        27: 3160, 28: 3253, 29: 3342, 30: 3411, 31: 3471, 32: 3505, 33: 3535, 34: 3608,
+        35: 3663, 36: 3708, 37: 3791, 38: 3973, 39: 4061, 40: 4136, 41: 4218, 42: 4272,
+        43: 4325, 44: 4414, 45: 4473, 46: 4510, 47: 4545, 48: 4583, 49: 4612, 50: 4630,
+        51: 4675, 52: 4735, 53: 4784, 54: 4846, 55: 4901, 56: 4979, 57: 5075, 58: 5104,
+        59: 5126, 60: 5150, 61: 5163, 62: 5177, 63: 5188, 64: 5199, 65: 5217, 66: 5229,
+        67: 5241, 68: 5271, 69: 5323, 70: 5375, 71: 5419, 72: 5447, 73: 5475, 74: 5495,
+        75: 5551, 76: 5591, 77: 5622, 78: 5672, 79: 5712, 80: 5758, 81: 5800, 82: 5829,
+        83: 5848, 84: 5884, 85: 5909, 86: 5931, 87: 5948, 88: 5967, 89: 5993, 90: 6023,
+        91: 6043, 92: 6058, 93: 6079, 94: 6090, 95: 6098, 96: 6106, 97: 6125, 98: 6130,
+        99: 6138, 100: 6146, 101: 6157, 102: 6168, 103: 6176, 104: 6179, 105: 6188, 106: 6193,
+        107: 6197, 108: 6204, 109: 6207, 110: 6213, 111: 6216, 112: 6221, 113: 6225, 114: 6230
+    ]
 
     // MARK: - Initialization
 
@@ -230,9 +280,7 @@ class QuranService {
 
             // Progress loaded successfully
         } catch {
-            #if DEBUG
-            print("❌ Failed to load progress from SwiftData: \(error)")
-            #endif
+            AppLogger.quran.error("Failed to load progress from SwiftData: \(error.localizedDescription, privacy: .public)")
             self.readingProgress = nil
         }
     }
@@ -250,9 +298,7 @@ class QuranService {
 
             self.bookmarks = records.map { $0.toBookmark() }
         } catch {
-            #if DEBUG
-            print("❌ Failed to load bookmarks from SwiftData: \(error)")
-            #endif
+            AppLogger.quran.error("Failed to load bookmarks from SwiftData: \(error.localizedDescription, privacy: .public)")
             self.bookmarks = []
         }
     }
@@ -272,9 +318,7 @@ class QuranService {
         }
 
         guard let url = Bundle.main.url(forResource: "quran_metadata", withExtension: "json") else {
-            #if DEBUG
-            print("WARNING: quran_metadata.json not found in bundle")
-            #endif
+            AppLogger.quran.warning("quran_metadata.json not found in bundle")
             return []
         }
 
@@ -296,9 +340,7 @@ class QuranService {
             cachedBundledSurahs = surahs
             return surahs
         } catch {
-            #if DEBUG
-            print("Failed to decode quran_metadata.json: \(error)")
-            #endif
+            AppLogger.quran.error("Failed to decode quran_metadata.json: \(error.localizedDescription, privacy: .public)")
             return []
         }
     }
@@ -339,8 +381,19 @@ class QuranService {
         }
     }
 
-    /// Get verses for a specific surah from API
+    /// Get verses for a specific surah from API, routing to the appropriate source
     func getVerses(forSurah surahNumber: Int) async throws -> [Verse] {
+        let mushafType = QuranSettingsService.shared.mushafType
+
+        switch mushafType.apiSource {
+        case .alquranCloud:
+            return try await getVersesFromAlQuranCloud(forSurah: surahNumber)
+        case .fawazahmed0:
+            return try await getVersesFromFawazahmed0(forSurah: surahNumber, edition: mushafType.editionIdentifier)
+        }
+    }
+
+    private func getVersesFromAlQuranCloud(forSurah surahNumber: Int) async throws -> [Verse] {
         do {
             let response: QuranSurahResponse = try await apiClient.fetchDirect(
                 url: "https://api.alquran.cloud/v1/surah/\(surahNumber)/\(arabicEdition)",
@@ -357,7 +410,30 @@ class QuranService {
                 )
             }
         } catch {
-            // Return fallback sample data if API fails
+            return getSampleVerses(forSurah: surahNumber)
+        }
+    }
+
+    private func getVersesFromFawazahmed0(forSurah surahNumber: Int, edition: String) async throws -> [Verse] {
+        do {
+            let response: Fawazahmed0ChapterResponse = try await apiClient.fetchDirect(
+                url: "https://cdn.jsdelivr.net/gh/fawazahmed0/quran-api@1/editions/\(edition)/\(surahNumber).json",
+                cacheKey: surahCacheKey(surahNumber)
+            )
+
+            let juz = Self.surahToJuz[surahNumber] ?? 1
+            let startingAbsoluteNumber = Self.surahStartVerse[surahNumber] ?? 1
+
+            return response.chapter.map { fawazVerse in
+                Verse(
+                    number: startingAbsoluteNumber + fawazVerse.verse - 1,
+                    surahNumber: surahNumber,
+                    verseNumber: fawazVerse.verse,
+                    text: fawazVerse.text,
+                    juz: juz
+                )
+            }
+        } catch {
             return getSampleVerses(forSurah: surahNumber)
         }
     }
@@ -427,6 +503,25 @@ class QuranService {
         }
 
         return translations
+    }
+
+    /// Fetch transliterations for a surah from AlQuran Cloud
+    /// Returns a dictionary keyed by absolute verse number
+    func getTransliterations(forSurah surahNumber: Int) async throws -> [Int: String] {
+        do {
+            let response: QuranSurahResponse = try await apiClient.fetchDirect(
+                url: "https://api.alquran.cloud/v1/surah/\(surahNumber)/en.transliteration",
+                cacheKey: "surah_transliteration_\(surahNumber)"
+            )
+            var map: [Int: String] = [:]
+            map.reserveCapacity(response.ayahs.count)
+            for ayah in response.ayahs {
+                map[ayah.number] = ayah.text
+            }
+            return map
+        } catch {
+            return [:]
+        }
     }
 
     // MARK: - Translation Preferences
@@ -565,9 +660,7 @@ class QuranService {
             loadBookmarksFromSwiftData()
             // Bookmark saved
         } catch {
-            #if DEBUG
-            print("❌ Failed to save bookmark: \(error)")
-            #endif
+            AppLogger.quran.error("Failed to save bookmark: \(error.localizedDescription, privacy: .public)")
         }
     }
 
@@ -591,9 +684,7 @@ class QuranService {
             loadBookmarksFromSwiftData()
             // Bookmark removed
         } catch {
-            #if DEBUG
-            print("❌ Failed to remove bookmark: \(error)")
-            #endif
+            AppLogger.quran.error("Failed to remove bookmark: \(error.localizedDescription, privacy: .public)")
         }
     }
 
@@ -612,9 +703,7 @@ class QuranService {
             bookmarks = []
             readingProgress = nil
         } catch {
-            #if DEBUG
-            print("Failed to delete all data: \(error)")
-            #endif
+            AppLogger.quran.error("Failed to delete all data: \(error.localizedDescription, privacy: .public)")
         }
     }
 
@@ -687,9 +776,7 @@ class QuranService {
             }
 
         } catch {
-            #if DEBUG
-            print("❌ Failed to update progress: \(error)")
-            #endif
+            AppLogger.quran.error("Failed to update progress: \(error.localizedDescription, privacy: .public)")
         }
     }
 
@@ -731,9 +818,7 @@ class QuranService {
                 stats.lastReadDate = today
             }
         } catch {
-            #if DEBUG
-            print("❌ Failed to update global stats: \(error)")
-            #endif
+            AppLogger.quran.error("Failed to update global stats: \(error.localizedDescription, privacy: .public)")
         }
     }
 
@@ -799,9 +884,7 @@ class QuranService {
             }
 
         } catch {
-            #if DEBUG
-            print("❌ Failed to mark verse as read: \(error)")
-            #endif
+            AppLogger.quran.error("Failed to mark verse as read: \(error.localizedDescription, privacy: .public)")
         }
     }
 
@@ -843,9 +926,7 @@ class QuranService {
             }
 
         } catch {
-            #if DEBUG
-            print("❌ Failed to mark verse as unread: \(error)")
-            #endif
+            AppLogger.quran.error("Failed to mark verse as unread: \(error.localizedDescription, privacy: .public)")
         }
     }
 
@@ -890,9 +971,7 @@ class QuranService {
             loadProgressFromSwiftData()
             ProgressHistoryManager.shared.clearHistory()
         } catch {
-            #if DEBUG
-            print("❌ Failed to reset progress: \(error)")
-            #endif
+            AppLogger.quran.error("Failed to reset progress: \(error.localizedDescription, privacy: .public)")
         }
     }
 
@@ -924,9 +1003,7 @@ class QuranService {
             try context.save()
             loadProgressFromSwiftData()
         } catch {
-            #if DEBUG
-            print("❌ Failed to reset surah progress: \(error)")
-            #endif
+            AppLogger.quran.error("Failed to reset surah progress: \(error.localizedDescription, privacy: .public)")
         }
     }
 
@@ -960,9 +1037,7 @@ class QuranService {
             try context.save()
             loadProgressFromSwiftData()
         } catch {
-            #if DEBUG
-            print("❌ Failed to reset verse range: \(error)")
-            #endif
+            AppLogger.quran.error("Failed to reset verse range: \(error.localizedDescription, privacy: .public)")
         }
     }
 
@@ -1006,9 +1081,7 @@ class QuranService {
             ProgressHistoryManager.shared.removeLastSnapshot()
             return true
         } catch {
-            #if DEBUG
-            print("❌ Failed to undo: \(error)")
-            #endif
+            AppLogger.quran.error("Failed to undo: \(error.localizedDescription, privacy: .public)")
             return false
         }
     }
@@ -1125,9 +1198,7 @@ class QuranService {
             try context.save()
             loadProgressFromSwiftData()
         } catch {
-            #if DEBUG
-            print("❌ Failed to import progress: \(error)")
-            #endif
+            AppLogger.quran.error("Failed to import progress: \(error.localizedDescription, privacy: .public)")
         }
     }
 
@@ -1159,9 +1230,7 @@ class QuranService {
             try context.save()
             loadProgressFromSwiftData()
         } catch {
-            #if DEBUG
-            print("❌ Failed to restore snapshot: \(error)")
-            #endif
+            AppLogger.quran.error("Failed to restore snapshot: \(error.localizedDescription, privacy: .public)")
         }
     }
 

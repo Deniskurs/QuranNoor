@@ -124,7 +124,7 @@ struct BookmarksView: View {
                     isSelected: viewModel.selectedTab == tab,
                     count: tab == .spiritual ? viewModel.spiritualBookmarks.count : viewModel.quranBookmarks.count
                 ) {
-                    withAnimation(.spring(response: 0.3)) {
+                    withAnimation(AppAnimation.fast) {
                         viewModel.selectedTab = tab
                     }
                 }
@@ -231,7 +231,7 @@ struct BookmarksView: View {
                         label: BookmarkCategory.shortLabel(for: category),
                         isSelected: viewModel.selectedCategory == category
                     ) {
-                        withAnimation(.spring(response: 0.3)) {
+                        withAnimation(AppAnimation.fast) {
                             viewModel.selectCategory(category)
                         }
                     }
@@ -390,11 +390,11 @@ private struct TabButton: View {
             .padding(.vertical, Spacing.xxs)
             .frame(maxWidth: .infinity)
             .background(
-                RoundedRectangle(cornerRadius: BorderRadius.md)
+                RoundedRectangle(cornerRadius: BorderRadius.md, style: .continuous)
                     .fill(isSelected ? themeManager.currentTheme.accent.opacity(0.12) : Color.clear)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: BorderRadius.md)
+                RoundedRectangle(cornerRadius: BorderRadius.md, style: .continuous)
                     .strokeBorder(
                         isSelected ? themeManager.currentTheme.accent : themeManager.currentTheme.textTertiary.opacity(0.3),
                         lineWidth: isSelected ? 2 : 1

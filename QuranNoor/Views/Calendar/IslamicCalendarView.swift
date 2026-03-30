@@ -117,7 +117,7 @@ struct IslamicCalendarView: View {
         .padding()
         .frame(maxWidth: .infinity)
         .background(
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous)
                 .fill(
                     .linearGradient(
                         colors: [themeManager.currentTheme.accent.opacity(0.1), themeManager.currentTheme.accentMuted.opacity(0.1)],
@@ -127,7 +127,7 @@ struct IslamicCalendarView: View {
                 )
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous)
                 .stroke(calendarService.getCurrentHijriMonth().isSacred ? themeManager.currentTheme.accentMuted : themeManager.currentTheme.accent, lineWidth: 2)
         )
     }
@@ -172,7 +172,7 @@ struct IslamicCalendarView: View {
             }
             .padding()
             .background(
-                RoundedRectangle(cornerRadius: CornerRadius.md)
+                RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                     .fill(themeManager.currentTheme.cardColor)
             )
         }
@@ -201,7 +201,7 @@ struct IslamicCalendarView: View {
                     .padding()
                     .frame(maxWidth: .infinity)
                     .background(
-                        RoundedRectangle(cornerRadius: CornerRadius.md)
+                        RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                             .fill(themeManager.currentTheme.cardColor)
                     )
             } else {
@@ -342,7 +342,7 @@ struct UpcomingEventCard: View {
             }
             .padding()
             .background(
-                RoundedRectangle(cornerRadius: CornerRadius.md)
+                RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                     .fill(themeManager.currentTheme.cardColor)
             )
         }
@@ -439,11 +439,11 @@ struct EventCard: View {
             }
             .padding()
             .background(
-                RoundedRectangle(cornerRadius: CornerRadius.md)
+                RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                     .fill(themeManager.currentTheme.cardColor)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: CornerRadius.md)
+                RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                     .stroke(isFavorite ? themeManager.currentTheme.accentMuted.opacity(0.3) : .clear, lineWidth: 2)
             )
         }

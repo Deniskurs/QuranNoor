@@ -148,7 +148,7 @@ struct NotificationSettingsView: View {
                     .padding(.vertical, 14)
                     .background(themeManager.currentTheme.accent)
                     .foregroundStyle(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .clipShape(RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous))
             }
 
             Button {
@@ -161,7 +161,7 @@ struct NotificationSettingsView: View {
                     .padding(.vertical, 14)
                     .background(themeManager.currentTheme.cardColor)
                     .foregroundStyle(themeManager.currentTheme.textPrimary)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .clipShape(RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous))
             }
         }
     }
@@ -207,7 +207,7 @@ struct NotificationSettingsView: View {
     // MARK: - Helper Methods
 
     private func toggleExpansion(for prayer: PrayerName) {
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+        withAnimation(AppAnimation.fast) {
             if expandedPrayers.contains(prayer) {
                 expandedPrayers.remove(prayer)
             } else {

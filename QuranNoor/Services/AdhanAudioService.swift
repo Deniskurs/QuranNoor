@@ -9,6 +9,7 @@
 import Foundation
 import AVFoundation
 import Observation
+import os
 
 /// Service for managing Adhan audio playback
 @Observable
@@ -73,9 +74,7 @@ final class AdhanAudioService: NSObject {
 
         // Get the audio file URL
         guard let audioURL = selectedAdhan.fileURL else {
-            #if DEBUG
-            print("❌ Adhan audio file not found: \(selectedAdhan.fileName)")
-            #endif
+            AppLogger.audio.error("Adhan audio file not found: \(self.selectedAdhan.fileName, privacy: .public)")
             return
         }
 
@@ -86,9 +85,7 @@ final class AdhanAudioService: NSObject {
                 try AVAudioPlayer(contentsOf: audioURL)
             }.value
         } catch {
-            #if DEBUG
-            print("❌ Error loading Adhan audio: \(error.localizedDescription)")
-            #endif
+            AppLogger.audio.error("Error loading Adhan audio: \(error.localizedDescription, privacy: .public)")
             return
         }
 
@@ -110,9 +107,7 @@ final class AdhanAudioService: NSObject {
                 isPlaying = true
             }
         } catch {
-            #if DEBUG
-            print("❌ Error playing Adhan: \(error.localizedDescription)")
-            #endif
+            AppLogger.audio.error("Error playing Adhan: \(error.localizedDescription, privacy: .public)")
             isPlaying = false
         }
     }
@@ -204,9 +199,7 @@ extension AdhanAudioService: AVAudioPlayerDelegate {
         Task { @MainActor in
             isPlaying = false
             audioPlayer = nil
-            #if DEBUG
-            print("❌ Adhan decode error: \(error?.localizedDescription ?? "Unknown error")")
-            #endif
+            AppLogger.audio.error("Adhan decode error: \(error?.localizedDescription ?? "Unknown error", privacy: .public)")
         }
     }
 }

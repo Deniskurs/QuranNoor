@@ -101,7 +101,7 @@ struct EnhancedPrayerRow: View {
         }
         .frame(minHeight: minRowHeight)
         .background(rowBackground(isCompleted: isCompleted))
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous))
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityLabel(isCompleted: isCompleted))
@@ -168,7 +168,7 @@ struct EnhancedPrayerRow: View {
             // Show more button if multiple special times
             if relatedSpecialTimes.count > 1 {
                 Button {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                    withAnimation(AppAnimation.fast) {
                         showSpecialTimes.toggle()
                     }
                 } label: {
@@ -191,23 +191,23 @@ struct EnhancedPrayerRow: View {
         Group {
             if isCurrentPrayer && !isCompleted {
                 // Current prayer: highlighted with accent
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous)
                     .fill(themeManager.currentTheme.accent.opacity(0.08))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous)
                             .strokeBorder(themeManager.currentTheme.accent.opacity(0.3), lineWidth: 1.5)
                     )
             } else if isNextPrayer && !isCompleted {
                 // Next prayer: subtle highlight
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous)
                     .fill(themeManager.currentTheme.accentMuted.opacity(0.05))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous)
                             .strokeBorder(themeManager.currentTheme.accentMuted.opacity(0.2), lineWidth: 1)
                     )
             } else {
                 // Default card
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous)
                     .fill(themeManager.currentTheme.cardColor)
             }
         }

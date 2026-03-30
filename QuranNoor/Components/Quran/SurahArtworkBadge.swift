@@ -97,28 +97,27 @@ struct SurahArtworkBadge: View {
         let card = VStack(spacing: 0) {
             if let text = arabicText {
                 Text(text)
-                    .font(.custom("KFGQPC HAFS Uthmanic Script Regular", size: 30))
+                    .font(AppTypography.arabicFont(for: QuranSettingsService.shared.mushafType, size: QuranSettingsService.shared.fontSize.arabicSize))
                     .foregroundColor(theme.textPrimary)
-                    .multilineTextAlignment(.center)
-                    .lineSpacing(16)
-                    .environment(\.layoutDirection, .rightToLeft)
+                    .multilineTextAlignment(.trailing)
+                    .lineSpacing(QuranSettingsService.shared.fontSize.lineSpacing)
                     .padding(.horizontal, Spacing.md)
                     .padding(.vertical, Spacing.lg)
                     .frame(maxWidth: .infinity)
             }
         }
         .background(
-            RoundedRectangle(cornerRadius: 20)
+            RoundedRectangle(cornerRadius: BorderRadius.xxl, style: .continuous)
                 .fill(theme.cardColor)
                 .overlay(
                     // Inner border
-                    RoundedRectangle(cornerRadius: 20)
+                    RoundedRectangle(cornerRadius: BorderRadius.xxl, style: .continuous)
                         .stroke(theme.accent.opacity(0.2), lineWidth: 0.5)
                         .padding(1)
                 )
                 .overlay(
                     // Outer border
-                    RoundedRectangle(cornerRadius: 20)
+                    RoundedRectangle(cornerRadius: BorderRadius.xxl, style: .continuous)
                         .stroke(theme.accentMuted.opacity(0.1), lineWidth: 1)
                 )
         )

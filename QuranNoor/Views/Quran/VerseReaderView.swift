@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import os
 
 struct VerseReaderView: View {
     // MARK: - Properties
@@ -31,6 +32,10 @@ struct VerseReaderView: View {
     @State private var showCategoryPicker = false
     @State private var pendingBookmarkVerse: Verse?
     @State private var showFullPlayer = false
+    @State private var settings = QuranSettingsService.shared
+    @State private var transliterations: [Int: String] = [:]
+    @State private var showingMushafSelector = false
+    @State private var showingFontSizePicker = false
 
     // Toast state
     @State private var showToast = false
@@ -43,6 +48,17 @@ struct VerseReaderView: View {
     // Share sheet state
     @State private var showShareSheet = false
     @State private var shareItems: [Any] = []
+    @State private var showShareStylePicker = false
+    @State private var shareVerseForImage: Verse?
+
+    // Tajweed state
+    @State private var tajweedData: [[TajweedSegment]] = []
+    @State private var isLoadingTajweed = false
+    @State private var showingTajweedLegend = false
+
+    // Word-by-word state
+    @State private var wordData: [[QuranWord]] = []
+    @State private var isLoadingWords = false
 
     // MARK: - Performance Optimization: Cached Read States
     @State private var verseReadStates: [Int: VerseReadState] = [:]
@@ -94,8 +110,9 @@ struct VerseReaderView: View {
                 ToolbarItem(placement: .principal) {
                     VStack(spacing: 1) {
                         Text(surah.name)
-                            .font(.custom("KFGQPC HAFS Uthmanic Script Regular", size: 18))
+                            .font(AppTypography.arabicFont(for: settings.mushafType, size: 18))
                             .foregroundColor(theme.textPrimary)
+                            .environment(\.layoutDirection, .rightToLeft)
                         Text(surah.englishName)
                             .font(.system(size: 11, weight: .medium))
                             .foregroundColor(theme.textTertiary)
@@ -131,6 +148,41 @@ struct VerseReaderView: View {
                             Label("Reciter: \(audioService.selectedReciter.shortName)", systemImage: "person.wave.2")
                         }
 
+                        Button {
+                            showingMushafSelector = true
+                        } label: {
+                            Label("Script: \(settings.mushafType.shortName)", systemImage: "character.book.closed")
+                        }
+
+                        Button {
+                            showingFontSizePicker = true
+                        } label: {
+                            Label("Font Size: \(settings.fontSize.displayName)", systemImage: "textformat.size")
+                        }
+
+                        Divider()
+
+                        // Tajweed toggle
+                        Button {
+                            settings.toggleTajweed()
+                            if settings.showTajweed && tajweedData.isEmpty {
+                                Task { await loadTajweedData() }
+                            }
+                        } label: {
+                            Label(
+                                settings.showTajweed ? "Tajweed: On" : "Tajweed: Off",
+                                systemImage: settings.showTajweed ? "paintpalette.fill" : "paintpalette"
+                            )
+                        }
+
+                        if settings.showTajweed {
+                            Button {
+                                showingTajweedLegend = true
+                            } label: {
+                                Label("Tajweed Legend", systemImage: "info.circle")
+                            }
+                        }
+
                         Divider()
 
                         Button {
@@ -152,6 +204,13 @@ struct VerseReaderView: View {
                 selectedTranslation = quranService.getTranslationPreferences().primaryTranslation
                 Task {
                     await loadVerses()
+                    // Pre-load tajweed/word data if those modes are already enabled
+                    if settings.showTajweed {
+                        await loadTajweedData()
+                    }
+                    if settings.showWordByWord {
+                        await loadWordData()
+                    }
                 }
             }
             .sheet(isPresented: $showingTranslationSelector) {
@@ -165,6 +224,34 @@ struct VerseReaderView: View {
                 }
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
+            }
+            .sheet(isPresented: $showingMushafSelector) {
+                MushafTypeSelectorView { _ in
+                    Task {
+                        isLoading = true
+                        await loadVerses()
+                    }
+                }
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+            }
+            .sheet(isPresented: $showingFontSizePicker) {
+                FontSizePickerView()
+                    .presentationDetents([.medium, .large])
+                    .presentationDragIndicator(.visible)
+            }
+            .onChange(of: settings.mushafType) { _, _ in
+                Task {
+                    isLoading = true
+                    await loadVerses()
+                }
+            }
+            .onChange(of: settings.showTransliteration) { _, newValue in
+                if newValue && transliterations.isEmpty {
+                    Task {
+                        await loadTransliterations()
+                    }
+                }
             }
             .sheet(isPresented: $showCategoryPicker) {
                 BookmarkCategoryPickerSheet { category in
@@ -187,6 +274,22 @@ struct VerseReaderView: View {
             .sheet(isPresented: $showShareSheet) {
                 if #available(iOS 16.0, *) {
                     ShareSheet(items: shareItems)
+                }
+            }
+            .sheet(isPresented: $showingTajweedLegend) {
+                TajweedLegendView()
+                    .presentationDetents([.medium, .large])
+            }
+            .sheet(isPresented: $showShareStylePicker) {
+                if let verse = shareVerseForImage {
+                    ShareStylePickerView(
+                        arabicText: verse.text,
+                        translationText: translations[verse.number]?.text,
+                        surahName: surah.englishName,
+                        verseReference: "\(surah.id):\(verse.verseNumber)"
+                    )
+                    .presentationDetents([.large])
+                    .presentationDragIndicator(.visible)
                 }
             }
         }
@@ -321,7 +424,7 @@ struct VerseReaderView: View {
                             // Delay scroll slightly so highlight animates first ("light then scroll")
                             Task {
                                 try? await Task.sleep(nanoseconds: 150_000_000) // 150ms
-                                withAnimation(.easeInOut(duration: 0.5)) {
+                                withAnimation(AppAnimation.standard) {
                                     proxy.scrollTo(match.id, anchor: UnitPoint(x: 0.5, y: 0.3))
                                 }
                             }
@@ -330,14 +433,30 @@ struct VerseReaderView: View {
                 }
             }
 
-            // Now Playing indicator (taps to open full player)
-            // No animationNamespace — VerseReaderView uses .sheet() for the full player
-            MiniAudioPlayerView(
-                showSkipControls: false,
-                showCloseButton: false,
-                animationNamespace: nil,
-                onTap: { showFullPlayer = true }
-            )
+            // Floating controls + mini audio player
+            VStack(spacing: 8) {
+                ReaderFloatingPill(
+                    showTranslation: settings.showTranslation,
+                    showTransliteration: settings.showTransliteration,
+                    showWordByWord: settings.showWordByWord,
+                    onToggleTranslation: { settings.toggleTranslation() },
+                    onToggleTransliteration: { settings.toggleTransliteration() },
+                    onToggleWordByWord: {
+                        settings.toggleWordByWord()
+                        if settings.showWordByWord && wordData.isEmpty {
+                            Task { await loadWordData() }
+                        }
+                    }
+                )
+
+                // Now Playing indicator (taps to open full player)
+                MiniAudioPlayerView(
+                    showSkipControls: false,
+                    showCloseButton: false,
+                    animationNamespace: nil,
+                    onTap: { showFullPlayer = true }
+                )
+            }
             .padding(.bottom, Spacing.xxs)
         }
     }
@@ -350,8 +469,9 @@ struct VerseReaderView: View {
         return VStack(spacing: 16) {
             // Arabic surah name -- large, calligraphic
             Text(surah.name)
-                .font(.custom("KFGQPC HAFS Uthmanic Script Regular", size: 40))
+                .font(AppTypography.arabicFont(for: settings.mushafType, size: settings.fontSize.arabicSize * 1.25))
                 .foregroundColor(theme.accent)
+                .environment(\.layoutDirection, .rightToLeft)
 
             // English name and translation
             VStack(spacing: 4) {
@@ -399,12 +519,13 @@ struct VerseReaderView: View {
 
         return VStack(spacing: 10) {
             Text("بِسۡمِ ٱللَّهِ ٱلرَّحۡمَـٰنِ ٱلرَّحِیمِ")
-                .font(.custom("KFGQPC HAFS Uthmanic Script Regular", size: 26))
+                .font(AppTypography.arabicFont(for: settings.mushafType, size: settings.fontSize.arabicSize * 0.93))
                 .foregroundColor(theme.accent)
                 .multilineTextAlignment(.center)
+                .environment(\.layoutDirection, .rightToLeft)
 
             Text("In the name of Allah, the Most Gracious, the Most Merciful")
-                .font(.system(size: 13))
+                .font(.system(size: settings.fontSize.translationSize * 0.81))
                 .italic()
                 .foregroundColor(theme.textTertiary)
                 .multilineTextAlignment(.center)
@@ -571,17 +692,50 @@ struct VerseReaderView: View {
             }
 
             // Arabic text -- the HERO
-            Text(verse.text + " \u{FD3F}\(verse.verseNumber.arabicNumerals)\u{FD3E}")
-                .font(.custom("KFGQPC HAFS Uthmanic Script Regular", size: 28))
-                .foregroundColor(isCurrentlyPlaying ? theme.accent : theme.textPrimary)
-                .animation(.easeInOut(duration: 0.5), value: isCurrentlyPlaying)
-                .lineSpacing(16)
-                .multilineTextAlignment(.trailing)
+            if settings.showWordByWord, index < wordData.count {
+                // Word-by-word mode
+                WordByWordView(
+                    words: wordData[index],
+                    fontSize: settings.fontSize.arabicSize,
+                    mushafType: settings.mushafType
+                )
+                .frame(maxWidth: .infinity)
+            } else if settings.showTajweed, index < tajweedData.count {
+                // Tajweed color-coded mode
+                TajweedText(
+                    segments: tajweedData[index],
+                    fontSize: settings.fontSize.arabicSize,
+                    mushafType: settings.mushafType
+                )
                 .frame(maxWidth: .infinity, alignment: .trailing)
-                .environment(\.layoutDirection, .rightToLeft)
+                .opacity(isCurrentlyPlaying ? 0.85 : 1.0)
+                .animation(AppAnimation.standard, value: isCurrentlyPlaying)
+            } else {
+                // Default plain text
+                Text(verse.text + " \u{FD3F}\(verse.verseNumber.arabicNumerals)\u{FD3E}")
+                    .font(AppTypography.arabicFont(for: settings.mushafType, size: settings.fontSize.arabicSize))
+                    .foregroundColor(isCurrentlyPlaying ? theme.accent : theme.textPrimary)
+                    .animation(AppAnimation.standard, value: isCurrentlyPlaying)
+                    .lineSpacing(settings.fontSize.lineSpacing)
+                    .multilineTextAlignment(.trailing)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .environment(\.layoutDirection, .rightToLeft)
+            }
+
+            // Transliteration (shown between Arabic and translation)
+            if settings.showTransliteration, let translit = transliterations[verse.number] {
+                Text(translit)
+                    .font(.system(size: settings.fontSize.translationSize, weight: .light, design: .serif))
+                    .italic()
+                    .foregroundColor(theme.textSecondary.opacity(0.8))
+                    .lineSpacing(4)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
 
             // Translation
-            translationSection(for: verse)
+            if settings.showTranslation {
+                translationSection(for: verse)
+            }
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 20)
@@ -614,7 +768,7 @@ struct VerseReaderView: View {
                 .foregroundColor(isPlaying ? theme.accent : theme.textSecondary)
         }
         .scaleEffect(isPlaying ? 1.05 : 1.0)
-        .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: isPlaying)
+        .animation(isPlaying ? .easeInOut(duration: 0.8).repeatForever(autoreverses: true) : AppAnimation.gentle, value: isPlaying)
     }
 
     // MARK: - Translation Section
@@ -626,13 +780,13 @@ struct VerseReaderView: View {
             if let translation = translations[verse.number] {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(translation.text)
-                        .font(.system(size: 15))
+                        .font(.system(size: settings.fontSize.translationSize))
                         .foregroundColor(theme.textSecondary)
-                        .lineSpacing(6)
+                        .lineSpacing(settings.fontSize.lineSpacing * 0.6)
                         .fixedSize(horizontal: false, vertical: true)
 
                     Text("-- \(translation.author)")
-                        .font(.system(size: 12))
+                        .font(.system(size: max(settings.fontSize.translationSize - 3, 11)))
                         .italic()
                         .foregroundColor(theme.textTertiary)
                 }
@@ -648,9 +802,9 @@ struct VerseReaderView: View {
                 // Fallback to sample translation
                 let fallback = quranService.getSampleTranslation(forVerse: verse)
                 Text(fallback.text)
-                    .font(.system(size: 15))
+                    .font(.system(size: settings.fontSize.translationSize))
                     .foregroundColor(theme.textSecondary)
-                    .lineSpacing(6)
+                    .lineSpacing(settings.fontSize.lineSpacing * 0.6)
                     .italic()
                     .opacity(0.7)
             }
@@ -697,7 +851,7 @@ struct VerseReaderView: View {
                 // Completion summary for current surah
                 VStack(spacing: Spacing.xxxs) {
                     Text("End of \(surah.name)")
-                        .font(.custom("KFGQPC HAFS Uthmanic Script Regular", size: 22))
+                        .font(AppTypography.arabicFont(for: settings.mushafType, size: settings.fontSize.arabicSize * 0.69))
                         .foregroundColor(theme.accent)
 
                     Text("\(surah.englishName) · \(surah.numberOfVerses) verses")
@@ -716,8 +870,9 @@ struct VerseReaderView: View {
                     // Next surah info
                     VStack(spacing: Spacing.xs) {
                         Text(next.name)
-                            .font(.custom("KFGQPC HAFS Uthmanic Script Regular", size: 30))
+                            .font(AppTypography.arabicFont(for: settings.mushafType, size: settings.fontSize.arabicSize * 0.94))
                             .foregroundColor(theme.textPrimary)
+                            .environment(\.layoutDirection, .rightToLeft)
 
                         Text(next.englishName)
                             .font(.system(size: FontSizes.lg, weight: .semibold))
@@ -757,9 +912,10 @@ struct VerseReaderView: View {
                                 .padding(.horizontal, Spacing.md)
 
                             Text("\u{0628}\u{0650}\u{0633}\u{0645}\u{0650} \u{0627}\u{0644}\u{0644}\u{0647}\u{0650} \u{0627}\u{0644}\u{0631}\u{0651}\u{064E}\u{062D}\u{0645}\u{0670}\u{0646}\u{0650} \u{0627}\u{0644}\u{0631}\u{0651}\u{064E}\u{062D}\u{0650}\u{064A}\u{0645}\u{0650}")
-                                .font(.custom("KFGQPC HAFS Uthmanic Script Regular", size: 20))
+                                .font(AppTypography.arabicFont(for: settings.mushafType, size: settings.fontSize.arabicSize * 0.63))
                                 .foregroundColor(theme.accent.opacity(0.7))
                                 .multilineTextAlignment(.center)
+                                .environment(\.layoutDirection, .rightToLeft)
                                 .padding(.vertical, Spacing.xxs)
                         }
                     }
@@ -793,7 +949,7 @@ struct VerseReaderView: View {
                 .background(theme.cardColor)
                 .cornerRadius(BorderRadius.xl)
                 .overlay(
-                    RoundedRectangle(cornerRadius: BorderRadius.xl)
+                    RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous)
                         .stroke(theme.accent.opacity(0.2), lineWidth: 1)
                 )
                 .padding(.horizontal, Spacing.screenHorizontal)
@@ -826,7 +982,7 @@ struct VerseReaderView: View {
                     .padding(.bottom, Spacing.xxxs)
 
                 Text("Khatm al-Quran")
-                    .font(.custom("KFGQPC HAFS Uthmanic Script Regular", size: 24))
+                    .font(AppTypography.arabicScalable(size: 24))
                     .foregroundColor(theme.accent)
 
                 Text("Completion of the Noble Quran")
@@ -848,8 +1004,9 @@ struct VerseReaderView: View {
                         .padding(.horizontal, Spacing.md)
 
                     Text("صَدَقَ اللهُ الْعَظِيمُ")
-                        .font(.custom("KFGQPC HAFS Uthmanic Script Regular", size: 22))
+                        .font(AppTypography.arabicScalable(size: 22))
                         .foregroundColor(theme.accent)
+                        .environment(\.layoutDirection, .rightToLeft)
                         .padding(.vertical, Spacing.xxs)
 
                     Text("Allah the Almighty has spoken the truth")
@@ -885,7 +1042,7 @@ struct VerseReaderView: View {
             .background(theme.cardColor)
             .cornerRadius(BorderRadius.xl)
             .overlay(
-                RoundedRectangle(cornerRadius: BorderRadius.xl)
+                RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous)
                     .stroke(theme.accent.opacity(0.2), lineWidth: 1)
             )
             .padding(.horizontal, Spacing.screenHorizontal)
@@ -906,6 +1063,7 @@ struct VerseReaderView: View {
         surah = next
         verses = []
         translations = [:]
+        transliterations = [:]
         verseReadStates = [:]
         visibleVerses = []
         dwellTask?.cancel()
@@ -913,7 +1071,7 @@ struct VerseReaderView: View {
         loadError = nil
 
         // Scroll to top
-        withAnimation(.easeInOut(duration: 0.3)) {
+        withAnimation(AppAnimation.gentle) {
             proxy.scrollTo("surah-header-top", anchor: .top)
         }
 
@@ -934,6 +1092,7 @@ struct VerseReaderView: View {
         surah = targetSurah
         verses = []
         translations = [:]
+        transliterations = [:]
         verseReadStates = [:]
         visibleVerses = []
         dwellTask?.cancel()
@@ -1015,24 +1174,26 @@ struct VerseReaderView: View {
         loadError = nil
 
         do {
-            // Concurrent loading: both API calls start in parallel
+            // Concurrent loading: all API calls start in parallel
             async let versesTask = quranService.getVerses(forSurah: surah.id)
             async let translationsTask = quranService.getTranslations(
                 forSurah: surah.id,
                 edition: selectedTranslation
             )
+            async let transliterationsTask = quranService.getTransliterations(forSurah: surah.id)
 
             let (fetchedVerses, fetchedTranslations) = try await (versesTask, translationsTask)
+            let fetchedTransliterations = try await transliterationsTask
             verses = fetchedVerses
             translations = fetchedTranslations
+            transliterations = fetchedTransliterations
             isLoading = false
             loadVerseReadStates()
         } catch {
             loadError = error
             isLoading = false
-            #if DEBUG
-            print("Failed to load verses for Surah \(surah.id): \(error)")
-            #endif
+            transliterations = [:]
+            AppLogger.quran.error("Failed to load verses for Surah \(surah.id, privacy: .public): \(error.localizedDescription, privacy: .public)")
             verses = quranService.getSampleVerses(forSurah: surah.id)
             loadVerseReadStates()
         }
@@ -1049,12 +1210,15 @@ struct VerseReaderView: View {
             )
             translations = bulk
         } catch {
-            #if DEBUG
-            print("Failed to load translations for Surah \(surah.id): \(error)")
-            #endif
+            AppLogger.quran.error("Failed to load translations for Surah \(surah.id, privacy: .public): \(error.localizedDescription, privacy: .public)")
         }
 
         isLoadingTranslations = false
+    }
+
+    private func loadTransliterations() async {
+        let fetched = (try? await quranService.getTransliterations(forSurah: surah.id)) ?? [:]
+        transliterations = fetched
     }
 
     // MARK: - Bookmarks
@@ -1122,26 +1286,36 @@ struct VerseReaderView: View {
 
     /// Share a specific verse with Arabic text and translation
     private func shareVerse(_ verse: Verse) {
-        var shareText = "Surah \(surah.englishName) (\(surah.name)) - Verse \(verse.verseNumber)\n\n"
-
-        // Arabic text
-        shareText += verse.text + "\n\n"
-
-        // Translation if available
-        if let translation = translations[verse.number] {
-            shareText += "\"\(translation.text)\"\n"
-            shareText += "— \(translation.author)\n"
-        }
-
-        shareText += "\n📖 Shared from Quran Noor"
-
-        shareItems = [shareText]
-        showShareSheet = true
+        // Show image share style picker instead of plain text
+        shareVerseForImage = verse
+        showShareStylePicker = true
         HapticManager.shared.trigger(.selection)
+    }
 
-        toastMessage = "Verse ready to share"
-        toastStyle = .info
-        showToast = true
+    // MARK: - Tajweed Data Loading
+
+    private func loadTajweedData() async {
+        guard !isLoadingTajweed else { return }
+        isLoadingTajweed = true
+        do {
+            tajweedData = try await TajweedService.shared.getTajweedVerses(forSurah: surah.id)
+        } catch {
+            AppLogger.quran.error("Failed to load tajweed data: \(error.localizedDescription, privacy: .public)")
+        }
+        isLoadingTajweed = false
+    }
+
+    // MARK: - Word Data Loading
+
+    private func loadWordData() async {
+        guard !isLoadingWords else { return }
+        isLoadingWords = true
+        do {
+            wordData = try await WordMorphologyService.shared.getWords(forSurah: surah.id)
+        } catch {
+            AppLogger.quran.error("Failed to load word data: \(error.localizedDescription, privacy: .public)")
+        }
+        isLoadingWords = false
     }
 }
 

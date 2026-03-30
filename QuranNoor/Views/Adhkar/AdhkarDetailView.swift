@@ -163,9 +163,10 @@ struct AdhkarDetailView: View {
                 .font(.system(size: 28, weight: .medium))
                 .multilineTextAlignment(.trailing)
                 .frame(maxWidth: .infinity, alignment: .trailing)
+                .environment(\.layoutDirection, .rightToLeft)
                 .padding()
                 .background(
-                    RoundedRectangle(cornerRadius: 16)
+                    RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous)
                         .fill(.ultraThinMaterial)
                 )
         }
@@ -190,7 +191,7 @@ struct AdhkarDetailView: View {
                 .padding()
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(
-                    RoundedRectangle(cornerRadius: 12)
+                    RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                         .fill(.ultraThinMaterial)
                 )
         }
@@ -214,7 +215,7 @@ struct AdhkarDetailView: View {
                 .padding()
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(
-                    RoundedRectangle(cornerRadius: 12)
+                    RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                         .fill(.ultraThinMaterial)
                 )
         }
@@ -252,7 +253,7 @@ struct AdhkarDetailView: View {
                     .padding()
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(
-                        RoundedRectangle(cornerRadius: 12)
+                        RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                             .fill(.yellow.opacity(0.1))
                     )
                     .transition(.opacity.combined(with: .move(edge: .top)))
@@ -285,7 +286,7 @@ struct AdhkarDetailView: View {
             incrementCount()
         } label: {
             ZStack {
-                RoundedRectangle(cornerRadius: 20)
+                RoundedRectangle(cornerRadius: BorderRadius.xxl, style: .continuous)
                     .fill(
                         .linearGradient(
                             colors: [themeManager.currentTheme.accent, themeManager.currentTheme.accentMuted],
@@ -319,7 +320,7 @@ struct AdhkarDetailView: View {
         }
         .padding()
         .background(
-            RoundedRectangle(cornerRadius: 12)
+            RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                 .fill(.ultraThinMaterial)
         )
     }

@@ -85,7 +85,7 @@ struct TargetPickerView: View {
                         .textFieldStyle(.roundedBorder)
                         .padding()
                         .background(
-                            RoundedRectangle(cornerRadius: 12)
+                            RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                                 .fill(.ultraThinMaterial)
                         )
 
@@ -126,7 +126,7 @@ struct TargetPickerView: View {
                     }
                     .padding()
                     .background(
-                        RoundedRectangle(cornerRadius: 12)
+                        RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                             .fill(.ultraThinMaterial)
                     )
                 }
@@ -155,11 +155,11 @@ struct TargetCard: View {
         .frame(maxWidth: .infinity)
         .padding()
         .background(
-            RoundedRectangle(cornerRadius: 12)
+            RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                 .fill(.ultraThinMaterial)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 12)
+            RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                 .stroke(isSelected ? .green : .clear, lineWidth: 2)
         )
     }

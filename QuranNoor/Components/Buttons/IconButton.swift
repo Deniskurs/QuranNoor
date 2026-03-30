@@ -77,7 +77,7 @@ struct IconButton: View {
             .frame(width: size, height: size)
             .scaleEffect(isPressed ? 0.92 : 1.0)
             .opacity(isDisabled ? 0.5 : 1.0)
-            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isPressed)
+            .animation(AppAnimation.fast, value: isPressed)
         }
         .disabled(isDisabled)
         .accessibilityLabel(label ?? accessibilityLabelText)

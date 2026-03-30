@@ -32,7 +32,7 @@ struct PrayerCompletionCheckbox: View {
     var body: some View {
         Button {
             // Scale animation on tap
-            withAnimation(.spring(response: 0.2, dampingFraction: 0.6)) {
+            withAnimation(AppAnimation.bouncy) {
                 scale = 0.95
             }
 
@@ -41,13 +41,13 @@ struct PrayerCompletionCheckbox: View {
             scaleTask = Task { @MainActor in
                 try? await Task.sleep(for: .seconds(0.1))
                 guard !Task.isCancelled else { return }
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                withAnimation(AppAnimation.bouncy) {
                     scale = 1.0
                 }
             }
 
             // Trigger completion toggle
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+            withAnimation(AppAnimation.bouncy) {
                 onCompletionToggle()
             }
 
@@ -75,7 +75,7 @@ struct PrayerCompletionCheckbox: View {
                         .transition(.scale.combined(with: .opacity))
                         .onAppear {
                             // Checkmark pop animation
-                            withAnimation(.spring(response: 0.4, dampingFraction: 0.5)) {
+                            withAnimation(AppAnimation.bouncy) {
                                 checkmarkScale = 1.0
                             }
                         }

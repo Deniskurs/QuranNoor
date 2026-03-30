@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import os
 
 
 // MARK: - API Error
@@ -202,12 +203,8 @@ class APIClient {
 
                 return result
             } catch let directError {
-                #if DEBUG
-                if let jsonString = String(data: data, encoding: .utf8) {
-                    print("Failed to decode JSON from endpoint: \(endpoint.fullURL)")
-                    print("JSON Response (first 500 chars): \(String(jsonString.prefix(500)))")
-                }
-                #endif
+                AppLogger.network.debug("Failed to decode JSON from endpoint: \(endpoint.fullURL, privacy: .public)")
+                AppLogger.network.debug("JSON Response (truncated): \(String(data.prefix(500).map { Character(UnicodeScalar($0)) }), privacy: .public)")
                 throw APIError.decodingError(directError)
             }
         }
@@ -253,12 +250,8 @@ class APIClient {
 
                 return result
             } catch let directError {
-                #if DEBUG
-                if let jsonString = String(data: data, encoding: .utf8) {
-                    print("Failed to decode JSON from URL: \(url)")
-                    print("JSON Response (first 500 chars): \(String(jsonString.prefix(500)))")
-                }
-                #endif
+                AppLogger.network.debug("Failed to decode JSON from URL: \(url, privacy: .public)")
+                AppLogger.network.debug("JSON Response (truncated): \(String(data.prefix(500).map { Character(UnicodeScalar($0)) }), privacy: .public)")
                 throw APIError.decodingError(directError)
             }
         }
@@ -272,9 +265,7 @@ class APIClient {
     private func fetchDataDeduplicated(url: URL, requestKey: String) async throws -> Data {
         // Check if there's already an in-flight request for this URL
         if let existingTask = await requestDeduplicator.getExistingTask(for: requestKey) {
-            #if DEBUG
-            print("♻️ Reusing in-flight request for: \(requestKey.prefix(80))...")
-            #endif
+            AppLogger.network.debug("Reusing in-flight request for: \(requestKey.prefix(80), privacy: .public)")
             return try await existingTask.value
         }
 
@@ -314,9 +305,7 @@ class APIClient {
                             retryAfter = pow(2.0, Double(retryCount))
                         }
 
-                        #if DEBUG
-                        print("⏱️ Rate limited (429). Retry \(retryCount)/\(maxRetries) after \(retryAfter)s")
-                        #endif
+                        AppLogger.network.debug("Rate limited (429). Retry \(retryCount, privacy: .public)/\(maxRetries, privacy: .public) after \(retryAfter, privacy: .public)s")
 
                         try await Task.sleep(for: .seconds(retryAfter))
                         continue
@@ -334,9 +323,7 @@ class APIClient {
                     if (error as? URLError) != nil && retryCount < maxRetries - 1 {
                         retryCount += 1
                         let backoffDelay = pow(2.0, Double(retryCount))
-                        #if DEBUG
-                        print("🔄 Network error. Retry \(retryCount)/\(maxRetries) after \(backoffDelay)s")
-                        #endif
+                        AppLogger.network.debug("Network error. Retry \(retryCount, privacy: .public)/\(maxRetries, privacy: .public) after \(backoffDelay, privacy: .public)s")
                         try await Task.sleep(for: .seconds(backoffDelay))
                         continue
                     }
@@ -380,9 +367,7 @@ class APIClient {
             let entryData = try Self.encoder.encode(cacheEntry)
             try entryData.write(to: cacheFileURL(forKey: key), options: .atomic)
         } catch {
-            #if DEBUG
-            print("❌ Failed to cache data: \(error)")
-            #endif
+            AppLogger.network.error("Failed to cache data: \(error.localizedDescription, privacy: .public)")
         }
     }
 

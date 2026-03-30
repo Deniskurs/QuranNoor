@@ -8,6 +8,7 @@
 
 import AVFoundation
 import Observation
+import os
 
 /// Types of audio usage in the app
 enum AudioUsageType {
@@ -56,9 +57,7 @@ final class AudioSessionManager {
         if currentUsage != usage {
             try audioSession.setCategory(category, mode: mode, options: options)
 
-            #if DEBUG
-            print("🔊 AudioSessionManager: Configured for \(usage) - category: \(category), mode: \(mode)")
-            #endif
+            AppLogger.audio.debug("AudioSessionManager: Configured for \(String(describing: usage), privacy: .public) - category: \(category.rawValue, privacy: .public), mode: \(mode.rawValue, privacy: .public)")
         }
 
         // Activate session if not already active
@@ -102,9 +101,7 @@ final class AudioSessionManager {
         usageStack.removeAll()
         currentUsage = nil
 
-        #if DEBUG
-        print("🔊 AudioSessionManager: Session deactivated")
-        #endif
+        AppLogger.audio.debug("AudioSessionManager: Session deactivated")
     }
 
     // MARK: - Private Methods
@@ -166,9 +163,7 @@ final class AudioSessionManager {
         case .began:
             // Interruption began (phone call, Siri, etc.)
             // Services should pause their playback
-            #if DEBUG
-            print("🔊 AudioSessionManager: Interruption began")
-            #endif
+            AppLogger.audio.debug("AudioSessionManager: Interruption began")
 
         case .ended:
             // Mark session as inactive so the next configureSession call re-activates it.
@@ -179,9 +174,7 @@ final class AudioSessionManager {
                 let options = AVAudioSession.InterruptionOptions(rawValue: optionsValue)
                 if options.contains(.shouldResume) {
                     // Can resume playback - services should handle this
-                    #if DEBUG
-                    print("🔊 AudioSessionManager: Interruption ended - should resume")
-                    #endif
+                    AppLogger.audio.debug("AudioSessionManager: Interruption ended - should resume")
                 }
             }
 

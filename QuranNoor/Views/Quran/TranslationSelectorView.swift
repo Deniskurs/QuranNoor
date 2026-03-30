@@ -35,7 +35,7 @@ struct TranslationSelectorView: View {
                         )
                         .contentShape(Rectangle())
                         .onTapGesture {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            withAnimation(AppAnimation.fast) {
                                 preferences.primaryTranslation = edition
                                 QuranService.shared.setPrimaryTranslation(edition)
                                 onSelect(edition)

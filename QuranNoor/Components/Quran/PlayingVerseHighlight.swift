@@ -18,12 +18,12 @@ struct PlayingVerseHighlight: ViewModifier {
                 // Multi-layer highlight
                 ZStack(alignment: .leading) {
                     // Background fill
-                    RoundedRectangle(cornerRadius: 12)
+                    RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                         .fill(accentColor.opacity(isPlaying ? 0.08 : 0))
 
                     // Leading accent bar (manuscript margin marker)
                     if isPlaying {
-                        RoundedRectangle(cornerRadius: 1.5)
+                        RoundedRectangle(cornerRadius: 1.5, style: .continuous)
                             .fill(accentColor)
                             .frame(width: 3)
                             .padding(.vertical, 4)
@@ -31,11 +31,11 @@ struct PlayingVerseHighlight: ViewModifier {
                 }
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                     .stroke(accentColor.opacity(isPlaying ? 0.25 : 0), lineWidth: 1.5)
             )
             .shadow(color: accentColor.opacity(isPlaying ? 0.10 : 0), radius: 8, x: 0, y: 0)
-            .animation(.easeInOut(duration: 0.4), value: isPlaying)
+            .animation(AppAnimation.standard, value: isPlaying)
     }
 }
 

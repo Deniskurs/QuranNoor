@@ -24,7 +24,7 @@ struct FontSizePickerView: View {
                         )
                         .contentShape(Rectangle())
                         .onTapGesture {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            withAnimation(AppAnimation.fast) {
                                 settings.setFontSize(fontSize)
                             }
                         }
@@ -48,10 +48,11 @@ struct FontSizePickerView: View {
 
                         // Arabic preview
                         Text("بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ")
-                            .font(AppTypography.arabicScalable(size: settings.fontSize.arabicSize))
+                            .font(AppTypography.arabicFont(for: settings.mushafType, size: settings.fontSize.arabicSize))
                             .lineSpacing(settings.fontSize.lineSpacing)
                             .foregroundColor(themeManager.currentTheme.textPrimary)
                             .multilineTextAlignment(.center)
+                            .environment(\.layoutDirection, .rightToLeft)
                             .frame(maxWidth: .infinity)
                             .padding()
 
@@ -142,7 +143,7 @@ struct FontSizeRow: View {
 
             // Preview icon size
             Text("أ")
-                .font(AppTypography.arabicScalable(size: fontSize.arabicSize * 0.7))
+                .font(AppTypography.arabicFont(for: QuranSettingsService.shared.mushafType, size: fontSize.arabicSize * 0.7))
                 .foregroundColor(themeManager.currentTheme.textSecondary.opacity(0.5))
         }
         .padding(.vertical, 8)

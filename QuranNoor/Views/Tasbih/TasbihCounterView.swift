@@ -175,7 +175,7 @@ struct TasbihCounterView: View {
                 }
                 .padding()
                 .background(
-                    RoundedRectangle(cornerRadius: 12)
+                    RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                         .fill(.ultraThinMaterial)
                 )
             }
@@ -204,7 +204,7 @@ struct TasbihCounterView: View {
                 }
                 .padding()
                 .background(
-                    RoundedRectangle(cornerRadius: 12)
+                    RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                         .fill(.ultraThinMaterial)
                 )
             }
@@ -288,10 +288,11 @@ struct TasbihCounterView: View {
                 Text(selectedPreset.arabicText)
                     .font(.system(size: 32, weight: .medium))
                     .multilineTextAlignment(.center)
+                    .environment(\.layoutDirection, .rightToLeft)
                     .padding()
                     .frame(maxWidth: .infinity)
                     .background(
-                        RoundedRectangle(cornerRadius: 16)
+                        RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous)
                             .fill(.ultraThinMaterial)
                     )
             }
@@ -314,7 +315,7 @@ struct TasbihCounterView: View {
                 .multilineTextAlignment(.center)
                 .padding()
                 .background(
-                    RoundedRectangle(cornerRadius: 12)
+                    RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                         .fill(.ultraThinMaterial)
                 )
             }
@@ -338,7 +339,7 @@ struct TasbihCounterView: View {
                 .frame(maxWidth: .infinity)
                 .padding()
                 .background(
-                    RoundedRectangle(cornerRadius: 12)
+                    RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                         .fill(.ultraThinMaterial)
                 )
             }
@@ -357,7 +358,7 @@ struct TasbihCounterView: View {
                 .frame(maxWidth: .infinity)
                 .padding()
                 .background(
-                    RoundedRectangle(cornerRadius: 12)
+                    RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                         .fill(.ultraThinMaterial)
                 )
             }
@@ -378,7 +379,7 @@ struct TasbihCounterView: View {
                 .frame(maxWidth: .infinity)
                 .padding()
                 .background(
-                    RoundedRectangle(cornerRadius: 12)
+                    RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                         .fill(.ultraThinMaterial)
                 )
             }

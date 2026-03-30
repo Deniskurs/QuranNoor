@@ -55,9 +55,10 @@ struct WelcomePermissionsView: View {
 
                 // MARK: - Bismillah (Visual Centerpiece)
                 Text("بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ")
-                    .font(.custom("KFGQPC HAFS Uthmanic Script Regular", size: 28))
+                    .font(AppTypography.arabicScalable(size: 28))
                     .foregroundColor(theme.textPrimary)
                     .multilineTextAlignment(.center)
+                    .environment(\.layoutDirection, .rightToLeft)
                     .opacity(animationPhase.bismillahOpacity)
                     .scaleEffect(animationPhase.bismillahScale)
                     .padding(.horizontal, Spacing.screenHorizontal)
@@ -94,7 +95,7 @@ struct WelcomePermissionsView: View {
                 }
                 .padding(.horizontal, Spacing.screenHorizontal)
                 .opacity(animationPhase == .visible ? 1 : 0)
-                .animation(.easeOut(duration: 0.4).delay(0.3), value: animationPhase)
+                .animation(AppAnimation.standard.delay(0.3), value: animationPhase)
 
                 // MARK: - Permission Cards
                 VStack(spacing: Spacing.sm) {
@@ -132,7 +133,7 @@ struct WelcomePermissionsView: View {
                 }
                 .padding(.horizontal, Spacing.screenHorizontal)
                 .opacity(animationPhase == .visible ? 1 : 0)
-                .animation(.easeOut(duration: 0.4).delay(0.5), value: animationPhase)
+                .animation(AppAnimation.standard.delay(0.5), value: animationPhase)
 
                 Spacer(minLength: Spacing.xxl + 60) // Room for button
             }
@@ -177,7 +178,7 @@ struct WelcomePermissionsView: View {
         }
         .onAppear {
             // Animate entrance
-            withAnimation(.easeOut(duration: 0.8)) {
+            withAnimation(AppAnimation.expressive) {
                 animationPhase = .visible
             }
         }
@@ -224,6 +225,8 @@ struct WelcomePermissionsView: View {
                 switch status {
                 case .granted:
                     coordinator.updateNotificationPermission(.granted)
+                    // Enable in-app notification preferences to match the OS permission
+                    NotificationPreferencesService.shared.enableAllNotifications()
                     feedbackCoordinator.playSuccess()
                 case .denied:
                     coordinator.updateNotificationPermission(.denied)

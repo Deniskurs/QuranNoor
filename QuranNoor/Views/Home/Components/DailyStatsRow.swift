@@ -82,7 +82,7 @@ struct HomeStatCard: View {
                     .font(.system(size: FontSizes.xxl + 4))
                     .foregroundColor(iconColor)
                     .scaleEffect(scale)
-                    .animation(.spring(response: 0.6, dampingFraction: 0.7), value: scale)
+                    .animation(AppAnimation.expressive, value: scale)
 
                 // Value
                 Text(value)

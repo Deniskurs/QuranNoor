@@ -260,7 +260,7 @@ private struct MenuItemButtonStyle: ButtonStyle {
         configuration.label
             .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
             .opacity(configuration.isPressed ? 0.7 : 1.0)
-            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: configuration.isPressed)
+            .animation(AppAnimation.fast, value: configuration.isPressed)
     }
 }
 
@@ -388,8 +388,9 @@ struct AboutView: View {
                 .tracking(1.0)
 
             Text("نور القرآن")
-                .font(.custom("KFGQPCHAFSUthmanicScript-Regular", size: 24, relativeTo: .title2))
+                .font(AppTypography.arabicScalable(size: 24))
                 .foregroundColor(theme.accent)
+                .environment(\.layoutDirection, .rightToLeft)
 
             // Version badge
             Text("Version 1.0.0")
@@ -494,8 +495,9 @@ struct AboutView: View {
                 .foregroundColor(theme.textTertiary)
 
             Text("بسم الله الرحمن الرحيم")
-                .font(.custom("KFGQPCHAFSUthmanicScript-Regular", size: 16, relativeTo: .caption))
+                .font(AppTypography.arabicScalable(size: 16))
                 .foregroundColor(theme.accentMuted)
+                .environment(\.layoutDirection, .rightToLeft)
         }
         .padding(.vertical, Spacing.md)
     }

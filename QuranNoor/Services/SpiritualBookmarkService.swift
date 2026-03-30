@@ -8,6 +8,7 @@
 
 import Foundation
 import Observation
+import os
 
 /// Service for managing spiritual content bookmarks
 @Observable
@@ -59,9 +60,7 @@ final class SpiritualBookmarkService {
             let data = try Self.encoder.encode(bookmarks)
             userDefaults.set(data, forKey: bookmarksKey)
         } catch {
-            #if DEBUG
-            print("❌ Failed to save spiritual bookmarks: \(error)")
-            #endif
+            AppLogger.data.error("Failed to save spiritual bookmarks: \(error.localizedDescription, privacy: .public)")
         }
     }
 

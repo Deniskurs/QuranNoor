@@ -108,10 +108,7 @@ struct DepletingProgressRing: View {
 
     private func startPulsing() {
         guard isViewVisible else { return }
-        withAnimation(
-            .easeInOut(duration: urgencyLevel.pulseDuration)
-            .repeatForever(autoreverses: true)
-        ) {
+        withAnimation(AppAnimation.pulse(duration: urgencyLevel.pulseDuration)) {
             pulseScale = urgencyLevel.pulseScale
             pulseOpacity = 0.0
         }

@@ -148,7 +148,7 @@ struct OnboardingContainerView: View {
 
         // Update AppStorage to trigger app transition
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            withAnimation(.easeInOut(duration: 0.6)) {
+            withAnimation(AppAnimation.expressive) {
                 hasCompletedOnboarding = true
             }
         }
@@ -169,7 +169,7 @@ struct StepDotsView: View {
                 Capsule()
                     .fill(index == currentStep ? accentColor : inactiveColor)
                     .frame(width: index == currentStep ? 24 : 8, height: 8)
-                    .animation(.spring(response: 0.4), value: currentStep)
+                    .animation(AppAnimation.standard, value: currentStep)
             }
         }
         .accessibilityLabel("Step \(currentStep + 1) of \(totalSteps)")

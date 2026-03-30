@@ -8,6 +8,7 @@
 import Foundation
 import UserNotifications
 import Observation
+import os
 
 // MARK: - Notification Error
 enum NotificationError: LocalizedError {
@@ -503,13 +504,9 @@ extension NotificationService {
 
         do {
             try await center.add(request)
-            #if DEBUG
-            print("✅ Test notification scheduled for 5 seconds from now")
-            #endif
+            AppLogger.notification.debug("Test notification scheduled for 5 seconds from now")
         } catch {
-            #if DEBUG
-            print("❌ Failed to schedule test notification: \(error)")
-            #endif
+            AppLogger.notification.error("Failed to schedule test notification: \(error.localizedDescription, privacy: .public)")
         }
     }
 

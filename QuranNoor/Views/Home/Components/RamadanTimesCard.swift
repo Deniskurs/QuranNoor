@@ -85,12 +85,12 @@ struct RamadanTimesCard: View {
                                 .foregroundStyle(themeManager.currentTheme.textPrimary)
                                 .monospacedDigit()
                                 .contentTransition(.numericText(countsDown: true))
-                                .animation(.linear(duration: 0.3), value: countdownInfo.text)
+                                .animation(AppAnimation.linear, value: countdownInfo.text)
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, Spacing.xxxs + 2)
                         .background(
-                            RoundedRectangle(cornerRadius: BorderRadius.md)
+                            RoundedRectangle(cornerRadius: BorderRadius.md, style: .continuous)
                                 .fill(themeManager.currentTheme.accent.opacity(0.08))
                         )
                     }

@@ -7,6 +7,7 @@
 
 import Foundation
 import Observation
+import os
 
 @Observable
 @MainActor
@@ -93,9 +94,7 @@ class QuranViewModel {
             }
             errorMessage = nil
         } catch {
-            #if DEBUG
-            print("API refresh skipped (offline). Bundled data is active with \(surahs.count) surahs.")
-            #endif
+            AppLogger.quran.debug("API refresh skipped (offline). Bundled data is active with \(self.surahs.count, privacy: .public) surahs.")
         }
     }
 

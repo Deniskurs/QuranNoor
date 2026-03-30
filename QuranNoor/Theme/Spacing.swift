@@ -100,13 +100,54 @@ struct BorderRadius {
     static let full: CGFloat = 9999
 }
 
-// MARK: - Corner Radius (Convenience Alias)
-/// Standardized corner radius constants for consistent UI rounding.
-/// Preferred over ad-hoc magic numbers throughout the codebase.
+// MARK: - Corner Radius (Deprecated — use BorderRadius instead)
+/// Maps old CornerRadius values to BorderRadius for backward compatibility.
+/// All new code should use BorderRadius directly.
 enum CornerRadius {
-    static let sm: CGFloat = 8
-    static let md: CGFloat = 12
-    static let lg: CGFloat = 16
-    static let xl: CGFloat = 20
-    static let xxl: CGFloat = 24
+    static let sm: CGFloat = BorderRadius.md    // was 8  -> 8
+    static let md: CGFloat = BorderRadius.lg    // was 12 -> 12
+    static let lg: CGFloat = BorderRadius.xl    // was 16 -> 16
+    static let xl: CGFloat = BorderRadius.xxl   // was 20 -> 20
+    static let xxl: CGFloat = 24                // kept as-is, no BorderRadius equivalent
+}
+
+// MARK: - App Animation Presets
+/// Standardized animation curves for consistent motion throughout the app.
+/// Use these instead of ad-hoc .easeInOut / .easeOut / .spring calls.
+struct AppAnimation {
+    /// Fast micro-interactions: toggles, button presses, highlights (0.25s)
+    static let fast = Animation.spring(response: 0.25, dampingFraction: 0.85)
+
+    /// Standard transitions: card reveals, filter changes, state updates (0.4s)
+    static let standard = Animation.spring(response: 0.4, dampingFraction: 0.85)
+
+    /// Slow, expressive transitions: onboarding, hero sections, celebrations (0.55s)
+    static let expressive = Animation.spring(response: 0.55, dampingFraction: 0.8)
+
+    /// Bouncy feedback: checkboxes, completion taps, interactive confirmations
+    static let bouncy = Animation.spring(response: 0.3, dampingFraction: 0.6)
+
+    /// Gentle ease for content transitions where spring feels too physical
+    static let gentle = Animation.easeInOut(duration: 0.3)
+
+    /// Linear for progress bars and continuous value changes
+    static let linear = Animation.linear(duration: 0.25)
+
+    /// Continuous pulse for breathing/glow effects (default 1.5s cycle)
+    static let pulse = Animation.easeInOut(duration: 1.5).repeatForever(autoreverses: true)
+
+    /// Pulse with custom duration for urgency-based effects
+    static func pulse(duration: Double) -> Animation {
+        .easeInOut(duration: duration).repeatForever(autoreverses: true)
+    }
+
+    /// Smooth physics for compass/gyroscope rotation tracking
+    static let compass = Animation.spring(response: 0.6, dampingFraction: 0.8)
+}
+
+// MARK: - Smooth Shape Helper
+/// Creates a RoundedRectangle with .continuous style (Apple's superellipse).
+/// Use this everywhere instead of plain RoundedRectangle(cornerRadius:).
+func SmoothRoundedRectangle(cornerRadius: CGFloat) -> RoundedRectangle {
+    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
 }

@@ -136,7 +136,7 @@ struct TasbihHistoryView: View {
         }
         .padding()
         .background(
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous)
                 .fill(.ultraThinMaterial)
         )
     }
@@ -251,11 +251,11 @@ struct HistoryCard: View {
         }
         .padding()
         .background(
-            RoundedRectangle(cornerRadius: 12)
+            RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                 .fill(.ultraThinMaterial)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 12)
+            RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                 .stroke(entry.session.isCompleted ? .green : .clear, lineWidth: 1)
         )
     }

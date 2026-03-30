@@ -78,7 +78,7 @@ struct MadhabPickerView: View {
         }
         .padding()
         .background(
-            RoundedRectangle(cornerRadius: 12)
+            RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                 .fill(themeManager.currentTheme.accent.opacity(0.15))
         )
     }
@@ -113,7 +113,7 @@ struct MadhabPickerView: View {
         }
         .padding()
         .background(
-            RoundedRectangle(cornerRadius: 12)
+            RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                 .fill(
                     madhab == selectedMadhab
                         ? themeManager.currentTheme.accent.opacity(0.15)

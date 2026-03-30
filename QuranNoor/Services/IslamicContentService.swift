@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import os
 
 
 @MainActor
@@ -422,9 +423,7 @@ class IslamicContentService {
             return translation.text
 
         } catch {
-            #if DEBUG
-            print("⚠️ Failed to fetch verse \(surah):\(verse) from QuranService: \(error.localizedDescription)")
-            #endif
+            AppLogger.quran.warning("Failed to fetch verse \(surah, privacy: .public):\(verse, privacy: .public) from QuranService: \(error.localizedDescription, privacy: .public)")
 
             // Fallback to generic prayer verse
             return "Establish prayer, for prayer has been enjoined upon the believers at fixed times."

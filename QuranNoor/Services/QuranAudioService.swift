@@ -8,6 +8,7 @@
 import Foundation
 import AVFoundation
 import UIKit
+import os
 
 import MediaPlayer
 
@@ -155,6 +156,10 @@ class QuranAudioService: NSObject {
         }
     }
 
+    var repeatSettings: RepeatSettings = RepeatSettings() {
+        didSet { saveRepeatSettings() }
+    }
+
     // MARK: - Settings
     // Stored properties so @Observable can track mutations and notify SwiftUI views.
     var selectedReciter: Reciter = .misharyRashid {
@@ -217,6 +222,7 @@ class QuranAudioService: NSObject {
         let speed = UserDefaults.standard.float(forKey: "playback_speed")
         if speed != 0 { self.playbackSpeed = speed }
         self.continuousPlaybackEnabled = UserDefaults.standard.bool(forKey: "continuous_playback_enabled")
+        loadRepeatSettings()
     }
 
     private func ensureAudioSessionReady() {
@@ -257,9 +263,7 @@ class QuranAudioService: NSObject {
                 object: AVAudioSession.sharedInstance()
             )
         } catch {
-            #if DEBUG
-            print("Failed to setup audio session: \(error)")
-            #endif
+            AppLogger.audio.error("Failed to setup audio session: \(error.localizedDescription, privacy: .public)")
         }
     }
 
@@ -775,7 +779,139 @@ class QuranAudioService: NSObject {
 
     @objc private func playerDidFinishPlaying() {
         Task { @MainActor in
-            // Auto-advance to next verse if continuous playback is enabled
+            switch repeatSettings.repeatMode {
+            case .singleVerse:
+                repeatSettings.currentRepetition += 1
+                if !repeatSettings.hasCompletedAllRepetitions {
+                    // Replay the same verse after an optional delay
+                    if repeatSettings.delayBetweenRepeats > 0 {
+                        try? await Task.sleep(for: .seconds(repeatSettings.delayBetweenRepeats))
+                    }
+                    if let verse = currentVerse {
+                        do {
+                            try await play(verse: verse, preserveQueue: true)
+                        } catch {
+                            playbackState = .idle
+                            currentTime = 0
+                        }
+                    }
+                    return
+                }
+                // All repetitions done — fall through to normal advance/stop
+                repeatSettings.currentRepetition = 0
+
+            case .range:
+                let currentVerseNum = currentVerse?.verseNumber
+                let rangeEnd = repeatSettings.rangeEnd
+
+                // Determine whether we've just finished the last verse in the range
+                let atRangeEnd: Bool
+                if let end = rangeEnd, let current = currentVerseNum {
+                    atRangeEnd = current >= end
+                } else {
+                    // No explicit range configured — treat current verse as end
+                    atRangeEnd = true
+                }
+
+                if atRangeEnd {
+                    repeatSettings.currentRepetition += 1
+                    if !repeatSettings.hasCompletedAllRepetitions {
+                        // Jump back to rangeStart after an optional delay
+                        if repeatSettings.delayBetweenRepeats > 0 {
+                            try? await Task.sleep(for: .seconds(repeatSettings.delayBetweenRepeats))
+                        }
+                        // Find the verse in the queue that matches rangeStart
+                        if let startNum = repeatSettings.rangeStart,
+                           let startIndex = playingVerses.firstIndex(where: { $0.verseNumber == startNum }) {
+                            currentVerseIndex = startIndex
+                            do {
+                                try await play(verse: playingVerses[startIndex], preserveQueue: true)
+                            } catch {
+                                playbackState = .idle
+                                currentTime = 0
+                            }
+                        } else if !playingVerses.isEmpty {
+                            // Fallback: restart from the first verse in the queue
+                            currentVerseIndex = 0
+                            do {
+                                try await play(verse: playingVerses[0], preserveQueue: true)
+                            } catch {
+                                playbackState = .idle
+                                currentTime = 0
+                            }
+                        }
+                        return
+                    }
+                    // All repetitions done — fall through to normal advance/stop
+                    repeatSettings.currentRepetition = 0
+                } else {
+                    // Still within range — advance to the next verse normally
+                    if continuousPlaybackEnabled && currentVerseIndex < playingVerses.count - 1 {
+                        do {
+                            try await playNextVerse()
+                        } catch {
+                            playbackState = .idle
+                            currentTime = 0
+                        }
+                    } else {
+                        saveSession()
+                        playbackState = .idle
+                        currentTime = 0
+                        updateIdleTimerState()
+                    }
+                    return
+                }
+
+            case .surah:
+                let atLastVerse = currentVerseIndex >= playingVerses.count - 1
+                if atLastVerse {
+                    repeatSettings.currentRepetition += 1
+                    if !repeatSettings.hasCompletedAllRepetitions {
+                        // Restart the surah from the first verse after an optional delay
+                        if repeatSettings.delayBetweenRepeats > 0 {
+                            try? await Task.sleep(for: .seconds(repeatSettings.delayBetweenRepeats))
+                        }
+                        guard !playingVerses.isEmpty else {
+                            saveSession()
+                            playbackState = .idle
+                            currentTime = 0
+                            updateIdleTimerState()
+                            return
+                        }
+                        currentVerseIndex = 0
+                        do {
+                            try await play(verse: playingVerses[0], preserveQueue: true)
+                        } catch {
+                            playbackState = .idle
+                            currentTime = 0
+                        }
+                        return
+                    }
+                    // All repetitions done — fall through to normal advance/stop
+                    repeatSettings.currentRepetition = 0
+                } else {
+                    // Not at the last verse — advance normally
+                    if continuousPlaybackEnabled && currentVerseIndex < playingVerses.count - 1 {
+                        do {
+                            try await playNextVerse()
+                        } catch {
+                            playbackState = .idle
+                            currentTime = 0
+                        }
+                    } else {
+                        saveSession()
+                        playbackState = .idle
+                        currentTime = 0
+                        updateIdleTimerState()
+                    }
+                    return
+                }
+
+            case .off:
+                break
+            }
+
+            // Default behavior (repeat mode is .off, or all repetitions completed)
             if continuousPlaybackEnabled && currentVerseIndex < playingVerses.count - 1 {
                 do {
                     try await playNextVerse()
@@ -784,12 +920,53 @@ class QuranAudioService: NSObject {
                     currentTime = 0
                 }
             } else {
-                // Save session before stopping so resume is possible
                 saveSession()
                 playbackState = .idle
                 currentTime = 0
                 updateIdleTimerState()
             }
+        }
+    }
+
+    // MARK: - Repeat Mode Controls
+
+    /// Cycles the repeat mode to the next value and resets the repetition counter.
+    func cycleRepeatMode() {
+        repeatSettings.repeatMode = repeatSettings.repeatMode.next
+        repeatSettings.currentRepetition = 0
+    }
+
+    /// Sets the verse-range to repeat and switches to .range mode.
+    func setRepeatRange(start: Int, end: Int) {
+        repeatSettings.rangeStart = start
+        repeatSettings.rangeEnd = end
+        repeatSettings.repeatMode = .range
+        repeatSettings.currentRepetition = 0
+    }
+
+    /// Clears the verse-range and switches repeat mode off.
+    func clearRepeatRange() {
+        repeatSettings.rangeStart = nil
+        repeatSettings.rangeEnd = nil
+        repeatSettings.repeatMode = .off
+        repeatSettings.currentRepetition = 0
+    }
+
+    // MARK: - Repeat Settings Persistence
+
+    private func saveRepeatSettings() {
+        if let encoded = try? Self.encoder.encode(repeatSettings) {
+            UserDefaults.standard.set(encoded, forKey: "audio_repeat_settings")
+        }
+    }
+
+    private func loadRepeatSettings() {
+        if let data = UserDefaults.standard.data(forKey: "audio_repeat_settings"),
+           let settings = try? Self.decoder.decode(RepeatSettings.self, from: data) {
+            // Always reset in-progress repetition counter on launch
+            var loaded = settings
+            loaded.currentRepetition = 0
+            self.repeatSettings = loaded
         }
     }
 

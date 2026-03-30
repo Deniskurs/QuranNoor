@@ -71,7 +71,7 @@ struct QiblaTutorialOverlay: View {
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 14)
                             .background(
-                                RoundedRectangle(cornerRadius: BorderRadius.lg)
+                                RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                                     .fill(themeManager.currentTheme.accentMuted)
                             )
                     }
@@ -91,15 +91,15 @@ struct QiblaTutorialOverlay: View {
             .background(
                 ZStack {
                     // Frosted glass blur
-                    RoundedRectangle(cornerRadius: BorderRadius.xxl)
+                    RoundedRectangle(cornerRadius: BorderRadius.xxl, style: .continuous)
                         .fill(.ultraThinMaterial)
 
                     // Semi-transparent color overlay
-                    RoundedRectangle(cornerRadius: BorderRadius.xxl)
+                    RoundedRectangle(cornerRadius: BorderRadius.xxl, style: .continuous)
                         .fill(themeManager.currentTheme.cardColor.opacity(0.9))
 
                     // Subtle border
-                    RoundedRectangle(cornerRadius: BorderRadius.xxl)
+                    RoundedRectangle(cornerRadius: BorderRadius.xxl, style: .continuous)
                         .strokeBorder(
                             LinearGradient(
                                 colors: [
@@ -159,7 +159,7 @@ struct QiblaTutorialOverlay: View {
 
         HapticManager.shared.trigger(.light)
 
-        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+        withAnimation(AppAnimation.standard) {
             isPresented = false
         }
     }

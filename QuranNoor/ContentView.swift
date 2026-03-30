@@ -7,6 +7,7 @@
 
 import SwiftUI
 import UserNotifications
+import os
 
 struct ContentView: View {
     // MARK: - Properties
@@ -81,7 +82,7 @@ struct ContentView: View {
                 .zIndex(999)
             }
         }
-        .animation(.spring(response: 0.45, dampingFraction: 0.85), value: audioService.isFullPlayerPresented)
+        .animation(AppAnimation.standard, value: audioService.isFullPlayerPresented)
         .onChange(of: selectedTab) { oldValue, newValue in
             // Tab switching haptic feedback
             HapticManager.shared.trigger(.selection)
@@ -96,9 +97,7 @@ struct ContentView: View {
             if let destination = destination {
                 selectedTab = destination.tabIndex
 
-                #if DEBUG
-                print("Deep link navigation: \(destination.rawValue) -> Tab \(destination.tabIndex)")
-                #endif
+                AppLogger.navigation.debug("Deep link navigation: \(destination.rawValue, privacy: .public) -> Tab \(destination.tabIndex, privacy: .public)")
             }
         }
         // Listen for prayer tab navigation from notification tap

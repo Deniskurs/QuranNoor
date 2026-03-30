@@ -47,7 +47,7 @@ struct EdgeHighlightModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .overlay(
-                RoundedRectangle(cornerRadius: cornerRadius)
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                     .stroke(
                         LinearGradient(
                             colors: [
@@ -94,7 +94,7 @@ struct MeshGradientBackgroundModifier: ViewModifier {
                                 themeManager.currentTheme.cardColor.opacity(0.5)
                             ]
                         )
-                        .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+                        .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
                     } else {
                         // Fallback for iOS 17
                         RadialGradient(
@@ -106,7 +106,7 @@ struct MeshGradientBackgroundModifier: ViewModifier {
                             startRadius: 0,
                             endRadius: 200
                         )
-                        .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+                        .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
                     }
                 }
             )

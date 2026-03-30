@@ -8,6 +8,7 @@
 
 import Foundation
 import Observation
+import os
 
 /// Service for managing prayer time adjustments (offsets)
 @Observable
@@ -77,9 +78,7 @@ final class PrayerTimeAdjustmentService {
         // Log change
         if clampedMinutes != oldValue {
             let change = clampedMinutes - oldValue
-            #if DEBUG
-            print("⚙️ Adjusted \(prayer.displayName): \(formatAdjustment(clampedMinutes)) (\(change > 0 ? "+" : "")\(change) min)")
-            #endif
+            AppLogger.prayer.debug("Adjusted \(prayer.displayName, privacy: .public): \(self.formatAdjustment(clampedMinutes), privacy: .public) (\(change > 0 ? "+" : "", privacy: .public)\(change) min)")
 
             // Post notification to refresh prayer times
             NotificationCenter.default.post(name: .prayerAdjustmentsChanged, object: nil)
@@ -91,9 +90,7 @@ final class PrayerTimeAdjustmentService {
     func resetAdjustment(for prayer: PrayerName) {
         adjustments[prayer] = 0
         saveAdjustments()
-        #if DEBUG
-        print("↩️ Reset \(prayer.displayName) adjustment to 0")
-        #endif
+        AppLogger.prayer.debug("Reset \(prayer.displayName, privacy: .public) adjustment to 0")
 
         // Post notification to refresh prayer times
         NotificationCenter.default.post(name: .prayerAdjustmentsChanged, object: nil)
@@ -103,9 +100,7 @@ final class PrayerTimeAdjustmentService {
     func resetAllAdjustments() {
         adjustments = Dictionary(uniqueKeysWithValues: PrayerName.allCases.map { ($0, 0) })
         saveAdjustments()
-        #if DEBUG
-        print("↩️ Reset all prayer time adjustments")
-        #endif
+        AppLogger.prayer.debug("Reset all prayer time adjustments")
 
         // Post notification to refresh prayer times
         NotificationCenter.default.post(name: .prayerAdjustmentsChanged, object: nil)
@@ -222,15 +217,13 @@ final class PrayerTimeAdjustmentService {
         }
 
         // Log loaded adjustments
-        #if DEBUG
         let activeAdjustments = adjustments.filter { $0.value != 0 }
         if !activeAdjustments.isEmpty {
-            print("⚙️ Loaded prayer time adjustments:")
+            AppLogger.prayer.debug("Loaded prayer time adjustments:")
             for (prayer, minutes) in activeAdjustments.sorted(by: { $0.key.rawValue < $1.key.rawValue }) {
-                print("   \(prayer.displayName): \(formatAdjustment(minutes))")
+                AppLogger.prayer.debug("   \(prayer.displayName, privacy: .public): \(self.formatAdjustment(minutes), privacy: .public)")
             }
         }
-        #endif
     }
 }
 

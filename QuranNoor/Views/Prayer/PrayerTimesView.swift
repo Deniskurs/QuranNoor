@@ -241,7 +241,7 @@ struct PrayerTimesView: View {
            !PrayerCompletionService.shared.isCompleted(currentPrayer) {
             try? await Task.sleep(nanoseconds: 1_000_000_000)
 
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+            withAnimation(AppAnimation.expressive) {
                 showPrayerReminder = true
                 hasShownReminderThisSession = true
             }
@@ -583,7 +583,7 @@ struct PrayerTimesView: View {
         .padding(.horizontal, Spacing.sm)
         .padding(.vertical, Spacing.xs)
         .background(
-            RoundedRectangle(cornerRadius: BorderRadius.md)
+            RoundedRectangle(cornerRadius: BorderRadius.md, style: .continuous)
                 .fill(themeManager.currentTheme.accent.opacity(0.08))
         )
         .accessibilityElement(children: .combine)

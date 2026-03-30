@@ -109,6 +109,7 @@ struct NameDetailView: View {
             Text(name.arabicName)
                 .font(.system(size: 48, weight: .medium))
                 .multilineTextAlignment(.center)
+                .environment(\.layoutDirection, .rightToLeft)
                 .foregroundStyle(
                     .linearGradient(
                         colors: [themeManager.currentTheme.accent, themeManager.currentTheme.accentMuted],
@@ -120,7 +121,7 @@ struct NameDetailView: View {
         .padding()
         .frame(maxWidth: .infinity)
         .background(
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous)
                 .fill(.ultraThinMaterial)
         )
     }
@@ -159,7 +160,7 @@ struct NameDetailView: View {
         }
         .padding()
         .background(
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous)
                 .fill(.ultraThinMaterial)
         )
     }
@@ -182,7 +183,7 @@ struct NameDetailView: View {
         }
         .padding()
         .background(
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous)
                 .fill(themeManager.currentTheme.accentTint)
         )
     }
@@ -205,7 +206,7 @@ struct NameDetailView: View {
         }
         .padding()
         .background(
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous)
                 .fill(.yellow.opacity(0.1))
         )
     }
@@ -248,7 +249,7 @@ struct NameDetailView: View {
                 .frame(maxWidth: .infinity)
                 .padding()
                 .background(
-                    RoundedRectangle(cornerRadius: 12)
+                    RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                         .fill(isLearned ? themeManager.currentTheme.accent.opacity(0.2) : Color.gray.opacity(0.1))
                 )
             }
@@ -267,7 +268,7 @@ struct NameDetailView: View {
                 .frame(maxWidth: .infinity)
                 .padding()
                 .background(
-                    RoundedRectangle(cornerRadius: 12)
+                    RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                         .fill(.ultraThinMaterial)
                 )
             }

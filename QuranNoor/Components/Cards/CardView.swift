@@ -62,14 +62,14 @@ struct CardView<Content: View>: View {
 
         ZStack {
             // Glass background
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
+            RoundedRectangle(cornerRadius: BorderRadius.xxl, style: .continuous)
                 .fill(intensity.materialStyle)
                 .background(
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    RoundedRectangle(cornerRadius: BorderRadius.xxl, style: .continuous)
                         .fill(glassBackgroundTint(for: theme))
                 )
                 .overlay(
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    RoundedRectangle(cornerRadius: BorderRadius.xxl, style: .continuous)
                         .strokeBorder(
                             LinearGradient(
                                 colors: [
@@ -90,7 +90,7 @@ struct CardView<Content: View>: View {
             if showPattern {
                 IslamicPatternView(patternColor: theme.accentMuted)
                     .opacity(0.04)
-                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: BorderRadius.xxl, style: .continuous))
                     .drawingGroup()
             }
 

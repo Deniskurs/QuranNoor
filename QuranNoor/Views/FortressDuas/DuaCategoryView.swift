@@ -84,7 +84,7 @@ struct DuaCategoryView: View {
         .padding()
         .frame(maxWidth: .infinity)
         .background(
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous)
                 .fill(.ultraThinMaterial)
         )
     }
@@ -141,7 +141,9 @@ struct FortressDuaDetailCard: View {
                 Text(dua.arabicText)
                     .font(.title3)
                     .lineSpacing(8)
+                    .multilineTextAlignment(.trailing)
                     .frame(maxWidth: .infinity, alignment: .trailing)
+                    .environment(\.layoutDirection, .rightToLeft)
                     .padding(.vertical, 8)
 
                 // Transliteration
@@ -178,11 +180,11 @@ struct FortressDuaDetailCard: View {
             }
             .padding()
             .background(
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                     .fill(.ultraThinMaterial)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                     .stroke(isFavorite ? .red.opacity(0.3) : .clear, lineWidth: 2)
             )
         }

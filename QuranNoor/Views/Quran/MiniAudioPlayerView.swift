@@ -80,14 +80,14 @@ struct MiniAudioPlayerView: View {
                 .padding(.horizontal, Spacing.sm)
                 .padding(.vertical, Spacing.xs)
             }
-            .clipShape(RoundedRectangle(cornerRadius: BorderRadius.xl))
+            .clipShape(RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous))
             .background(
-                RoundedRectangle(cornerRadius: BorderRadius.xl)
+                RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous)
                     .fill(theme.cardColor)
                     .shadow(color: theme.cardShadow, radius: theme.cardShadowRadius / 2, x: 0, y: -2)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: BorderRadius.xl)
+                RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous)
                     .stroke(theme.accent.opacity(0.15), lineWidth: 0.5)
             )
             .scaleEffect(isDragging ? 1.02 : 1.0)
@@ -112,14 +112,14 @@ struct MiniAudioPlayerView: View {
                             HapticManager.shared.trigger(.medium)
                             onTap()
                         }
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        withAnimation(AppAnimation.fast) {
                             dragOffset = 0
                         }
                     }
             )
             .padding(.horizontal, Spacing.screenHorizontal)
             .transition(.move(edge: .bottom).combined(with: .opacity))
-            .animation(.spring(response: 0.35, dampingFraction: 0.8), value: audioService.hasActivePlayback)
+            .animation(AppAnimation.fast, value: audioService.hasActivePlayback)
         }
     }
 

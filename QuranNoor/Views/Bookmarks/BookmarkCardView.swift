@@ -67,7 +67,7 @@ struct SpiritualBookmarkCard: View {
             .background(themeManager.currentTheme.cardColor)
             .cornerRadius(BorderRadius.lg)
             .overlay(
-                RoundedRectangle(cornerRadius: BorderRadius.lg)
+                RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                     .strokeBorder(accentColor.opacity(0.15), lineWidth: 1)
             )
         }
@@ -169,7 +169,7 @@ struct QuranBookmarkCard: View {
             .background(themeManager.currentTheme.cardColor)
             .cornerRadius(BorderRadius.lg)
             .overlay(
-                RoundedRectangle(cornerRadius: BorderRadius.lg)
+                RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                     .strokeBorder(themeManager.currentTheme.accent.opacity(0.15), lineWidth: 1)
             )
         }

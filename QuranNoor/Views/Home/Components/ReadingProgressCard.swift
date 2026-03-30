@@ -64,7 +64,7 @@ struct ReadingProgressCard: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
                 .background(themeManager.currentTheme.accent)
-                .cornerRadius(12)
+                .clipShape(RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous))
             }
             .padding(.horizontal, 20)
 

@@ -44,7 +44,7 @@ struct HomeView: View {
                 if showWelcomeMoment {
                     WelcomeMomentView(selectedTab: $selectedTab) {
                         UserDefaults.standard.set(true, forKey: "hasSeenWelcomeMoment")
-                        withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                        withAnimation(AppAnimation.expressive) {
                             showWelcomeMoment = false
                         }
                     }
@@ -110,7 +110,7 @@ struct HomeView: View {
                     // Mark as launched after user interacts
                     UserDefaults.standard.set(true, forKey: "hasLaunchedBefore")
 
-                    withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                    withAnimation(AppAnimation.expressive) {
                         showFirstTimeExperience = false
                     }
 
@@ -119,7 +119,7 @@ struct HomeView: View {
                         try? await Task.sleep(for: .milliseconds(500))
                         let hasSeenWelcome = UserDefaults.standard.bool(forKey: "hasSeenWelcomeMoment")
                         if !hasSeenWelcome {
-                            withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                            withAnimation(AppAnimation.expressive) {
                                 showWelcomeMoment = true
                             }
                         }

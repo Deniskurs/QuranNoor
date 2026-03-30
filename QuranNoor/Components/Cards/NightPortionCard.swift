@@ -82,12 +82,12 @@ struct NightPortionCard: View {
         GeometryReader { geometry in
             ZStack(alignment: .leading) {
                 // Background bar
-                RoundedRectangle(cornerRadius: 8)
+                RoundedRectangle(cornerRadius: BorderRadius.md, style: .continuous)
                     .fill(themeManager.currentTheme.textPrimary.opacity(0.1))
                     .frame(height: 40)
 
                 // Night duration gradient
-                RoundedRectangle(cornerRadius: 8)
+                RoundedRectangle(cornerRadius: BorderRadius.md, style: .continuous)
                     .fill(
                         LinearGradient(
                             colors: [
@@ -166,7 +166,7 @@ struct NightPortionCard: View {
         .padding(.vertical, 4)
         .padding(.horizontal, 8)
         .background(
-            RoundedRectangle(cornerRadius: 8)
+            RoundedRectangle(cornerRadius: BorderRadius.md, style: .continuous)
                 .fill(highlighted ? color.opacity(0.1) : Color.clear)
         )
     }
@@ -207,7 +207,7 @@ struct CompactNightPortionInfo: View {
             }
             .padding()
             .background(
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                     .fill(themeManager.currentTheme.accent.opacity(0.1))
             )
         }

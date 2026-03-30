@@ -90,7 +90,7 @@ struct ToastView: View {
                     Button {
                         HapticManager.shared.trigger(.light)
                         onUndo()
-                        withAnimation(.easeOut(duration: 0.2)) {
+                        withAnimation(AppAnimation.fast) {
                             isPresented = false
                         }
                     } label: {
@@ -103,7 +103,7 @@ struct ToastView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
             .background(
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                     .fill(themeManager.currentTheme.cardColor)
                     .shadow(
                         color: themeManager.currentTheme.textPrimary.opacity(0.15),
@@ -113,7 +113,7 @@ struct ToastView: View {
                     )
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                     .stroke(style.color(for: themeManager.currentTheme).opacity(0.3), lineWidth: 1)
             )
             .padding(.horizontal, 20)
@@ -125,7 +125,7 @@ struct ToastView: View {
             ))
             .onAppear {
                 // Slide in from top with bounce
-                withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                withAnimation(AppAnimation.standard) {
                     offset = 0
                     opacity = 1
                 }
@@ -155,7 +155,7 @@ struct ToastView: View {
 
     // MARK: - Methods
     private func dismissToast() {
-        withAnimation(.easeOut(duration: 0.3)) {
+        withAnimation(AppAnimation.gentle) {
             offset = -100
             opacity = 0
         }

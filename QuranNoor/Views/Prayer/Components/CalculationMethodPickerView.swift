@@ -76,7 +76,7 @@ struct CalculationMethodPickerView: View {
         }
         .padding()
         .background(
-            RoundedRectangle(cornerRadius: 12)
+            RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                 .fill(
                     method == selectedMethod
                         ? themeManager.currentTheme.accent.opacity(0.15)

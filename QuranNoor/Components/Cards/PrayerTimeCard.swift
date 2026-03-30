@@ -65,7 +65,7 @@ struct PrayerTimeCard: View {
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 4)
                                 .background(themeManager.currentTheme.accent)
-                                .cornerRadius(6)
+                                .clipShape(RoundedRectangle(cornerRadius: BorderRadius.sm, style: .continuous))
                         }
 
                         // Prayer name
@@ -187,7 +187,7 @@ struct CompactPrayerTimeCard: View {
         .padding(.vertical, 12)
         .padding(.horizontal, 16)
         .background(
-            RoundedRectangle(cornerRadius: 12)
+            RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                 .fill(isNext ? themeManager.currentTheme.accent.opacity(0.1) : Color.clear)
         )
     }

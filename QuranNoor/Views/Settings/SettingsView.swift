@@ -7,6 +7,7 @@
 
 import SwiftUI
 import StoreKit
+import os
 
 struct SettingsView: View {
     // MARK: - Properties
@@ -430,9 +431,7 @@ struct SettingsView: View {
         UserDefaults.standard.removeObject(forKey: "hasCompletedOnboarding")
         AudioHapticCoordinator.shared.playSuccess()
 
-        #if DEBUG
-        print("Onboarding reset! Restart the app to see onboarding again.")
-        #endif
+        AppLogger.settings.debug("Onboarding reset! Restart the app to see onboarding again.")
     }
 
     private func testAudioPlayback() {
@@ -491,9 +490,7 @@ struct SettingsView: View {
 
         AudioHapticCoordinator.shared.playSuccess()
 
-        #if DEBUG
-        print("All app data deleted")
-        #endif
+        AppLogger.settings.debug("All app data deleted")
     }
 
     private func clearCachedFiles() {
@@ -505,9 +502,7 @@ struct SettingsView: View {
                     try? fileManager.removeItem(at: file)
                 }
             } catch {
-                #if DEBUG
-                print("Failed to clear cache: \(error)")
-                #endif
+                AppLogger.settings.error("Failed to clear cache: \(error.localizedDescription, privacy: .public)")
             }
         }
     }

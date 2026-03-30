@@ -47,7 +47,7 @@ struct SpecialTimeCard: View {
         }
         .padding()
         .background(
-            RoundedRectangle(cornerRadius: 12)
+            RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                 .fill(
                     highlight
                         ? themeManager.currentTheme.accent.opacity(0.1)
@@ -164,7 +164,7 @@ struct CompactSpecialTimeCard: View {
             }
             .padding()
             .background(
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                     .fill(ThemeManager().currentTheme.cardColor)
             )
         }

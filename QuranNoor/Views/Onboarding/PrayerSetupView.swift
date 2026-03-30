@@ -9,6 +9,7 @@
 import SwiftUI
 import CoreLocation
 import MapKit
+import os
 
 struct PrayerSetupView: View {
     // MARK: - Properties
@@ -135,7 +136,7 @@ struct PrayerSetupView: View {
                 }
                 .padding(Spacing.sm)
                 .background(
-                    RoundedRectangle(cornerRadius: CornerRadius.lg)
+                    RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous)
                         .fill(theme.cardColor)
                 )
                 .padding(.horizontal, Spacing.screenHorizontal)
@@ -156,11 +157,11 @@ struct PrayerSetupView: View {
                         .foregroundColor(theme.textPrimary)
                         .padding(Spacing.sm)
                         .background(
-                            RoundedRectangle(cornerRadius: CornerRadius.md)
+                            RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                                 .fill(theme.backgroundColor.opacity(0.5))
                         )
                         .overlay(
-                            RoundedRectangle(cornerRadius: CornerRadius.md)
+                            RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                                 .stroke(
                                     isNameFieldFocused ? theme.accent : theme.borderColor,
                                     lineWidth: isNameFieldFocused ? 2 : 1
@@ -187,7 +188,7 @@ struct PrayerSetupView: View {
                 }
                 .padding(Spacing.sm)
                 .background(
-                    RoundedRectangle(cornerRadius: CornerRadius.lg)
+                    RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous)
                         .fill(theme.cardColor)
                 )
                 .padding(.horizontal, Spacing.screenHorizontal)
@@ -276,9 +277,7 @@ struct PrayerSetupView: View {
                 }
             }
         } catch {
-            #if DEBUG
-            print("MapKit search error: \(error)")
-            #endif
+            AppLogger.prayer.error("MapKit search error: \(error.localizedDescription, privacy: .public)")
         }
     }
 }

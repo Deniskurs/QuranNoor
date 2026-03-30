@@ -66,19 +66,19 @@ struct SubtleCelebrationView: View {
     private func startCelebration() {
         if reduceMotion {
             // Static glow for reduced motion
-            withAnimation(.easeIn(duration: 0.3)) {
+            withAnimation(AppAnimation.gentle) {
                 glowOpacity = 0.6
                 borderOpacity = 0.8
             }
         } else {
             // Animated glow
-            withAnimation(.easeIn(duration: 0.5)) {
+            withAnimation(AppAnimation.standard) {
                 glowOpacity = 0.6
                 borderOpacity = 0.8
             }
 
             // Continuous pulse
-            withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
+            withAnimation(AppAnimation.pulse) {
                 pulseScale = 1.02
                 glowOpacity = 0.8
             }
@@ -86,7 +86,7 @@ struct SubtleCelebrationView: View {
     }
 
     private func stopCelebration() {
-        withAnimation(.easeOut(duration: 0.3)) {
+        withAnimation(AppAnimation.gentle) {
             glowOpacity = 0
             borderOpacity = 0
             pulseScale = 1.0
@@ -158,7 +158,7 @@ struct CelebrationCompletionCard: View {
                                     style: StrokeStyle(lineWidth: 6, lineCap: .round)
                                 )
                                 .rotationEffect(.degrees(-90))
-                                .animation(.spring(response: 0.5, dampingFraction: 0.7), value: stats.completedCount)
+                                .animation(AppAnimation.expressive, value: stats.completedCount)
 
                             // Percentage
                             Text("\(stats.percentage)%")
@@ -206,7 +206,7 @@ struct CelebrationCompletionCard: View {
                 }
             }
         }
-        .animation(.spring(response: 0.5, dampingFraction: 0.7), value: stats.isAllCompleted)
+        .animation(AppAnimation.expressive, value: stats.isAllCompleted)
     }
 
     private func statItem(icon: String, value: String, label: String, color: Color) -> some View {
@@ -258,7 +258,7 @@ struct CelebrationCompletionCard: View {
         ZStack {
             SubtleCelebrationView(isAllCompleted: true)
 
-            RoundedRectangle(cornerRadius: 24)
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .fill(Color(hex: "#2A3342"))
                 .frame(height: 150)
                 .overlay(
@@ -272,7 +272,7 @@ struct CelebrationCompletionCard: View {
         ZStack {
             SubtleCelebrationView(isAllCompleted: false)
 
-            RoundedRectangle(cornerRadius: 24)
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .fill(Color(hex: "#2A3342"))
                 .frame(height: 150)
                 .overlay(

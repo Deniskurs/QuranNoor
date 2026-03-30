@@ -104,7 +104,7 @@ struct WelcomeMomentView: View {
                 }
                 .padding(24)
                 .background(
-                    RoundedRectangle(cornerRadius: 20)
+                    RoundedRectangle(cornerRadius: BorderRadius.xxl, style: .continuous)
                         .fill(themeManager.currentTheme.cardColor)
                         .shadow(color: .black.opacity(0.1), radius: 16, x: 0, y: 8)
                 )
@@ -116,7 +116,7 @@ struct WelcomeMomentView: View {
                 // Begin button
                 Button(action: {
                     HapticManager.shared.trigger(.medium)
-                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                    withAnimation(AppAnimation.standard) {
                         onDismiss()
                     }
                 }) {
@@ -126,7 +126,7 @@ struct WelcomeMomentView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
                         .background(themeManager.currentTheme.accent)
-                        .cornerRadius(16)
+                        .clipShape(RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous))
                 }
                 .padding(.horizontal, 32)
                 .opacity(animationPhase < 4 ? 0 : 1)
@@ -193,11 +193,11 @@ struct WelcomeMomentView: View {
             }
             .padding(16)
             .background(
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                     .fill(isPrimary ? iconColor.opacity(0.08) : Color.clear)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                     .stroke(isPrimary ? iconColor.opacity(0.3) : Color.clear, lineWidth: 1)
             )
         }
@@ -213,23 +213,23 @@ struct WelcomeMomentView: View {
         }
 
         // Staggered animation sequence using Task.sleep (lifecycle-safe)
-        withAnimation(.spring(response: 0.6, dampingFraction: 0.7)) {
+        withAnimation(AppAnimation.expressive) {
             animationPhase = 1
         }
 
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(200))
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+            withAnimation(AppAnimation.expressive) {
                 animationPhase = 2
             }
 
             try? await Task.sleep(for: .milliseconds(200))
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+            withAnimation(AppAnimation.expressive) {
                 animationPhase = 3
             }
 
             try? await Task.sleep(for: .milliseconds(200))
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+            withAnimation(AppAnimation.expressive) {
                 animationPhase = 4
             }
         }
@@ -242,7 +242,7 @@ struct ScaleButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
-            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: configuration.isPressed)
+            .animation(AppAnimation.bouncy, value: configuration.isPressed)
     }
 }
 

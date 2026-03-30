@@ -167,6 +167,8 @@ struct ProgressManagementView: View {
             themeManager.currentTheme.backgroundColor
                 .ignoresSafeArea()
 
+            GradientBackground(style: .quran, opacity: 0.3)
+
             ScrollView {
                 VStack(spacing: Spacing.sectionSpacing) {
                     heroProgressSection
@@ -184,18 +186,18 @@ struct ProgressManagementView: View {
     // MARK: - Hero Progress Section
 
     private var heroProgressSection: some View {
-        VStack(spacing: Spacing.md) {
-            // Progress ring with key stats
-            HStack(spacing: Spacing.md) {
-                ProgressRing(
-                    progress: viewModel.overallCompletionPercentage / 100,
-                    lineWidth: 8,
-                    size: 80,
-                    showPercentage: true,
-                    color: themeManager.currentTheme.accent
-                )
+        CardView(showPattern: true, intensity: .moderate) {
+            VStack(spacing: Spacing.md) {
+                // Progress ring with key stats — centered layout
+                VStack(spacing: Spacing.sm) {
+                    ProgressRing(
+                        progress: viewModel.overallCompletionPercentage / 100,
+                        lineWidth: 10,
+                        size: 120,
+                        showPercentage: true,
+                        color: themeManager.currentTheme.accent
+                    )
 
-                VStack(alignment: .leading, spacing: Spacing.xxs) {
                     Text("\(viewModel.totalVersesRead) of 6,236 verses")
                         .font(.system(size: FontSizes.sm))
                         .foregroundColor(themeManager.currentTheme.textTertiary)
@@ -215,42 +217,33 @@ struct ProgressManagementView: View {
                         .foregroundColor(themeManager.currentTheme.textTertiary)
                 }
 
-                Spacer()
-            }
+                // Expandable detailed stats
+                if isStatsExpanded {
+                    IslamicDivider(style: .ornamental)
 
-            // Expandable detailed stats
-            if isStatsExpanded {
-                IslamicDivider(style: .simple)
+                    HStack(spacing: 0) {
+                        compactStat(
+                            value: "\(viewModel.completedSurahsCount)",
+                            label: "Completed",
+                            color: themeManager.currentTheme.accent
+                        )
 
-                HStack(spacing: 0) {
-                    compactStat(
-                        value: "\(viewModel.completedSurahsCount)",
-                        label: "Completed",
-                        color: themeManager.currentTheme.accent
-                    )
+                        compactStat(
+                            value: "\(viewModel.startedSurahsCount)",
+                            label: "In Progress",
+                            color: themeManager.currentTheme.accentMuted
+                        )
 
-                    compactStat(
-                        value: "\(viewModel.startedSurahsCount)",
-                        label: "In Progress",
-                        color: themeManager.currentTheme.accentMuted
-                    )
-
-                    compactStat(
-                        value: "\(viewModel.notStartedSurahsCount)",
-                        label: "Not Started",
-                        color: themeManager.currentTheme.textTertiary
-                    )
+                        compactStat(
+                            value: "\(viewModel.notStartedSurahsCount)",
+                            label: "Not Started",
+                            color: themeManager.currentTheme.textTertiary
+                        )
+                    }
+                    .transition(.opacity.combined(with: .move(edge: .top)))
                 }
-                .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
-        .padding(Spacing.md)
-        .background(themeManager.currentTheme.cardColor)
-        .clipShape(RoundedRectangle(cornerRadius: BorderRadius.xl))
-        .overlay(
-            RoundedRectangle(cornerRadius: BorderRadius.xl)
-                .stroke(themeManager.currentTheme.borderColor, lineWidth: 1)
-        )
     }
 
     private func compactStat(value: String, label: String, color: Color) -> some View {
@@ -292,12 +285,8 @@ struct ProgressManagementView: View {
             }
             .padding(.horizontal, Spacing.sm)
             .padding(.vertical, Spacing.xs)
-            .background(themeManager.currentTheme.cardColor)
-            .clipShape(RoundedRectangle(cornerRadius: BorderRadius.lg))
-            .overlay(
-                RoundedRectangle(cornerRadius: BorderRadius.lg)
-                    .stroke(themeManager.currentTheme.borderColor, lineWidth: 1)
-            )
+            .background(.ultraThinMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous))
 
             // Filter and sort row
             HStack {
@@ -332,7 +321,7 @@ struct ProgressManagementView: View {
                         .foregroundColor(themeManager.currentTheme.accentMuted)
                         .padding(Spacing.xxs)
                         .background(themeManager.currentTheme.accentTint)
-                        .clipShape(RoundedRectangle(cornerRadius: BorderRadius.md))
+                        .clipShape(RoundedRectangle(cornerRadius: BorderRadius.md, style: .continuous))
                 }
             }
         }
@@ -357,7 +346,7 @@ struct ProgressManagementView: View {
                         ? themeManager.currentTheme.accentTint
                         : Color.clear
                 )
-                .clipShape(RoundedRectangle(cornerRadius: BorderRadius.md))
+                .clipShape(RoundedRectangle(cornerRadius: BorderRadius.md, style: .continuous))
         }
     }
 
@@ -399,15 +388,22 @@ struct ProgressManagementView: View {
             selectedSurah = stat.surahNumber
         } label: {
             HStack(spacing: Spacing.sm) {
-                // Surah number
+                // Surah number — octagonal Islamic badge
                 ZStack {
-                    Circle()
+                    OctagonShape()
+                        .stroke(
+                            stat.isCompleted
+                                ? themeManager.currentTheme.accent
+                                : themeManager.currentTheme.accentMuted.opacity(0.4),
+                            lineWidth: 1.2
+                        )
+
+                    OctagonShape()
                         .fill(
                             stat.isCompleted
-                                ? themeManager.currentTheme.accent.opacity(0.15)
-                                : themeManager.currentTheme.accentTint
+                                ? themeManager.currentTheme.accent.opacity(0.12)
+                                : Color.clear
                         )
-                        .frame(width: 36, height: 36)
 
                     if stat.isCompleted {
                         Image(systemName: "checkmark")
@@ -415,10 +411,11 @@ struct ProgressManagementView: View {
                             .foregroundColor(themeManager.currentTheme.accent)
                     } else {
                         Text("\(stat.surahNumber)")
-                            .font(.system(size: FontSizes.xs, weight: .medium))
-                            .foregroundColor(themeManager.currentTheme.accentMuted)
+                            .font(.system(size: FontSizes.xs, weight: .medium, design: .rounded))
+                            .foregroundColor(themeManager.currentTheme.textSecondary)
                     }
                 }
+                .frame(width: 36, height: 36)
 
                 // Surah info
                 if let surah = viewModel.getSurah(forNumber: stat.surahNumber) {
@@ -448,12 +445,8 @@ struct ProgressManagementView: View {
             }
             .padding(.horizontal, Spacing.sm)
             .padding(.vertical, Spacing.xs)
-            .background(themeManager.currentTheme.cardColor)
-            .clipShape(RoundedRectangle(cornerRadius: BorderRadius.lg))
-            .overlay(
-                RoundedRectangle(cornerRadius: BorderRadius.lg)
-                    .stroke(themeManager.currentTheme.borderColor, lineWidth: 0.5)
-            )
+            .background(.ultraThinMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous))
         }
         .buttonStyle(.plain)
     }
@@ -507,7 +500,7 @@ struct ProgressManagementView: View {
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, Spacing.sm)
                             .background(resetConfirmationText == "RESET" ? Color.red : Color.gray)
-                            .clipShape(RoundedRectangle(cornerRadius: BorderRadius.lg))
+                            .clipShape(RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous))
                     }
                     .disabled(resetConfirmationText != "RESET")
 
@@ -614,7 +607,7 @@ struct ProgressManagementView: View {
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 2)
                                 .background(themeManager.currentTheme.accent)
-                                .clipShape(RoundedRectangle(cornerRadius: BorderRadius.sm))
+                                .clipShape(RoundedRectangle(cornerRadius: BorderRadius.sm, style: .continuous))
                         }
                     }
 

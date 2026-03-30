@@ -101,7 +101,7 @@ struct AdhkarQuickAccessCard: View {
             .padding(.vertical, Spacing.xs)
             .padding(.horizontal, Spacing.sm)
             .background(
-                RoundedRectangle(cornerRadius: BorderRadius.lg)
+                RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                     .fill(.ultraThinMaterial)
             )
 
@@ -126,7 +126,7 @@ struct AdhkarQuickAccessCard: View {
             .padding(.vertical, Spacing.xs)
             .padding(.horizontal, Spacing.sm)
             .background(
-                RoundedRectangle(cornerRadius: BorderRadius.lg)
+                RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                     .fill(.ultraThinMaterial)
             )
         }
@@ -167,7 +167,7 @@ struct AdhkarQuickAccessCard: View {
                 .padding(.vertical, Spacing.xs)
                 .padding(.horizontal, Spacing.xs)
                 .background(
-                    RoundedRectangle(cornerRadius: BorderRadius.lg)
+                    RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                         .fill(.ultraThinMaterial)
                 )
             }
@@ -204,7 +204,7 @@ struct AdhkarQuickAccessCard: View {
                 .padding(.vertical, Spacing.xs)
                 .padding(.horizontal, Spacing.xs)
                 .background(
-                    RoundedRectangle(cornerRadius: BorderRadius.lg)
+                    RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                         .fill(.ultraThinMaterial)
                 )
             }
@@ -287,11 +287,11 @@ private struct CategoryRowView: View {
         .padding(.vertical, Spacing.xxs + 2)
         .padding(.horizontal, Spacing.xs)
         .background(
-            RoundedRectangle(cornerRadius: BorderRadius.lg)
+            RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                 .fill(.ultraThinMaterial)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: BorderRadius.lg)
+            RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                 .stroke(statistics.isFullyCompleted ? themeManager.currentTheme.accent.opacity(0.3) : .clear, lineWidth: 1)
         )
     }

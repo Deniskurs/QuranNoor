@@ -43,14 +43,14 @@ struct AppTypography {
     // MARK: - Arabic Text (Uthmanic Hafs) — Dynamic Type scaling via relativeTo:
     //
     // Font file: "UthmanicHafs.ttf" in Resources/Fonts/
-    // PostScript name: "KFGQPC Uthmanic Script HAFS"
+    // PostScript name: "KFGQPCUthmanicScriptHAFS"
     // Registration: Must be listed under "Fonts provided by application" (UIAppFonts)
     //   in Info.plist as "Fonts/UthmanicHafs.ttf" (or the correct bundle-relative path).
     //   If the font fails to load, SwiftUI silently falls back to the system font.
     //
-    static let arabicVerse = Font.custom("KFGQPC Uthmanic Script HAFS", size: FontSizes.xl, relativeTo: .title)
-    static let arabicTitle = Font.custom("KFGQPC Uthmanic Script HAFS", size: FontSizes.xxl, relativeTo: .title)
-    static let arabicLarge = Font.custom("KFGQPC Uthmanic Script HAFS", size: FontSizes.xxxl, relativeTo: .largeTitle)
+    static let arabicVerse = Font.custom("KFGQPCUthmanicScriptHAFS", size: FontSizes.xl, relativeTo: .title)
+    static let arabicTitle = Font.custom("KFGQPCUthmanicScriptHAFS", size: FontSizes.xxl, relativeTo: .title)
+    static let arabicLarge = Font.custom("KFGQPCUthmanicScriptHAFS", size: FontSizes.xxxl, relativeTo: .largeTitle)
 
     // MARK: - Fallback Arabic (system font)
     static let arabicVerseSystem = Font.system(size: FontSizes.xl, weight: .regular, design: .default)
@@ -58,7 +58,18 @@ struct AppTypography {
 
     // MARK: - Scalable Arabic fonts for user preferences
     static func arabicScalable(size: CGFloat) -> Font {
-        Font.custom("KFGQPC Uthmanic Script HAFS", size: size, relativeTo: .body)
+        Font.custom("KFGQPCUthmanicScriptHAFS", size: size, relativeTo: .body)
+    }
+
+    // MARK: - Dynamic Arabic font based on mushaf type
+    /// Returns the appropriate font for the given mushaf type and size.
+    /// Use this for Quran verse text that should change with the user's script preference.
+    /// For static Arabic text (prayer names, app titles), continue using `arabicScalable(size:)`.
+    static func arabicFont(for mushafType: MushafType, size: CGFloat) -> Font {
+        if mushafType.usesSystemFont {
+            return Font.system(size: size, weight: .regular)
+        }
+        return Font.custom(mushafType.fontName, size: size, relativeTo: .body)
     }
 }
 

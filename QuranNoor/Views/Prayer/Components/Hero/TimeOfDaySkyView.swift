@@ -370,7 +370,7 @@ private struct StarParticle {
                             .foregroundColor(.white)
                             .padding(8)
                             .background(Color.black.opacity(0.5))
-                            .cornerRadius(8),
+                            .clipShape(RoundedRectangle(cornerRadius: BorderRadius.md, style: .continuous)),
                         alignment: .topLeading
                     )
             }

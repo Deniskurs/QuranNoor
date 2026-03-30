@@ -101,7 +101,7 @@ struct EventDetailView: View {
         .padding()
         .frame(maxWidth: .infinity)
         .background(
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous)
                 .fill(.ultraThinMaterial)
         )
     }
@@ -154,7 +154,7 @@ struct EventDetailView: View {
         }
         .padding()
         .background(
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous)
                 .fill(categoryColor.opacity(0.1))
         )
     }
@@ -178,7 +178,7 @@ struct EventDetailView: View {
         }
         .padding()
         .background(
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous)
                 .fill(themeManager.currentTheme.accentTint)
         )
     }
@@ -202,7 +202,7 @@ struct EventDetailView: View {
         }
         .padding()
         .background(
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous)
                 .fill(.yellow.opacity(0.1))
         )
     }
@@ -255,7 +255,7 @@ struct EventDetailView: View {
                 .frame(maxWidth: .infinity)
                 .padding()
                 .background(
-                    RoundedRectangle(cornerRadius: 12)
+                    RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                         .fill(
                             .linearGradient(
                                 colors: [categoryColor, categoryColor.opacity(0.7)],
@@ -269,7 +269,7 @@ struct EventDetailView: View {
         }
         .padding()
         .background(
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous)
                 .fill(.green.opacity(0.1))
         )
     }

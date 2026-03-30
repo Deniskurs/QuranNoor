@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import os
 
 
 // MARK: - Surah
@@ -304,9 +305,7 @@ struct ReadingProgress: Codable, Equatable, Sendable {
 
         // Migration: Extract progressHistory and move to ProgressHistoryManager
         if let oldHistory = try? container.decodeIfPresent([ProgressSnapshot].self, forKey: .progressHistory), !oldHistory.isEmpty {
-            #if DEBUG
-            print("⚠️ Found \(oldHistory.count) snapshots in old format - will migrate to ProgressHistoryManager")
-            #endif
+            AppLogger.data.warning("Found \(oldHistory.count, privacy: .public) snapshots in old format - will migrate to ProgressHistoryManager")
             // ProgressHistoryManager will handle this migration in QuranService
         }
 
@@ -314,9 +313,7 @@ struct ReadingProgress: Codable, Equatable, Sendable {
         if let newFormat = try? container.decode([String: VerseReadData].self, forKey: .readVerses) {
             // New format with metadata - use as is
             readVerses = newFormat
-            #if DEBUG
-            print("✅ Loaded reading progress: \(newFormat.count) verses (enhanced format)")
-            #endif
+            AppLogger.data.debug("Loaded reading progress: \(newFormat.count, privacy: .public) verses (enhanced format)")
         } else if let oldFormat = try? container.decode(Set<String>.self, forKey: .readVerses) {
             // Old format (Set<String>) - migrate to new format
             readVerses = [:]
@@ -328,21 +325,16 @@ struct ReadingProgress: Codable, Equatable, Sendable {
                     source: .autoTracked
                 )
             }
-            #if DEBUG
-            print("✅ Migrated \(oldFormat.count) verses from Set to Dictionary format")
-            #endif
+            AppLogger.data.debug("Migrated \(oldFormat.count, privacy: .public) verses from Set to Dictionary format")
         } else if (try? container.decode(Int.self, forKey: .totalVersesRead)) != nil {
             // Very old format - reset progress
             readVerses = [:]
-            #if DEBUG
-            print("⚠️ Legacy format detected, resetting progress (streak preserved: \(streakDays) days)")
-            #endif
+            let preservedStreak = streakDays
+            AppLogger.data.warning("Legacy format detected, resetting progress (streak preserved: \(preservedStreak, privacy: .public) days)")
         } else {
             // No data - start fresh
             readVerses = [:]
-            #if DEBUG
-            print("ℹ️ No progress data, starting fresh")
-            #endif
+            AppLogger.data.debug("No progress data, starting fresh")
         }
     }
 

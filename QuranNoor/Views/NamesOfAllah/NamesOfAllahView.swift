@@ -166,7 +166,7 @@ struct NamesOfAllahView: View {
             }
             .padding()
             .background(
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                     .fill(.ultraThinMaterial)
             )
         }
@@ -223,6 +223,7 @@ struct NameCard: View {
                 Text(name.arabicName)
                     .font(.title3)
                     .foregroundStyle(themeManager.currentTheme.accent)
+                    .environment(\.layoutDirection, .rightToLeft)
             }
 
             Spacer()
@@ -242,7 +243,7 @@ struct NameCard: View {
         }
         .padding()
         .background(
-            RoundedRectangle(cornerRadius: 12)
+            RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                 .fill(.ultraThinMaterial)
         )
     }

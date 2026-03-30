@@ -63,7 +63,7 @@ struct AudioProgressBar: View {
                     .fill(theme.accent)
                     .frame(width: max(0, fillWidth), height: 3)
                     .shadow(color: theme.accent.opacity(0.5), radius: 4, x: 0, y: 0)
-                    .animation(dragProgress != nil ? nil : .linear(duration: 0.25), value: displayProgress)
+                    .animation(dragProgress != nil ? nil : AppAnimation.linear, value: displayProgress)
             }
             .clipShape(Capsule())
             .contentShape(Rectangle())
@@ -107,7 +107,7 @@ struct AudioProgressBar: View {
                             )
                         )
                         .frame(width: max(0, fillWidth), height: trackHeight)
-                        .animation(isTouching ? nil : .linear(duration: 0.25), value: displayProgress)
+                        .animation(isTouching ? nil : AppAnimation.linear, value: displayProgress)
 
                     // Scrubber knob
                     Circle()
@@ -117,9 +117,9 @@ struct AudioProgressBar: View {
                         .scaleEffect(isTouching ? 1.2 : 1.0)
                         .offset(x: max(0, min(fillWidth - 8, geometry.size.width - 16)))
                         .opacity(isTouching ? 1.0 : 0.0)
-                        .animation(isTouching ? nil : .linear(duration: 0.25), value: displayProgress)
+                        .animation(isTouching ? nil : AppAnimation.linear, value: displayProgress)
                 }
-                .animation(.easeOut(duration: 0.15), value: isTouching)
+                .animation(AppAnimation.fast, value: isTouching)
                 .contentShape(Rectangle().inset(by: -16))
                 .gesture(
                     DragGesture(minimumDistance: 0)
@@ -140,7 +140,7 @@ struct AudioProgressBar: View {
                 )
             }
             .frame(height: isTouching ? 8 : 6)
-            .animation(.easeOut(duration: 0.15), value: isTouching)
+            .animation(AppAnimation.fast, value: isTouching)
 
             // Time labels
             HStack {

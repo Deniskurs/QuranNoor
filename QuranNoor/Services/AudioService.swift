@@ -9,6 +9,7 @@
 import AVFoundation
 import UIKit
 import Observation
+import os
 
 /// Sound effects available in the app
 enum SoundEffect: String, CaseIterable {
@@ -75,9 +76,7 @@ class AudioService {
             try AudioSessionManager.shared.configureSession(for: .uiSounds)
             isAudioSessionConfigured = true
         } catch {
-            #if DEBUG
-            print("❌ AudioService: Failed to configure audio session - \(error.localizedDescription)")
-            #endif
+            AppLogger.audio.error("AudioService: Failed to configure audio session - \(error.localizedDescription, privacy: .public)")
         }
     }
 
@@ -98,9 +97,7 @@ class AudioService {
             }
 
             guard let audioURL = url else {
-                #if DEBUG
-                print("⚠️ AudioService: Sound file not found - \(sound.fileName).\(sound.fileExtension)")
-                #endif
+                AppLogger.audio.warning("AudioService: Sound file not found - \(sound.fileName, privacy: .public).\(sound.fileExtension, privacy: .public)")
                 continue
             }
 
@@ -110,9 +107,7 @@ class AudioService {
                 player.prepareToPlay() // Preload to buffer for instant playback
                 audioPlayers[sound] = player
             } catch {
-                #if DEBUG
-                print("❌ AudioService: Failed to preload sound \(sound.fileName) - \(error.localizedDescription)")
-                #endif
+                AppLogger.audio.error("AudioService: Failed to preload sound \(sound.fileName, privacy: .public) - \(error.localizedDescription, privacy: .public)")
             }
         }
     }
@@ -130,9 +125,7 @@ class AudioService {
         ensureReady()
 
         guard let player = audioPlayers[sound] else {
-            #if DEBUG
-            print("⚠️ AudioService: Player not found for sound - \(sound.fileName)")
-            #endif
+            AppLogger.audio.warning("AudioService: Player not found for sound - \(sound.fileName, privacy: .public)")
             return
         }
 

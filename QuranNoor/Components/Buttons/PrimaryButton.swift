@@ -62,7 +62,7 @@ struct PrimaryButton: View {
             .frame(maxWidth: .infinity)
             .frame(height: 52)
             .background(backgroundGradient)
-            .cornerRadius(16)
+            .clipShape(RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous))
             .shadow(
                 color: themeManager.currentTheme.cardShadow,
                 radius: isPressed ? 5 : 10,
@@ -71,7 +71,7 @@ struct PrimaryButton: View {
             )
             .scaleEffect(isPressed ? 0.95 : 1.0)
             .opacity(isDisabled ? 0.5 : 1.0)
-            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isPressed)
+            .animation(AppAnimation.fast, value: isPressed)
         }
         .disabled(isDisabled || isLoading)
         .accessibilityLabel(title)

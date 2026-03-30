@@ -10,6 +10,7 @@ import CoreLocation
 import UserNotifications
 import Observation
 import UIKit
+import os
 
 /// Manages app permissions with status tracking and persistence
 @Observable
@@ -188,9 +189,7 @@ final class PermissionManager {
 
                     return status
                 } catch {
-                    #if DEBUG
-                    print("⚠️ Notification permission error: \(error)")
-                    #endif
+                    AppLogger.settings.warning("Notification permission error: \(error.localizedDescription, privacy: .public)")
                     let status: PermissionStatus = .denied
                     await MainActor.run {
                         self.notificationStatus = status
@@ -203,9 +202,7 @@ final class PermissionManager {
             // Timeout task (10 seconds - should never hit this, but safety measure)
             group.addTask {
                 try? await Task.sleep(nanoseconds: 10_000_000_000)
-                #if DEBUG
-                print("⚠️ Notification permission request timed out")
-                #endif
+                AppLogger.settings.warning("Notification permission request timed out")
                 return await self.checkNotificationStatus()
             }
 
@@ -247,22 +244,16 @@ final class PermissionManager {
     /// Open iOS Settings app
     func openSettings() {
         guard let settingsURL = URL(string: UIApplication.openSettingsURLString) else {
-            #if DEBUG
-            print("⚠️ Unable to create settings URL")
-            #endif
+            AppLogger.settings.warning("Unable to create settings URL")
             return
         }
 
         Task { @MainActor in
             if UIApplication.shared.canOpenURL(settingsURL) {
                 UIApplication.shared.open(settingsURL)
-                #if DEBUG
-                print("🔧 Opening Settings app")
-                #endif
+                AppLogger.settings.debug("Opening Settings app")
             } else {
-                #if DEBUG
-                print("⚠️ Cannot open settings URL")
-                #endif
+                AppLogger.settings.warning("Cannot open settings URL")
             }
         }
     }
@@ -286,18 +277,14 @@ final class PermissionManager {
     private func persistLocationStatus(_ status: PermissionStatus) {
         if let encoded = try? Self.encoder.encode(status) {
             userDefaults.set(encoded, forKey: locationStatusKey)
-            #if DEBUG
-            print("💾 Location status persisted: \(status.description)")
-            #endif
+            AppLogger.settings.debug("Location status persisted: \(status.description, privacy: .public)")
         }
     }
 
     private func persistNotificationStatus(_ status: PermissionStatus) {
         if let encoded = try? Self.encoder.encode(status) {
             userDefaults.set(encoded, forKey: notificationStatusKey)
-            #if DEBUG
-            print("💾 Notification status persisted: \(status.description)")
-            #endif
+            AppLogger.settings.debug("Notification status persisted: \(status.description, privacy: .public)")
         }
     }
 
@@ -344,9 +331,7 @@ final class PermissionManager {
         locationStatus = .notDetermined
         notificationStatus = .notDetermined
 
-        #if DEBUG
-        print("🔄 All permission data reset")
-        #endif
+        AppLogger.settings.debug("All permission data reset")
     }
 }
 

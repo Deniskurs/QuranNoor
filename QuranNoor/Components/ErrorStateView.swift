@@ -92,7 +92,7 @@ struct ErrorStateView: View {
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 14)
                             .background(
-                                RoundedRectangle(cornerRadius: 12)
+                                RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                                     .fill(index == 0 ? themeManager.currentTheme.accent : themeManager.currentTheme.cardColor)
                             )
                         }

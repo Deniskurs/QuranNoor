@@ -8,6 +8,7 @@
 
 import Foundation
 import Observation
+import WidgetKit
 
 @Observable
 @MainActor
@@ -202,6 +203,14 @@ class PrayerViewModel {
 
             // Step 3.6: Publish Maghrib time for Hijri day transition
             MaghribTimeStore.shared.update(maghribTime: adjustedPrayerTimes.maghrib)
+
+            // Step 3.7: Push data to widget
+            let hijriString = HijriCalendarService().getCachedHijriDate()?.formatted
+            WidgetUpdateService.shared.updatePrayerWidget(
+                prayerTimes: adjustedPrayerTimes,
+                location: userLocation,
+                hijriDateString: hijriString
+            )
 
             // Step 4: Schedule notifications (if enabled)
             // Non-blocking: notification failures must not affect prayer time display

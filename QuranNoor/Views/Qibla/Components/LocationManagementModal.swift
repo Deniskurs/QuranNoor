@@ -69,7 +69,7 @@ struct LocationManagementModal: View {
             Button("Cancel", role: .cancel) {}
             Button("Delete", role: .destructive) {
                 if let location = locationToDelete {
-                    withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                    withAnimation(AppAnimation.standard) {
                         viewModel.deleteSavedLocation(location)
                     }
                     locationToDelete = nil
@@ -115,7 +115,7 @@ struct LocationManagementModal: View {
             }
             .padding(Spacing.cardPadding)
             .background(
-                RoundedRectangle(cornerRadius: BorderRadius.xl)
+                RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous)
                     .fill(
                         LinearGradient(
                             colors: [
@@ -127,7 +127,7 @@ struct LocationManagementModal: View {
                         )
                     )
                     .overlay(
-                        RoundedRectangle(cornerRadius: BorderRadius.xl)
+                        RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous)
                             .strokeBorder(
                                 themeManager.currentTheme.accent.opacity(0.3),
                                 lineWidth: 1
@@ -230,10 +230,10 @@ struct LocationManagementModal: View {
             }
             .padding(Spacing.cardPadding)
             .background(
-                RoundedRectangle(cornerRadius: BorderRadius.xl)
+                RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous)
                     .fill(themeManager.currentTheme.cardColor)
                     .overlay(
-                        RoundedRectangle(cornerRadius: BorderRadius.xl)
+                        RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous)
                             .strokeBorder(
                                 themeManager.currentTheme.accentMuted.opacity(0.3),
                                 style: StrokeStyle(lineWidth: 1, dash: [5, 3])
@@ -355,16 +355,16 @@ struct LocationCardView: View {
         .background(
             ZStack {
                 // Base glass morphism layer
-                RoundedRectangle(cornerRadius: BorderRadius.xl)
+                RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous)
                     .fill(.ultraThinMaterial)
 
                 // Color overlay with theme
-                RoundedRectangle(cornerRadius: BorderRadius.xl)
+                RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous)
                     .fill(themeManager.currentTheme.cardColor.opacity(0.8))
 
                 // Selected state glow
                 if isSelected {
-                    RoundedRectangle(cornerRadius: BorderRadius.xl)
+                    RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous)
                         .fill(
                             LinearGradient(
                                 colors: [
@@ -377,13 +377,13 @@ struct LocationCardView: View {
                             )
                         )
 
-                    RoundedRectangle(cornerRadius: BorderRadius.xl)
+                    RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous)
                         .strokeBorder(themeManager.currentTheme.accentMuted, lineWidth: 2)
                 }
 
                 // Normal state border
                 if !isSelected {
-                    RoundedRectangle(cornerRadius: BorderRadius.xl)
+                    RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous)
                         .strokeBorder(
                             LinearGradient(
                                 colors: [
@@ -405,8 +405,8 @@ struct LocationCardView: View {
             y: isSelected ? 4 : 2
         )
         .scaleEffect(isPressed ? 0.98 : 1.0)
-        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isPressed)
-        .animation(.spring(response: 0.4, dampingFraction: 0.7), value: isSelected)
+        .animation(AppAnimation.bouncy, value: isPressed)
+        .animation(AppAnimation.standard, value: isSelected)
     }
 
     /// Check if current theme is dark

@@ -87,6 +87,7 @@ struct PresetCard: View {
                 .font(.title2)
                 .multilineTextAlignment(.trailing)
                 .frame(maxWidth: .infinity, alignment: .trailing)
+                .environment(\.layoutDirection, .rightToLeft)
 
             // Translation
             Text(preset.translation)
@@ -107,11 +108,11 @@ struct PresetCard: View {
         }
         .padding()
         .background(
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous)
                 .fill(.ultraThinMaterial)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous)
                 .stroke(isSelected ? .green : .clear, lineWidth: 2)
         )
     }

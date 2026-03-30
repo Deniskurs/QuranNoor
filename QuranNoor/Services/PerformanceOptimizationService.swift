@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import os
 import SwiftUI
 import Observation
 
@@ -240,9 +241,7 @@ final class PerformanceOptimizationService {
 
         if result == KERN_SUCCESS {
             let usedMB = Double(info.resident_size) / 1024.0 / 1024.0
-            #if DEBUG
-            print("💾 Memory usage: \(String(format: "%.2f MB", usedMB))")
-            #endif
+            AppLogger.performance.debug("Memory usage: \(String(format: "%.2f MB", usedMB), privacy: .public)")
         }
     }
 
@@ -278,9 +277,7 @@ extension PerformanceOptimizationService {
         try await block()
 
         let timeElapsed = CFAbsoluteTimeGetCurrent() - startTime
-        #if DEBUG
-        print("⏱️ \(label): \(String(format: "%.4f", timeElapsed))s")
-        #endif
+        AppLogger.performance.debug("\(label, privacy: .public): \(String(format: "%.4f", timeElapsed), privacy: .public)s")
     }
 
     /// Check if performance optimizations should be more aggressive

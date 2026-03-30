@@ -6,6 +6,7 @@
 //  Handles persistence of onboarding state using UserDefaults
 
 import Foundation
+import os
 
 /// Manages persistence of onboarding state
 final class OnboardingStorage: OnboardingStorageProtocol {
@@ -45,13 +46,9 @@ final class OnboardingStorage: OnboardingStorageProtocol {
             let encoded = try Self.encoder.encode(state)
             userDefaults.set(encoded, forKey: stateKey)
 
-            #if DEBUG
-            print("💾 Onboarding state saved: step \(state.currentStep.rawValue)")
-            #endif
+            AppLogger.onboarding.debug("Onboarding state saved: step \(state.currentStep.rawValue, privacy: .public)")
         } catch {
-            #if DEBUG
-            print("⚠️ Failed to save onboarding state: \(error)")
-            #endif
+            AppLogger.onboarding.warning("Failed to save onboarding state: \(error.localizedDescription, privacy: .public)")
         }
     }
 
@@ -66,9 +63,7 @@ final class OnboardingStorage: OnboardingStorageProtocol {
 
             // Check if state is stale (older than 7 days)
             if Date().timeIntervalSince(state.timestamp) > maxStateAge {
-                #if DEBUG
-                print("🗑️ Onboarding state is stale (>7 days), clearing")
-                #endif
+                AppLogger.onboarding.debug("Onboarding state is stale (>7 days), clearing")
                 clearState()
                 return nil
             }
@@ -78,15 +73,11 @@ final class OnboardingStorage: OnboardingStorageProtocol {
                 return nil
             }
 
-            #if DEBUG
-            print("📂 Onboarding state loaded: step \(state.currentStep.rawValue)")
-            #endif
+            AppLogger.onboarding.debug("Onboarding state loaded: step \(state.currentStep.rawValue, privacy: .public)")
 
             return state
         } catch {
-            #if DEBUG
-            print("⚠️ Failed to load onboarding state: \(error)")
-            #endif
+            AppLogger.onboarding.warning("Failed to load onboarding state: \(error.localizedDescription, privacy: .public)")
             clearState() // Clear corrupted data
             return nil
         }
@@ -96,9 +87,7 @@ final class OnboardingStorage: OnboardingStorageProtocol {
     func saveCompletionStatus(_ completed: Bool) {
         userDefaults.set(completed, forKey: completionKey)
 
-        #if DEBUG
-        print("✅ Onboarding completion status saved: \(completed)")
-        #endif
+        AppLogger.onboarding.debug("Onboarding completion status saved: \(completed, privacy: .public)")
     }
 
     /// Check if onboarding has been completed
@@ -112,9 +101,7 @@ final class OnboardingStorage: OnboardingStorageProtocol {
         // Also clean up old v2 key if present
         userDefaults.removeObject(forKey: "onboarding_state_v2")
 
-        #if DEBUG
-        print("🗑️ Onboarding state cleared")
-        #endif
+        AppLogger.onboarding.debug("Onboarding state cleared")
     }
 
     /// Reset onboarding completely (for testing/debugging)
@@ -122,9 +109,7 @@ final class OnboardingStorage: OnboardingStorageProtocol {
         clearState()
         userDefaults.set(false, forKey: completionKey)
 
-        #if DEBUG
-        print("🔄 Onboarding completely reset")
-        #endif
+        AppLogger.onboarding.debug("Onboarding completely reset")
     }
 }
 

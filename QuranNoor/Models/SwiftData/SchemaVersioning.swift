@@ -8,6 +8,7 @@
 
 import Foundation
 import SwiftData
+import os
 
 // MARK: - Schema Version 1 (Initial Release)
 
@@ -69,16 +70,12 @@ enum QuranNoorMigrationPlan: SchemaMigrationPlan {
         willMigrate: { context in
             // Pre-migration logic (optional)
             // e.g., validate data, backup critical records
-            #if DEBUG
-            print("Starting migration from V1 to V2...")
-            #endif
+            AppLogger.migration.debug("Starting migration from V1 to V2...")
         },
         didMigrate: { context in
             // Post-migration logic (optional)
             // e.g., transform data, update relationships, cleanup
-            #if DEBUG
-            print("Completed migration from V1 to V2")
-            #endif
+            AppLogger.migration.debug("Completed migration from V1 to V2")
 
             // Example: Update all BookmarkRecord instances
             let bookmarks = try? context.fetch(FetchDescriptor<BookmarkRecord>())

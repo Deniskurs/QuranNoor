@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import os
 import SwiftData
 
 /// Service responsible for one-time migration of data from UserDefaults to SwiftData
@@ -57,9 +58,7 @@ final class DataMigrationService {
             // Mark migration as complete
             UserDefaults.standard.set(true, forKey: migrationCompleteKey)
         } catch {
-            #if DEBUG
-            print("❌ Failed to save SwiftData migration: \(error)")
-            #endif
+            AppLogger.migration.error("Failed to save SwiftData migration: \(error.localizedDescription, privacy: .public)")
         }
 
         return (versesMigrated, bookmarksMigrated)
@@ -91,9 +90,7 @@ final class DataMigrationService {
 
             return count
         } catch {
-            #if DEBUG
-            print("❌ Failed to decode reading progress for migration: \(error)")
-            #endif
+            AppLogger.migration.error("Failed to decode reading progress for migration: \(error.localizedDescription, privacy: .public)")
             return 0
         }
     }
@@ -114,9 +111,7 @@ final class DataMigrationService {
 
             return bookmarks.count
         } catch {
-            #if DEBUG
-            print("❌ Failed to decode bookmarks for migration: \(error)")
-            #endif
+            AppLogger.migration.error("Failed to decode bookmarks for migration: \(error.localizedDescription, privacy: .public)")
             return 0
         }
     }

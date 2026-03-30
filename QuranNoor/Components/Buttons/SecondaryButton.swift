@@ -72,16 +72,16 @@ struct SecondaryButton: View {
             .frame(maxWidth: .infinity)
             .frame(height: 52)
             .background(
-                RoundedRectangle(cornerRadius: 16)
+                RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous)
                     .fill(backgroundColor)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 16)
+                RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous)
                     .stroke(borderColor, lineWidth: 2)
             )
             .scaleEffect(isPressed ? 0.97 : 1.0)
             .opacity(isDisabled ? 0.5 : 1.0)
-            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isPressed)
+            .animation(AppAnimation.fast, value: isPressed)
         }
         .disabled(isDisabled || isLoading)
         .accessibilityLabel(title)
@@ -186,7 +186,7 @@ struct TertiaryButton: View {
             }
             .foregroundColor(resolvedColor)
             .opacity(isPressed ? 0.6 : 1.0)
-            .animation(.easeInOut(duration: 0.1), value: isPressed)
+            .animation(AppAnimation.fast, value: isPressed)
         }
         .accessibilityLabel(title)
         .accessibilityAddTraits(.isButton)

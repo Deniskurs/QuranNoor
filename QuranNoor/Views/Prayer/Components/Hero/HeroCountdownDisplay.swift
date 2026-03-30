@@ -32,7 +32,7 @@ struct HeroCountdownDisplay: View {
                 .monospacedDigit()
                 .foregroundColor(countdownColor)
                 .contentTransition(.numericText(countsDown: true))
-                .animation(.linear(duration: 0.3), value: countdownString)
+                .animation(AppAnimation.linear, value: countdownString)
                 .scaleEffect(isPulsing && urgencyLevel == .critical ? 1.02 : 1.0)
                 .minimumScaleFactor(0.5)
                 .lineLimit(1)
@@ -108,13 +108,13 @@ struct HeroCountdownDisplay: View {
 
     private func startPulseAnimation() {
         guard isViewVisible else { return }
-        withAnimation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) {
+        withAnimation(AppAnimation.pulse(duration: 0.8)) {
             isPulsing = true
         }
     }
 
     private func stopPulseAnimation() {
-        withAnimation(.easeOut(duration: 0.2)) {
+        withAnimation(AppAnimation.fast) {
             isPulsing = false
         }
     }

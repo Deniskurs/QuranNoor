@@ -13,8 +13,14 @@ struct AudioPlayerView: View {
     @Environment(ThemeManager.self) var themeManager: ThemeManager
     @State private var audioService = QuranAudioService.shared
     @State private var currentTranslation: Translation?
+    @State private var currentTransliteration: String?
     @State private var surahName: String = ""
     @State private var isPlayPausePressed = false
+    @State private var settings = QuranSettingsService.shared
+
+    // Tajweed / word-by-word state for the full player
+    @State private var tajweedSegments: [TajweedSegment] = []
+    @State private var wordData: [QuranWord] = []
 
     // Swipe-down dismiss state
     @State private var dismissDragOffset: CGFloat = 0
@@ -59,11 +65,15 @@ struct AudioPlayerView: View {
         .gesture(dismissGesture)
         .onChange(of: audioService.currentVerse) { _, newVerse in
             loadTranslation(for: newVerse)
+            loadTransliteration(for: newVerse)
             loadSurahName(for: newVerse)
+            loadTajweedAndWordData(for: newVerse)
         }
         .onAppear {
             loadTranslation(for: verse)
+            loadTransliteration(for: verse)
             loadSurahName(for: verse)
+            loadTajweedAndWordData(for: verse)
         }
     }
 
@@ -84,7 +94,7 @@ struct AudioPlayerView: View {
                     HapticManager.shared.trigger(.medium)
                     onClose()
                 } else {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    withAnimation(AppAnimation.fast) {
                         dismissDragOffset = 0
                     }
                 }
@@ -105,13 +115,8 @@ struct AudioPlayerView: View {
                         .frame(height: Spacing.sm)
 
                     // Arabic text artwork card
-                    SurahArtworkBadge(
-                        surahNumber: verse.surahNumber,
-                        arabicText: verse.text,
-                        size: .full,
-                        animationNamespace: animationNamespace
-                    )
-                    .animation(.easeInOut(duration: 0.3), value: verse.id)
+                    verseArtwork(verse: verse, theme: theme)
+                        .animation(AppAnimation.gentle, value: verse.id)
 
                     // Verse info
                     verseInfo(verse: verse, theme: theme)
@@ -121,10 +126,24 @@ struct AudioPlayerView: View {
                     errorBanner(verse: verse, theme: theme)
                         .padding(.horizontal, Spacing.screenHorizontal)
 
+                    // Transliteration
+                    if settings.showTransliteration, let translit = currentTransliteration {
+                        Text(translit)
+                            .font(.system(size: settings.fontSize.translationSize, weight: .light, design: .serif))
+                            .italic()
+                            .foregroundColor(theme.textSecondary.opacity(0.8))
+                            .multilineTextAlignment(.center)
+                            .lineSpacing(4)
+                            .padding(.top, Spacing.xs)
+                            .padding(.horizontal, Spacing.screenHorizontal)
+                    }
+
                     // Translation (full text, no truncation)
-                    translationText(theme: theme)
-                        .padding(.top, Spacing.xs)
-                        .padding(.horizontal, Spacing.screenHorizontal)
+                    if settings.showTranslation {
+                        translationText(theme: theme)
+                            .padding(.top, Spacing.xs)
+                            .padding(.horizontal, Spacing.screenHorizontal)
+                    }
 
                     Spacer(minLength: Spacing.md)
                         .frame(height: Spacing.md)
@@ -133,6 +152,17 @@ struct AudioPlayerView: View {
 
             // Fixed bottom controls
             VStack(spacing: 0) {
+                // Floating reader controls
+                ReaderFloatingPill(
+                    showTranslation: settings.showTranslation,
+                    showTransliteration: settings.showTransliteration,
+                    showWordByWord: settings.showWordByWord,
+                    onToggleTranslation: { settings.toggleTranslation() },
+                    onToggleTransliteration: { settings.toggleTransliteration() },
+                    onToggleWordByWord: { settings.toggleWordByWord() }
+                )
+                .padding(.bottom, Spacing.xs)
+
                 // Progress bar with scrubber
                 AudioProgressBar(
                     style: .full,
@@ -182,6 +212,55 @@ struct AudioPlayerView: View {
         .padding(.top, Spacing.xs)
     }
 
+    // MARK: - Verse Artwork (tajweed / word-by-word aware)
+
+    @ViewBuilder
+    private func verseArtwork(verse: Verse, theme: ThemeMode) -> some View {
+        VStack(spacing: 0) {
+            if settings.showWordByWord, !wordData.isEmpty {
+                WordByWordView(
+                    words: wordData,
+                    fontSize: settings.fontSize.arabicSize,
+                    mushafType: settings.mushafType
+                )
+                .padding(.horizontal, Spacing.md)
+                .padding(.vertical, Spacing.lg)
+                .frame(maxWidth: .infinity)
+            } else if settings.showTajweed, !tajweedSegments.isEmpty {
+                TajweedText(
+                    segments: tajweedSegments,
+                    fontSize: settings.fontSize.arabicSize,
+                    mushafType: settings.mushafType
+                )
+                .padding(.horizontal, Spacing.md)
+                .padding(.vertical, Spacing.lg)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+            } else {
+                Text(verse.text)
+                    .font(AppTypography.arabicFont(for: settings.mushafType, size: settings.fontSize.arabicSize))
+                    .foregroundColor(theme.textPrimary)
+                    .multilineTextAlignment(.trailing)
+                    .lineSpacing(settings.fontSize.lineSpacing)
+                    .environment(\.layoutDirection, .rightToLeft)
+                    .padding(.horizontal, Spacing.md)
+                    .padding(.vertical, Spacing.lg)
+                    .frame(maxWidth: .infinity)
+            }
+        }
+        .background(
+            RoundedRectangle(cornerRadius: BorderRadius.xxl, style: .continuous)
+                .fill(theme.cardColor)
+                .overlay(
+                    RoundedRectangle(cornerRadius: BorderRadius.xxl, style: .continuous)
+                        .stroke(theme.accent.opacity(0.2), lineWidth: 0.5)
+                        .padding(1)
+                )
+        )
+        .shadow(color: theme.cardShadow, radius: theme.cardShadowRadius, x: 0, y: 4)
+        .shadow(color: theme.accent.opacity(0.08), radius: 20, x: 0, y: 8)
+        .padding(.horizontal, Spacing.screenHorizontal)
+    }
+
     // MARK: - Verse Info
 
     private func verseInfo(verse: Verse, theme: ThemeMode) -> some View {
@@ -210,13 +289,13 @@ struct AudioPlayerView: View {
         Group {
             if let translation = currentTranslation {
                 Text(translation.text)
-                    .font(.system(size: FontSizes.sm))
+                    .font(.system(size: settings.fontSize.translationSize))
                     .foregroundColor(theme.textSecondary)
                     .multilineTextAlignment(.center)
-                    .lineSpacing(6)
+                    .lineSpacing(settings.fontSize.lineSpacing * 0.6)
                     .fixedSize(horizontal: false, vertical: true)
                     .transition(.opacity)
-                    .animation(.easeInOut(duration: 0.3), value: currentTranslation?.id)
+                    .animation(AppAnimation.gentle, value: currentTranslation?.id)
             }
         }
     }
@@ -257,7 +336,7 @@ struct AudioPlayerView: View {
                 playPauseIcon(theme: theme)
             }
             .scaleEffect(isPlayPausePressed ? 0.92 : 1.0)
-            .animation(.spring(response: 0.2, dampingFraction: 0.6), value: isPlayPausePressed)
+            .animation(AppAnimation.bouncy, value: isPlayPausePressed)
             .onLongPressGesture(minimumDuration: .infinity, pressing: { pressing in
                 isPlayPausePressed = pressing
             }, perform: {})
@@ -328,6 +407,7 @@ struct AudioPlayerView: View {
     private func bottomRow(theme: ThemeMode) -> some View {
         HStack(spacing: Spacing.xs) {
             speedPill(theme: theme)
+            repeatModePill(theme: theme)
             continuousPill(theme: theme)
             reciterPill(theme: theme)
             Spacer()
@@ -371,6 +451,65 @@ struct AudioPlayerView: View {
         if speed == 1.0 { return "1\u{00D7}" }
         if speed == floor(speed) { return String(format: "%.0f\u{00D7}", speed) }
         return String(format: "%.2g\u{00D7}", speed)
+    }
+
+    // MARK: - Repeat Mode Pill
+
+    private func repeatModePill(theme: ThemeMode) -> some View {
+        Button {
+            audioService.cycleRepeatMode()
+            HapticManager.shared.trigger(.selection)
+        } label: {
+            HStack(spacing: Spacing.xxxs) {
+                Image(systemName: audioService.repeatSettings.repeatMode.iconName)
+                    .font(.system(size: FontSizes.xs))
+                if let progressText = audioService.repeatSettings.progressText {
+                    Text(progressText)
+                        .font(.system(size: FontSizes.xs, weight: .medium))
+                } else {
+                    Text(audioService.repeatSettings.repeatMode.displayName)
+                        .font(.system(size: FontSizes.xs, weight: .medium))
+                }
+            }
+            .foregroundColor(audioService.repeatSettings.isActive ? theme.accent : theme.textSecondary)
+            .padding(.horizontal, Spacing.xs)
+            .padding(.vertical, Spacing.xxs)
+            .frame(minHeight: Spacing.tapTarget)
+            .background(
+                Capsule()
+                    .fill(audioService.repeatSettings.isActive ? theme.accent.opacity(0.12) : theme.cardColor)
+            )
+        }
+        .contextMenu {
+            // Quick repeat count options
+            ForEach([3, 5, 10, 20, 0], id: \.self) { count in
+                Button {
+                    audioService.repeatSettings.repeatCount = count
+                } label: {
+                    HStack {
+                        Text(count == 0 ? "\u{221E} Infinite" : "\(count)\u{00D7} Repeat")
+                        if audioService.repeatSettings.repeatCount == count {
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
+            }
+            Divider()
+            Menu("Delay Between Repeats") {
+                ForEach(RepeatSettings.availableDelays, id: \.self) { delay in
+                    Button {
+                        audioService.repeatSettings.delayBetweenRepeats = delay
+                    } label: {
+                        HStack {
+                            Text(delay == 0 ? "No Delay" : "\(Int(delay))s Delay")
+                            if audioService.repeatSettings.delayBetweenRepeats == delay {
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     // MARK: - Continuous Toggle Pill
@@ -514,13 +653,13 @@ struct AudioPlayerView: View {
                 }
                 .padding(Spacing.xs)
                 .background(
-                    RoundedRectangle(cornerRadius: BorderRadius.md)
+                    RoundedRectangle(cornerRadius: BorderRadius.md, style: .continuous)
                         .fill(theme.semanticWarning.opacity(0.1))
                 )
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
-        .animation(.easeOut(duration: 0.25), value: audioService.playbackState)
+        .animation(AppAnimation.fast, value: audioService.playbackState)
     }
 
     // MARK: - Data Loading
@@ -533,6 +672,17 @@ struct AudioPlayerView: View {
         Task {
             let preferredEdition = quranService.getTranslationPreferences().primaryTranslation
             currentTranslation = try? await quranService.getTranslation(forVerse: verse, edition: preferredEdition)
+        }
+    }
+
+    private func loadTransliteration(for verse: Verse?) {
+        guard let verse = verse else {
+            currentTransliteration = nil
+            return
+        }
+        Task {
+            let transliterations = try? await quranService.getTransliterations(forSurah: verse.surahNumber)
+            currentTransliteration = transliterations?[verse.number]
         }
     }
 
@@ -550,6 +700,47 @@ struct AudioPlayerView: View {
                 }
             } else {
                 surahName = "Surah \(verse.surahNumber)"
+            }
+        }
+    }
+
+    private func loadTajweedAndWordData(for verse: Verse?) {
+        guard let verse = verse else {
+            tajweedSegments = []
+            wordData = []
+            return
+        }
+        Task {
+            // Load tajweed segments for this verse's surah, then pick the right verse
+            if settings.showTajweed {
+                if let allVerses = try? await TajweedService.shared.getTajweedVerses(forSurah: verse.surahNumber) {
+                    let verseIdx = verse.verseNumber - 1
+                    if verseIdx >= 0 && verseIdx < allVerses.count {
+                        tajweedSegments = allVerses[verseIdx]
+                    } else {
+                        tajweedSegments = []
+                    }
+                } else {
+                    tajweedSegments = []
+                }
+            } else {
+                tajweedSegments = []
+            }
+
+            // Load word data for this verse's surah, then pick the right verse
+            if settings.showWordByWord {
+                if let allVerses = try? await WordMorphologyService.shared.getWords(forSurah: verse.surahNumber) {
+                    let verseIdx = verse.verseNumber - 1
+                    if verseIdx >= 0 && verseIdx < allVerses.count {
+                        wordData = allVerses[verseIdx]
+                    } else {
+                        wordData = []
+                    }
+                } else {
+                    wordData = []
+                }
+            } else {
+                wordData = []
             }
         }
     }
@@ -580,7 +771,7 @@ struct ReciterSelectorView: View {
                         )
                         .contentShape(Rectangle())
                         .onTapGesture {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            withAnimation(AppAnimation.fast) {
                                 selectedReciter = reciter
                                 audioService.selectedReciter = reciter
                                 onSelect(reciter)

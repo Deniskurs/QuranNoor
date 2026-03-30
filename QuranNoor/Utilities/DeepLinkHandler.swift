@@ -7,6 +7,7 @@
 
 import SwiftUI
 import UIKit
+import os
 
 // MARK: - Deep Link Destination
 enum DeepLinkDestination: String, Hashable {
@@ -66,9 +67,7 @@ class DeepLinkHandler {
     /// Handle UIApplicationShortcutItem from 3D Touch
     func handle(shortcutItem: UIApplicationShortcutItem) {
         guard let action = shortcutItem.userInfo?["action"] as? String else {
-            #if DEBUG
-            print("No action found in shortcut item")
-            #endif
+            AppLogger.navigation.warning("No action found in shortcut item")
             return
         }
 
@@ -79,9 +78,7 @@ class DeepLinkHandler {
             // Haptic feedback for shortcut activation
             HapticManager.shared.trigger(.medium)
 
-            #if DEBUG
-            print("🚀 Quick Action: \(destination.rawValue) -> Tab \(destination.tabIndex)")
-            #endif
+            AppLogger.navigation.debug("Quick Action: \(destination.rawValue, privacy: .public) -> Tab \(destination.tabIndex, privacy: .public)")
         }
     }
 
@@ -96,9 +93,7 @@ class DeepLinkHandler {
         if let destination = DeepLinkDestination(rawValue: action) {
             navigate(to: destination)
 
-            #if DEBUG
-            print("🔗 URL Scheme: \(url.absoluteString) -> Tab \(destination.tabIndex)")
-            #endif
+            AppLogger.navigation.debug("URL Scheme: \(url.absoluteString, privacy: .public) -> Tab \(destination.tabIndex, privacy: .public)")
 
             return true
         }

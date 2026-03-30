@@ -86,7 +86,7 @@ struct SwipeablePrayerRow: View {
             )
             .offset(x: displayOffset)
         }
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous))
         .contentShape(Rectangle())
         .simultaneousGesture(swipeGesture)
         .onChange(of: currentOffset) { _, newValue in
@@ -116,11 +116,11 @@ struct SwipeablePrayerRow: View {
         .padding(.trailing, 20)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous)
                 .fill(Color.green)
         )
         .opacity(swipeProgress)
-        .animation(.easeOut(duration: 0.15), value: isPastThreshold)
+        .animation(AppAnimation.fast, value: isPastThreshold)
     }
 
     // MARK: - Swipe Gesture
@@ -208,7 +208,7 @@ struct SwipeablePrayerRow: View {
                 dragState.reset()
                 dragTick += 1
 
-                withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
+                withAnimation(AppAnimation.fast) {
                     displayOffset = 0
                 }
             }

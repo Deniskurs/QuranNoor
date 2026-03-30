@@ -28,7 +28,7 @@ extension View {
         self
             .scaleEffect(isPresented ? 1.0 : scaleFrom)
             .opacity(isPresented ? 1.0 : 0.0)
-            .animation(.easeInOut(duration: duration), value: isPresented)
+            .animation(AppAnimation.expressive, value: isPresented)
     }
 
     // MARK: - Onboarding Transition
@@ -86,7 +86,7 @@ extension View {
         self
             .scaleEffect(isPresented ? 1.0 : 0.8)
             .opacity(isPresented ? 1.0 : 0.0)
-            .animation(.spring(response: 0.4, dampingFraction: 0.7), value: isPresented)
+            .animation(AppAnimation.standard, value: isPresented)
     }
 
     // MARK: - Slide Fade Transition
@@ -113,7 +113,7 @@ struct OnboardingDismissalModifier: ViewModifier {
         content
             .scaleEffect(isOnboardingComplete ? 0.95 : 1.0)
             .opacity(isOnboardingComplete ? 0.0 : 1.0)
-            .animation(.easeInOut(duration: 0.6), value: isOnboardingComplete)
+            .animation(AppAnimation.expressive, value: isOnboardingComplete)
     }
 }
 
@@ -126,7 +126,7 @@ struct HomeAppearanceModifier: ViewModifier {
         content
             .scaleEffect(isOnboardingComplete ? 1.0 : 1.05)
             .opacity(isOnboardingComplete ? 1.0 : 0.0)
-            .animation(.easeInOut(duration: 0.6), value: isOnboardingComplete)
+            .animation(AppAnimation.expressive, value: isOnboardingComplete)
     }
 }
 
@@ -147,23 +147,8 @@ extension View {
 
 extension Animation {
 
-    /// Custom smooth animation (renamed to avoid shadowing SwiftUI's built-in .smooth)
-    static var smoothCustom: Animation {
-        .timingCurve(0.4, 0.0, 0.2, 1.0, duration: 0.3)
-    }
-
-    /// Custom smooth animation with custom duration (renamed to avoid shadowing SwiftUI's built-in .smooth(duration:))
-    static func smoothCustom(duration: Double) -> Animation {
-        .timingCurve(0.4, 0.0, 0.2, 1.0, duration: duration)
-    }
-
-    /// Custom snappy animation for quick interactions (renamed to avoid shadowing SwiftUI's built-in .snappy)
-    static var snappyCustom: Animation {
-        .timingCurve(0.5, 0.0, 0.0, 1.0, duration: 0.2)
-    }
-
-    /// Elegant ease-in-out
+    /// Elegant ease-in-out (convenience alias for AppAnimation.standard)
     static var elegant: Animation {
-        .easeInOut(duration: 0.4)
+        AppAnimation.standard
     }
 }

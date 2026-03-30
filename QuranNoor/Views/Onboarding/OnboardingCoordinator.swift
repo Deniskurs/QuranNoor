@@ -7,6 +7,7 @@
 
 import SwiftUI
 import Observation
+import os
 
 // MARK: - Cached Formatter (Performance: avoid repeated allocation)
 private let onboardingISOFormatter = ISO8601DateFormatter()
@@ -410,8 +411,6 @@ final class MockAnalyticsService: AnalyticsServiceProtocol {
 
     func track(event: AnalyticsEvent, properties: [String: String]) {
         trackedEvents.append((event, properties))
-        #if DEBUG
-        print("📊 Analytics: \(event.name) - \(properties)")
-        #endif
+        AppLogger.onboarding.debug("Analytics: \(event.name, privacy: .public) - \(String(describing: properties), privacy: .public)")
     }
 }

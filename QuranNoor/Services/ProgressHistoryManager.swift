@@ -8,6 +8,7 @@
 
 import Foundation
 import Observation
+import os
 
 @Observable
 @MainActor
@@ -101,9 +102,7 @@ class ProgressHistoryManager {
 
             try data.write(to: fileURL, options: .atomic)
         } catch {
-            #if DEBUG
-            print("❌ Failed to save history: \(error.localizedDescription)")
-            #endif
+            AppLogger.data.error("Failed to save history: \(error.localizedDescription, privacy: .public)")
         }
     }
 

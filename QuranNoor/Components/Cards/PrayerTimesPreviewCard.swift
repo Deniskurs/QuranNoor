@@ -88,7 +88,7 @@ struct PrayerTimesPreviewCard: View {
             }
             .padding(12)
             .background(
-                RoundedRectangle(cornerRadius: 10)
+                RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                     .fill(theme.accentColor.opacity(0.1))
             )
 
@@ -123,7 +123,7 @@ struct PrayerTimesPreviewCard: View {
         }
         .padding(16)
         .background(
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous)
                 .fill(theme.cardColor)
                 .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
         )

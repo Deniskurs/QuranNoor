@@ -91,7 +91,7 @@ struct PrayerReminderPopup: View {
                             .frame(maxWidth: .infinity)
                             .frame(height: 50)
                             .background(
-                                RoundedRectangle(cornerRadius: 12)
+                                RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                                     .stroke(themeManager.currentTheme.textPrimary.opacity(0.2), lineWidth: 1.5)
                             )
                     }
@@ -101,7 +101,7 @@ struct PrayerReminderPopup: View {
                         // Play confirm sound + success haptic for "Yes"
                         // AudioHapticCoordinator.shared.playSuccess() // Removed: button press sound
 
-                        withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                        withAnimation(AppAnimation.standard) {
                             onComplete()
                         }
 
@@ -122,7 +122,7 @@ struct PrayerReminderPopup: View {
                         .frame(maxWidth: .infinity)
                         .frame(height: 50)
                         .background(
-                            RoundedRectangle(cornerRadius: 12)
+                            RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                                 .fill(themeManager.currentTheme.accent)
                         )
                     }
@@ -133,7 +133,7 @@ struct PrayerReminderPopup: View {
             }
             .frame(maxWidth: 380)
             .background(
-                RoundedRectangle(cornerRadius: 24)
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
                     .fill(themeManager.currentTheme.cardColor)
                     .shadow(color: .black.opacity(0.3), radius: 20, x: 0, y: 10)
             )
@@ -146,7 +146,7 @@ struct PrayerReminderPopup: View {
             AudioHapticCoordinator.shared.playPrayerReminderAppear()
 
             // Entrance animation
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+            withAnimation(AppAnimation.expressive) {
                 scale = 1.0
                 opacity = 1.0
             }
@@ -162,7 +162,7 @@ struct PrayerReminderPopup: View {
     // MARK: - Helper Methods
 
     private func dismiss() {
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+        withAnimation(AppAnimation.fast) {
             scale = 0.8
             opacity = 0
         }

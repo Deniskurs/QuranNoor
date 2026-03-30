@@ -89,7 +89,7 @@ struct SpiritualNourishmentCarousel: View {
                         Circle()
                             .fill(index == currentPage ? themeManager.currentTheme.accent : themeManager.currentTheme.textTertiary.opacity(0.3))
                             .frame(width: 8, height: 8)
-                            .animation(.easeInOut(duration: 0.3), value: currentPage)
+                            .animation(AppAnimation.gentle, value: currentPage)
                     }
                 }
                 .frame(maxWidth: .infinity)
@@ -256,14 +256,14 @@ struct SpiritualContentCard: View {
         .contentShape(Rectangle()) // Make entire card tappable
         .onTapGesture {
             // Tap animation with haptic feedback
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+            withAnimation(AppAnimation.bouncy) {
                 isTapped = true
             }
             HapticManager.shared.trigger(.light)
 
             // Reset after brief delay and show sheet
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                withAnimation(AppAnimation.bouncy) {
                     isTapped = false
                 }
                 showDetailSheet = true
@@ -328,7 +328,7 @@ struct SpiritualContentCard: View {
     // MARK: - Actions
 
     private func toggleBookmark() {
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+        withAnimation(AppAnimation.bouncy) {
             isBookmarked.toggle()
         }
 
@@ -372,14 +372,14 @@ struct LoadingContentCard: View {
         CardView(intensity: .moderate) {
             VStack(alignment: .leading, spacing: 16) {
                 // Header skeleton
-                RoundedRectangle(cornerRadius: 6)
+                RoundedRectangle(cornerRadius: BorderRadius.sm, style: .continuous)
                     .fill(skeletonGradient)
                     .frame(width: 120, height: 16)
 
                 // Content lines skeleton
                 VStack(alignment: .leading, spacing: 12) {
                     ForEach(0..<6, id: \.self) { index in
-                        RoundedRectangle(cornerRadius: 4)
+                        RoundedRectangle(cornerRadius: BorderRadius.sm, style: .continuous)
                             .fill(skeletonGradient)
                             .frame(height: 18)
                             .frame(maxWidth: index == 5 ? 200 : nil, alignment: .leading)
@@ -389,7 +389,7 @@ struct LoadingContentCard: View {
                 Spacer()
 
                 // Source skeleton
-                RoundedRectangle(cornerRadius: 4)
+                RoundedRectangle(cornerRadius: BorderRadius.sm, style: .continuous)
                     .fill(skeletonGradient)
                     .frame(width: 100, height: 14)
 
@@ -400,13 +400,13 @@ struct LoadingContentCard: View {
 
                 // Action buttons skeleton
                 HStack(spacing: 24) {
-                    RoundedRectangle(cornerRadius: 8)
+                    RoundedRectangle(cornerRadius: BorderRadius.md, style: .continuous)
                         .fill(skeletonGradient)
                         .frame(width: 60, height: 48)
 
                     Spacer()
 
-                    RoundedRectangle(cornerRadius: 8)
+                    RoundedRectangle(cornerRadius: BorderRadius.md, style: .continuous)
                         .fill(skeletonGradient)
                         .frame(width: 60, height: 48)
                 }

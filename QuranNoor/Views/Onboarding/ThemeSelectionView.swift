@@ -106,7 +106,7 @@ struct ThemeSelectionView: View {
     // MARK: - Methods
 
     private func selectTheme(_ mode: ThemeMode) {
-        withAnimation(accessibilityHelper.shouldAnimate ? .spring(response: 0.3, dampingFraction: 0.7) : nil) {
+        withAnimation(accessibilityHelper.shouldAnimate ? AppAnimation.fast : nil) {
             selectedTheme = mode
             coordinator.selectedTheme = mode.rawValue
         }
@@ -161,11 +161,11 @@ struct ThemeGridCard: View {
             VStack(spacing: Spacing.xxs) {
                 // Color swatch
                 ZStack {
-                    RoundedRectangle(cornerRadius: CornerRadius.md)
+                    RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                         .fill(theme.backgroundColor)
                         .frame(height: 60)
                         .overlay(
-                            RoundedRectangle(cornerRadius: CornerRadius.md)
+                            RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                                 .stroke(theme.textPrimary.opacity(0.15), lineWidth: 1)
                         )
 
@@ -190,19 +190,19 @@ struct ThemeGridCard: View {
             }
             .padding(Spacing.xs)
             .background(
-                RoundedRectangle(cornerRadius: CornerRadius.lg)
+                RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous)
                     .fill(themeManager.currentTheme.cardColor)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: CornerRadius.lg)
+                RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous)
                     .stroke(
                         isSelected ? themeManager.currentTheme.accent : Color.clear,
                         lineWidth: 2.5
                     )
-                    .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
+                    .animation(AppAnimation.fast, value: isSelected)
             )
             .scaleEffect(isSelected ? 1.02 : 1.0)
-            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
+            .animation(AppAnimation.fast, value: isSelected)
         }
         .buttonStyle(.plain)
         .accessibleElement(

@@ -151,7 +151,6 @@ struct QadhaDuaCard: View {
                     .multilineTextAlignment(.trailing)
                     .frame(maxWidth: .infinity, alignment: .trailing)
                     .padding(.vertical, 8)
-                    .environment(\.layoutDirection, .rightToLeft)
 
                 Divider()
 

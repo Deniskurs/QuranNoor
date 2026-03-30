@@ -150,6 +150,6 @@ struct ReadingProgressSection: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 8)
         .background(color.opacity(themeManager.currentTheme == .sepia ? 0 : (themeManager.currentTheme == .light ? 0.12 : 0.30)))
-        .cornerRadius(8)
+        .clipShape(RoundedRectangle(cornerRadius: BorderRadius.md, style: .continuous))
     }
 }

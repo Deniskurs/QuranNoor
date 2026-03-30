@@ -7,6 +7,7 @@
 
 import Foundation
 import Observation
+import os
 
 @Observable
 @MainActor
@@ -312,9 +313,7 @@ class ProgressManagementViewModel {
         }
 
         // Note: No need to call loadProgress() - observers will update automatically
-        #if DEBUG
-        print("🔄 Reset completed - observers will update ViewModels")
-        #endif
+        AppLogger.data.debug("Reset completed - observers will update ViewModels")
         showingResetConfirmation = false
         resetType = nil
     }
@@ -371,9 +370,7 @@ class ProgressManagementViewModel {
             exportURL = fileURL
             isExporting = false
 
-            #if DEBUG
-            print("📤 Exported progress to: \(fileURL.path)")
-            #endif
+            AppLogger.data.debug("Exported progress to: \(fileURL.path, privacy: .public)")
         } catch {
             importError = "Failed to export: \(error.localizedDescription)"
             isExporting = false
@@ -406,9 +403,7 @@ class ProgressManagementViewModel {
             loadProgress()
             isImporting = false
 
-            #if DEBUG
-            print("📥 Imported \(importedProgress.totalVersesRead) verses with strategy: \(strategy)")
-            #endif
+            AppLogger.data.debug("Imported \(importedProgress.totalVersesRead, privacy: .public) verses with strategy: \(String(describing: strategy), privacy: .public)")
         } catch {
             importError = "Failed to import: \(error.localizedDescription)"
             isImporting = false

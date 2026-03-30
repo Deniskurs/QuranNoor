@@ -54,7 +54,7 @@ struct ProgressRing: View {
                     )
                 )
                 .rotationEffect(.degrees(-90)) // Start from top
-                .animation(.spring(response: 0.8, dampingFraction: 0.7), value: animatedProgress)
+                .animation(AppAnimation.expressive, value: animatedProgress)
 
             // Optional percentage text
             if showPercentage {

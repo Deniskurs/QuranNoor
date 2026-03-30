@@ -28,6 +28,8 @@ struct VerseProgressDetailView: View {
                 themeManager.currentTheme.backgroundColor
                     .ignoresSafeArea()
 
+                GradientBackground(style: .quran, opacity: 0.3)
+
                 ScrollView {
                     VStack(spacing: Spacing.sectionSpacing) {
                         heroHeader
@@ -100,37 +102,33 @@ struct VerseProgressDetailView: View {
     // MARK: - Hero Header
 
     private var heroHeader: some View {
-        VStack(spacing: Spacing.sm) {
-            // Arabic name as hero
-            Text(surah.name)
-                .font(.custom("KFGQPC HAFS Uthmanic Script Regular", size: 36))
-                .foregroundColor(themeManager.currentTheme.accent)
+        CardView(showPattern: true, intensity: .moderate) {
+            VStack(spacing: Spacing.sm) {
+                // Arabic name as hero
+                Text(surah.name)
+                    .font(AppTypography.arabicScalable(size: 36))
+                    .foregroundColor(themeManager.currentTheme.accent)
+                    .environment(\.layoutDirection, .rightToLeft)
 
-            // English names
-            Text(surah.englishName)
-                .font(.system(size: FontSizes.lg, weight: .semibold))
-                .foregroundColor(themeManager.currentTheme.textPrimary)
+                // English names
+                Text(surah.englishName)
+                    .font(.system(size: FontSizes.lg, weight: .semibold))
+                    .foregroundColor(themeManager.currentTheme.textPrimary)
 
-            Text(surah.englishNameTranslation)
-                .font(.system(size: FontSizes.sm))
-                .foregroundColor(themeManager.currentTheme.textTertiary)
+                Text(surah.englishNameTranslation)
+                    .font(.system(size: FontSizes.sm))
+                    .foregroundColor(themeManager.currentTheme.textTertiary)
 
-            IslamicDivider(style: .ornamental, color: themeManager.currentTheme.accent.opacity(0.3))
+                IslamicDivider(style: .ornamental, color: themeManager.currentTheme.accent.opacity(0.3))
 
-            // Surah metadata
-            HStack(spacing: Spacing.md) {
-                metadataItem(text: "\(surah.numberOfVerses) Verses")
-                metadataItem(text: surah.revelationType.rawValue)
-                metadataItem(text: "Surah \(surah.id)")
+                // Surah metadata
+                HStack(spacing: Spacing.md) {
+                    metadataItem(text: "\(surah.numberOfVerses) Verses")
+                    metadataItem(text: surah.revelationType.rawValue)
+                    metadataItem(text: "Surah \(surah.id)")
+                }
             }
         }
-        .padding(Spacing.md)
-        .background(themeManager.currentTheme.cardColor)
-        .clipShape(RoundedRectangle(cornerRadius: BorderRadius.xl))
-        .overlay(
-            RoundedRectangle(cornerRadius: BorderRadius.xl)
-                .stroke(themeManager.currentTheme.borderColor, lineWidth: 1)
-        )
     }
 
     private func metadataItem(text: String) -> some View {
@@ -144,53 +142,58 @@ struct VerseProgressDetailView: View {
     private var progressBar: some View {
         let stats = getSurahStats()
 
-        return VStack(spacing: Spacing.xs) {
-            HStack {
-                Text("\(stats.readVerses) / \(stats.totalVerses) verses")
-                    .font(.system(size: FontSizes.sm, weight: .medium))
-                    .foregroundColor(themeManager.currentTheme.textPrimary)
+        return CardView(intensity: .subtle) {
+            VStack(spacing: Spacing.xs) {
+                HStack {
+                    Text("\(stats.readVerses) / \(stats.totalVerses) verses")
+                        .font(.system(size: FontSizes.sm, weight: .medium))
+                        .foregroundColor(themeManager.currentTheme.textPrimary)
 
-                Spacer()
+                    Spacer()
 
-                Text("\(Int(stats.completionPercentage))%")
-                    .font(.system(size: FontSizes.sm, weight: .semibold))
-                    .foregroundColor(themeManager.currentTheme.accent)
-            }
-
-            GeometryReader { geometry in
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(themeManager.currentTheme.textPrimary.opacity(0.08))
-                        .frame(height: 6)
-
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(themeManager.currentTheme.accent)
-                        .frame(
-                            width: geometry.size.width * (stats.completionPercentage / 100),
-                            height: 6
-                        )
+                    Text("\(Int(stats.completionPercentage))%")
+                        .font(.system(size: FontSizes.sm, weight: .semibold))
+                        .foregroundColor(themeManager.currentTheme.accent)
                 }
-            }
-            .frame(height: 6)
 
-            // Date info
-            HStack(spacing: Spacing.sm) {
-                if let firstRead = stats.firstReadDate {
-                    dateLabel(prefix: "Started", date: firstRead)
+                GeometryReader { geometry in
+                    ZStack(alignment: .leading) {
+                        Capsule()
+                            .fill(themeManager.currentTheme.textPrimary.opacity(0.08))
+                            .frame(height: 6)
+
+                        Capsule()
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        themeManager.currentTheme.accent,
+                                        themeManager.currentTheme.accentMuted
+                                    ],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .frame(
+                                width: geometry.size.width * (stats.completionPercentage / 100),
+                                height: 6
+                            )
+                            .animation(.spring(), value: stats.completionPercentage)
+                    }
                 }
-                if let lastRead = stats.lastReadDate {
-                    dateLabel(prefix: "Last read", date: lastRead)
+                .frame(height: 6)
+
+                // Date info
+                HStack(spacing: Spacing.sm) {
+                    if let firstRead = stats.firstReadDate {
+                        dateLabel(prefix: "Started", date: firstRead)
+                    }
+                    if let lastRead = stats.lastReadDate {
+                        dateLabel(prefix: "Last read", date: lastRead)
+                    }
+                    Spacer()
                 }
-                Spacer()
             }
         }
-        .padding(Spacing.sm)
-        .background(themeManager.currentTheme.cardColor)
-        .clipShape(RoundedRectangle(cornerRadius: BorderRadius.lg))
-        .overlay(
-            RoundedRectangle(cornerRadius: BorderRadius.lg)
-                .stroke(themeManager.currentTheme.borderColor, lineWidth: 1)
-        )
     }
 
     private func dateLabel(prefix: String, date: Date) -> some View {
@@ -208,22 +211,17 @@ struct VerseProgressDetailView: View {
                 .foregroundColor(themeManager.currentTheme.textPrimary)
 
             ScrollViewReader { proxy in
-                LazyVGrid(columns: columns, spacing: 10) {
-                    ForEach(1...surah.numberOfVerses, id: \.self) { verseNumber in
-                        verseCell(verseNumber)
-                            .id(verseNumber)
+                CardView(intensity: .subtle) {
+                    LazyVGrid(columns: columns, spacing: 10) {
+                        ForEach(1...surah.numberOfVerses, id: \.self) { verseNumber in
+                            verseCell(verseNumber)
+                                .id(verseNumber)
+                        }
                     }
                 }
-                .padding(Spacing.sm)
-                .background(themeManager.currentTheme.cardColor)
-                .clipShape(RoundedRectangle(cornerRadius: BorderRadius.xl))
-                .overlay(
-                    RoundedRectangle(cornerRadius: BorderRadius.xl)
-                        .stroke(themeManager.currentTheme.borderColor, lineWidth: 1)
-                )
                 .onChange(of: selectedVerseToScroll) { _, newValue in
                     if let verse = newValue {
-                        withAnimation(.easeInOut(duration: 0.3)) {
+                        withAnimation(AppAnimation.gentle) {
                             proxy.scrollTo(verse, anchor: .center)
                         }
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
@@ -239,19 +237,20 @@ struct VerseProgressDetailView: View {
         let isRead = verseStates[verseNumber] ?? false
 
         return Button {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+            withAnimation(AppAnimation.fast) {
                 toggleVerse(verseNumber)
+                HapticManager.shared.trigger(.light)
             }
         } label: {
             ZStack {
-                RoundedRectangle(cornerRadius: BorderRadius.md)
+                RoundedRectangle(cornerRadius: BorderRadius.md, style: .continuous)
                     .fill(
                         isRead
                             ? themeManager.currentTheme.accent
                             : themeManager.currentTheme.textPrimary.opacity(0.06)
                     )
                     .overlay(
-                        RoundedRectangle(cornerRadius: BorderRadius.md)
+                        RoundedRectangle(cornerRadius: BorderRadius.md, style: .continuous)
                             .stroke(
                                 isRead
                                     ? themeManager.currentTheme.accent.opacity(0.6)

@@ -188,7 +188,7 @@ class ThemeManager {
     // MARK: - Methods
     func setTheme(_ theme: ThemeMode) {
         // Animate theme changes for smooth transitions
-        withAnimation(.easeInOut(duration: 0.3)) {
+        withAnimation(AppAnimation.gentle) {
             currentTheme = theme
         }
     }

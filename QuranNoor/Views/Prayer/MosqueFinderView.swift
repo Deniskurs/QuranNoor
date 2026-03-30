@@ -87,7 +87,7 @@ struct MosqueFinderView: View {
                             mosque: mosque,
                             isSelected: selectedMosque?.id == mosque.id,
                             onSelect: {
-                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                withAnimation(AppAnimation.fast) {
                                     selectedMosque = mosque
                                     // Update map to center on selected mosque
                                     mapPosition = .camera(
@@ -201,7 +201,7 @@ struct MosqueFinderView: View {
         }
         .padding(12)
         .background(
-            RoundedRectangle(cornerRadius: 12)
+            RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
                 .fill(themeManager.currentTheme.cardColor)
         )
     }
@@ -384,7 +384,7 @@ struct MosqueCard: View {
                                     .padding(.vertical, 12)
                                     .background(themeManager.currentTheme.accent)
                                     .foregroundStyle(.white)
-                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                                    .clipShape(RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous))
                             }
 
                             // Call Button (if phone number available)
@@ -398,7 +398,7 @@ struct MosqueCard: View {
                                         .padding(.vertical, 12)
                                         .background(Color.green)
                                         .foregroundStyle(.white)
-                                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                                        .clipShape(RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous))
                                 }
                             }
                         }
@@ -408,7 +408,7 @@ struct MosqueCard: View {
             }
             .padding(16)
         }
-        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
+        .animation(AppAnimation.fast, value: isSelected)
     }
 
     // MARK: - Actions

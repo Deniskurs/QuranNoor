@@ -9,6 +9,7 @@
 import SwiftUI
 import SwiftData
 import UserNotifications
+import WidgetKit
 
 // TODO: Add crash reporting framework (e.g., Firebase Crashlytics or Sentry) before production release.
 // TODO: NetworkMonitor.swift exists but is not wired to the UI. Add offline indicators in views that require network access.
@@ -136,7 +137,7 @@ struct QuranNoorApp: App {
             .environment(localizationManager)
             // Inject SwiftData model container
             .modelContainer(modelContainer)
-            .animation(.easeInOut(duration: 0.6), value: hasCompletedOnboarding)
+            .animation(AppAnimation.expressive, value: hasCompletedOnboarding)
             // Setup SwiftData services and perform migration on first launch
             .task {
                 await setupSwiftDataServices()
@@ -151,6 +152,8 @@ struct QuranNoorApp: App {
                 case .active:
                     // Clear badge count when app becomes active
                     UNUserNotificationCenter.current().setBadgeCount(0)
+                    // Refresh widgets with latest data
+                    WidgetCenter.shared.reloadAllTimelines()
                 case .background:
                     // Placeholder for future background tasks
                     break

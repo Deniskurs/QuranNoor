@@ -89,8 +89,9 @@ struct RamadanTrackerView: View {
                 .shadow(color: themeManager.currentTheme.accent.opacity(0.3), radius: 12)
 
             Text("رَمَضَان مُبَارَك")
-                .font(.custom("KFGQPCHAFSUthmanicScript-Regular", size: 28, relativeTo: .title))
+                .font(AppTypography.arabicScalable(size: 28))
                 .foregroundStyle(themeManager.currentTheme.textPrimary)
+                .environment(\.layoutDirection, .rightToLeft)
 
             Text("Ramadan \(currentYear) AH")
                 .font(.system(size: FontSizes.lg, weight: .semibold, design: .rounded))
@@ -310,7 +311,7 @@ struct RamadanTrackerView: View {
 
         return Button {
             guard !isFuture else { return }
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+            withAnimation(AppAnimation.fast) {
                 currentTracker.toggleFasting(day: day)
                 calendarService.updateRamadanTracker(currentTracker)
             }
@@ -421,7 +422,7 @@ struct RamadanTrackerView: View {
 
         return Button {
             guard !isFuture else { return }
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+            withAnimation(AppAnimation.fast) {
                 currentTracker.toggleQiyam(night: night)
                 calendarService.updateRamadanTracker(currentTracker)
             }
@@ -500,7 +501,7 @@ struct RamadanTrackerView: View {
                 subtitle: "Read the entire Quran during this blessed month",
                 isCompleted: currentTracker.quranCompleted
             ) {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                withAnimation(AppAnimation.fast) {
                     currentTracker.quranCompleted.toggle()
                     calendarService.updateRamadanTracker(currentTracker)
                 }
@@ -514,7 +515,7 @@ struct RamadanTrackerView: View {
                 subtitle: "Obligatory charity before Eid prayer",
                 isCompleted: currentTracker.zakahPaid
             ) {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                withAnimation(AppAnimation.fast) {
                     currentTracker.zakahPaid.toggle()
                     calendarService.updateRamadanTracker(currentTracker)
                 }
