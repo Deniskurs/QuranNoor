@@ -13,6 +13,7 @@ struct NameDetailView: View {
     @Bindable var namesService: NamesOfAllahService
 
     @Environment(\.dismiss) private var dismiss
+    @State private var showAudioComingSoon = false
 
     private var isFavorite: Bool {
         namesService.isFavorite(number: name.number)
@@ -116,6 +117,36 @@ struct NameDetailView: View {
                         endPoint: .trailing
                     )
                 )
+
+            // Audio pronunciation placeholder
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    showAudioComingSoon = true
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                    withAnimation(.easeOut(duration: 0.3)) {
+                        showAudioComingSoon = false
+                    }
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "speaker.wave.2")
+                        .font(.body)
+                    if showAudioComingSoon {
+                        Text("Coming Soon")
+                            .font(.caption)
+                            .transition(.opacity)
+                    }
+                }
+                .foregroundStyle(themeManager.currentTheme.featureAccent)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(
+                    Capsule()
+                        .fill(themeManager.currentTheme.featureAccent.opacity(0.15))
+                )
+            }
+            .buttonStyle(.plain)
         }
         .padding()
         .frame(maxWidth: .infinity)

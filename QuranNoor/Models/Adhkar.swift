@@ -15,8 +15,6 @@ enum AdhkarCategory: String, CaseIterable, Identifiable, Codable {
     case evening = "evening"
     case afterPrayer = "after_prayer"
     case beforeSleep = "before_sleep"
-    case waking = "waking"
-    case general = "general"
 
     var id: String { rawValue }
 
@@ -30,10 +28,6 @@ enum AdhkarCategory: String, CaseIterable, Identifiable, Codable {
             return "After Prayer"
         case .beforeSleep:
             return "Before Sleep"
-        case .waking:
-            return "Upon Waking"
-        case .general:
-            return "General Adhkar"
         }
     }
 
@@ -47,10 +41,6 @@ enum AdhkarCategory: String, CaseIterable, Identifiable, Codable {
             return "Remembrances after completing obligatory prayers"
         case .beforeSleep:
             return "Remembrances before going to sleep"
-        case .waking:
-            return "Remembrances upon waking up"
-        case .general:
-            return "General remembrances for daily life"
         }
     }
 
@@ -64,10 +54,6 @@ enum AdhkarCategory: String, CaseIterable, Identifiable, Codable {
             return "hands.sparkles.fill"
         case .beforeSleep:
             return "moon.stars.fill"
-        case .waking:
-            return "sun.max.fill"
-        case .general:
-            return "star.fill"
         }
     }
 
@@ -81,10 +67,6 @@ enum AdhkarCategory: String, CaseIterable, Identifiable, Codable {
             return "Immediately after prayer"
         case .beforeSleep:
             return "Before sleeping"
-        case .waking:
-            return "Upon waking"
-        case .general:
-            return "Anytime"
         }
     }
 }

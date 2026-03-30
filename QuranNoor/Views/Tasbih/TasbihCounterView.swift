@@ -16,6 +16,8 @@ struct TasbihCounterView: View {
     @State private var showingTargetPicker = false
     @State private var showingHistory = false
     @State private var showingSettings = false
+    @State private var tapScale: CGFloat = 1.0
+    @State private var showCelebration = false
 
     private var currentCount: Int {
         tasbihService.currentSession?.currentCount ?? 0
@@ -251,7 +253,16 @@ struct TasbihCounterView: View {
                         .font(.title2)
                         .foregroundStyle(.secondary)
                 }
+
+                // Celebration checkmark overlay
+                if showCelebration {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 80))
+                        .foregroundStyle(.green)
+                        .transition(.scale.combined(with: .opacity))
+                }
             }
+            .scaleEffect(tapScale)
             .onTapGesture {
                 incrementCounter()
             }
@@ -385,8 +396,29 @@ struct TasbihCounterView: View {
     // MARK: - Actions
 
     private func incrementCounter() {
+        // Tap scale animation
+        withAnimation(.spring(duration: 0.15)) {
+            tapScale = 0.95
+        }
+        withAnimation(.spring(duration: 0.3).delay(0.1)) {
+            tapScale = 1.0
+        }
+
         withAnimation(.spring(duration: 0.3)) {
             tasbihService.increment()
+        }
+
+        // Celebration when target reached
+        if tasbihService.currentSession?.isCompleted == true && !showCelebration {
+            withAnimation(.spring(duration: 0.5)) {
+                showCelebration = true
+            }
+            // Auto-dismiss after 2 seconds
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                withAnimation(.easeOut(duration: 0.3)) {
+                    showCelebration = false
+                }
+            }
         }
     }
 

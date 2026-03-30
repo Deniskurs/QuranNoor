@@ -11,9 +11,18 @@ struct AdhkarView: View {
     @Environment(ThemeManager.self) var themeManager
     @State private var adhkarService = AdhkarService()
     @State private var selectedCategory: AdhkarCategory?
-    @State private var showingTasbih = false
-    @State private var showingNamesOfAllah = false
-    @State private var showingFortressDuas = false
+
+    private var todayCompletedCount: Int {
+        AdhkarCategory.allCases.reduce(0) { total, category in
+            total + adhkarService.getStatistics(for: category).completedToday
+        }
+    }
+
+    private var todayTotalCount: Int {
+        AdhkarCategory.allCases.reduce(0) { total, category in
+            total + adhkarService.getStatistics(for: category).totalDhikr
+        }
+    }
 
     var body: some View {
         NavigationStack {
@@ -22,11 +31,11 @@ struct AdhkarView: View {
                     // Header
                     headerSection
 
+                    // Today's progress summary
+                    progressSummary
+
                     // Statistics Card
                     statisticsCard
-
-                    // Quick Access Section
-                    quickAccessSection
 
                     // Categories
                     categoriesSection
@@ -37,15 +46,6 @@ struct AdhkarView: View {
             .navigationBarTitleDisplayMode(.large)
             .navigationDestination(for: AdhkarCategory.self) { category in
                 AdhkarCategoryView(category: category, adhkarService: adhkarService)
-            }
-            .sheet(isPresented: $showingTasbih) {
-                TasbihCounterView()
-            }
-            .sheet(isPresented: $showingNamesOfAllah) {
-                NamesOfAllahView()
-            }
-            .sheet(isPresented: $showingFortressDuas) {
-                FortressDuasView()
             }
         }
     }
@@ -66,13 +66,40 @@ struct AdhkarView: View {
                 .font(.title2)
                 .fontWeight(.semibold)
 
-            Text("Keep your tongue moist with the remembrance of Allah")
+            Text("Daily remembrances for specific times of the day")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)
         }
         .padding(.vertical)
+    }
+
+    // MARK: - Progress Summary
+
+    private var progressSummary: some View {
+        HStack(spacing: 16) {
+            HStack(spacing: 6) {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+                    .font(.subheadline)
+                Text("Today's Progress: \(todayCompletedCount)/\(todayTotalCount) completed")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            HStack(spacing: 4) {
+                Image(systemName: "flame.fill")
+                    .foregroundStyle(.orange)
+                    .font(.caption)
+                Text("Streak: \(adhkarService.progress.streak) days")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.horizontal, 4)
     }
 
     // MARK: - Statistics Card
@@ -103,158 +130,6 @@ struct AdhkarView: View {
             RoundedRectangle(cornerRadius: 16)
                 .fill(.ultraThinMaterial)
         )
-    }
-
-    // MARK: - Quick Access Section
-
-    private var quickAccessSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Quick Access")
-                .font(.headline)
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 4)
-
-            VStack(spacing: 12) {
-                // Digital Tasbih Button
-                Button {
-                    showingTasbih = true
-                } label: {
-                    HStack(spacing: 16) {
-                        ZStack {
-                            Circle()
-                                .fill(
-                                    .linearGradient(
-                                        colors: [themeManager.currentTheme.featureAccent, themeManager.currentTheme.featureAccentSecondary],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                                .frame(width: 50, height: 50)
-
-                            Image(systemName: "hand.tap.fill")
-                                .font(.title3)
-                                .foregroundStyle(.white)
-                        }
-
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Digital Tasbih")
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
-                                .foregroundStyle(.primary)
-
-                            Text("Count your dhikr")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-
-                        Spacer()
-
-                        Image(systemName: "chevron.right")
-                            .foregroundStyle(.tertiary)
-                            .font(.caption)
-                    }
-                    .padding()
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(.ultraThinMaterial)
-                    )
-                }
-                .buttonStyle(.plain)
-
-                // 99 Names of Allah Button
-                Button {
-                    showingNamesOfAllah = true
-                } label: {
-                    HStack(spacing: 16) {
-                        ZStack {
-                            Circle()
-                                .fill(
-                                    .linearGradient(
-                                        colors: [.green, .teal],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                                .frame(width: 50, height: 50)
-
-                            Text("99")
-                                .font(.headline)
-                                .fontWeight(.bold)
-                                .foregroundStyle(.white)
-                        }
-
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("99 Names of Allah")
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
-                                .foregroundStyle(.primary)
-
-                            Text("Asma ul Husna")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-
-                        Spacer()
-
-                        Image(systemName: "chevron.right")
-                            .foregroundStyle(.tertiary)
-                            .font(.caption)
-                    }
-                    .padding()
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(.ultraThinMaterial)
-                    )
-                }
-                .buttonStyle(.plain)
-
-                // Fortress of the Muslim Button
-                Button {
-                    showingFortressDuas = true
-                } label: {
-                    HStack(spacing: 16) {
-                        ZStack {
-                            Circle()
-                                .fill(
-                                    .linearGradient(
-                                        colors: [.orange, .red],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                                .frame(width: 50, height: 50)
-
-                            Image(systemName: "book.closed.fill")
-                                .font(.title3)
-                                .foregroundStyle(.white)
-                        }
-
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Fortress of the Muslim")
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
-                                .foregroundStyle(.primary)
-
-                            Text("Hisn al-Muslim duas")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-
-                        Spacer()
-
-                        Image(systemName: "chevron.right")
-                            .foregroundStyle(.tertiary)
-                            .font(.caption)
-                    }
-                    .padding()
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(.ultraThinMaterial)
-                    )
-                }
-                .buttonStyle(.plain)
-            }
-        }
     }
 
     // MARK: - Categories Section
@@ -382,10 +257,6 @@ struct AdhkarCategoryCard: View {
             return .green
         case .beforeSleep:
             return themeManager.currentTheme.featureAccent
-        case .waking:
-            return .yellow
-        case .general:
-            return .teal
         }
     }
 

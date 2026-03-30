@@ -11,8 +11,10 @@ struct DuaDetailView: View {
     @Environment(ThemeManager.self) var themeManager
     let dua: FortressDua
     @Bindable var duaService: FortressDuaService
+    var isSheet: Bool = true
 
     @Environment(\.dismiss) private var dismiss
+    @State private var showCopiedFeedback = false
 
     private var isFavorite: Bool {
         duaService.progress.isFavorite(duaId: dua.id)
@@ -23,60 +25,75 @@ struct DuaDetailView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 24) {
-                    // Category Badge
-                    categoryBadge
+        ScrollView {
+            VStack(spacing: 28) {
+                // Category Badge
+                categoryBadge
 
-                    // Title and Occasion
-                    titleSection
+                // Title and Occasion
+                titleSection
 
-                    // Arabic Text
-                    arabicSection
+                Divider()
+                    .padding(.horizontal)
 
-                    // Transliteration
-                    transliterationSection
+                // Arabic Text
+                arabicSection
 
-                    // Translation
-                    translationSection
+                Divider()
+                    .padding(.horizontal)
 
-                    // Benefits (if available)
-                    if let benefits = dua.benefits {
-                        benefitsSection(benefits)
-                    }
+                // Transliteration
+                transliterationSection
 
-                    // Reference
-                    referenceSection
+                Divider()
+                    .padding(.horizontal)
 
-                    // Usage Statistics
-                    if usageCount > 0 {
-                        usageSection
-                    }
+                // Translation
+                translationSection
 
-                    // Actions
-                    actionsSection
+                // Benefits (if available)
+                if let benefits = dua.benefits {
+                    Divider()
+                        .padding(.horizontal)
+
+                    benefitsSection(benefits)
                 }
-                .padding()
+
+                Divider()
+                    .padding(.horizontal)
+
+                // Reference
+                referenceSection
+
+                // Usage Statistics
+                if usageCount > 0 {
+                    usageSection
+                }
+
+                // Actions
+                actionsSection
             }
-            .navigationTitle("Dua Details")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
+            .padding()
+        }
+        .navigationTitle("Dua Details")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if isSheet {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Close") {
                         dismiss()
                     }
                 }
+            }
 
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        withAnimation {
-                            duaService.toggleFavorite(duaId: dua.id)
-                        }
-                    } label: {
-                        Image(systemName: isFavorite ? "heart.fill" : "heart")
-                            .foregroundStyle(isFavorite ? .red : .primary)
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    withAnimation {
+                        duaService.toggleFavorite(duaId: dua.id)
                     }
+                } label: {
+                    Image(systemName: isFavorite ? "heart.fill" : "heart")
+                        .foregroundStyle(isFavorite ? .red : .primary)
                 }
             }
         }
@@ -134,10 +151,32 @@ struct DuaDetailView: View {
                 Text("Arabic Text")
                     .font(.headline)
                 Spacer()
+
+                Button {
+                    UIPasteboard.general.string = dua.arabicText
+                    withAnimation {
+                        showCopiedFeedback = true
+                    }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                        withAnimation {
+                            showCopiedFeedback = false
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: showCopiedFeedback ? "checkmark" : "doc.on.doc")
+                        if showCopiedFeedback {
+                            Text("Copied")
+                                .font(.caption)
+                        }
+                    }
+                    .foregroundStyle(showCopiedFeedback ? .green : .secondary)
+                }
+                .buttonStyle(.plain)
             }
 
             Text(dua.arabicText)
-                .font(.system(size: 28))
+                .font(.system(size: 32))
                 .lineSpacing(12)
                 .frame(maxWidth: .infinity, alignment: .trailing)
                 .padding()
@@ -358,18 +397,20 @@ struct DuaDetailView: View {
 }
 
 #Preview {
-    DuaDetailView(
-        dua: FortressDua(
-            category: .waking,
-            title: "Upon Waking Up",
-            arabicText: "الْحَمْدُ لِلَّهِ الَّذِي أَحْيَانَا بَعْدَ مَا أَمَاتَنَا وَإِلَيْهِ النُّشُورُ",
-            transliteration: "Alhamdu lillahil-ladhi ahyana ba'da ma amatana wa ilayhin-nushur.",
-            translation: "All praise is for Allah who gave us life after having taken it from us, and unto Him is the resurrection.",
-            reference: "Bukhari 6312",
-            occasion: "When waking up from sleep",
-            benefits: "Expressing gratitude for being granted another day of life and remembering the resurrection.",
-            order: 1
-        ),
-        duaService: FortressDuaService()
-    )
+    NavigationStack {
+        DuaDetailView(
+            dua: FortressDua(
+                category: .waking,
+                title: "Upon Waking Up",
+                arabicText: "\u{0627}\u{0644}\u{0652}\u{062D}\u{064E}\u{0645}\u{0652}\u{062F}\u{064F} \u{0644}\u{0650}\u{0644}\u{0651}\u{064E}\u{0647}\u{0650} \u{0627}\u{0644}\u{0651}\u{064E}\u{0630}\u{0650}\u{064A} \u{0623}\u{064E}\u{062D}\u{0652}\u{064A}\u{064E}\u{0627}\u{0646}\u{064E}\u{0627} \u{0628}\u{064E}\u{0639}\u{0652}\u{062F}\u{064E} \u{0645}\u{064E}\u{0627} \u{0623}\u{064E}\u{0645}\u{064E}\u{0627}\u{062A}\u{064E}\u{0646}\u{064E}\u{0627} \u{0648}\u{064E}\u{0625}\u{0650}\u{0644}\u{064E}\u{064A}\u{0652}\u{0647}\u{0650} \u{0627}\u{0644}\u{0646}\u{0651}\u{064F}\u{0634}\u{064F}\u{0648}\u{0631}\u{064F}",
+                transliteration: "Alhamdu lillahil-ladhi ahyana ba'da ma amatana wa ilayhin-nushur.",
+                translation: "All praise is for Allah who gave us life after having taken it from us, and unto Him is the resurrection.",
+                reference: "Bukhari 6312",
+                occasion: "When waking up from sleep",
+                benefits: "Expressing gratitude for being granted another day of life and remembering the resurrection.",
+                order: 1
+            ),
+            duaService: FortressDuaService()
+        )
+    }
 }

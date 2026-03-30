@@ -9,6 +9,8 @@ import SwiftUI
 
 struct MoreView: View {
     @Environment(ThemeManager.self) var themeManager: ThemeManager
+    @State private var adhkarService = AdhkarService()
+    private var tasbihService: TasbihService { TasbihService.shared }
 
     var body: some View {
         NavigationStack {
@@ -21,6 +23,9 @@ struct MoreView: View {
                     VStack(spacing: Spacing.md) {
                         // Header
                         headerSection
+
+                        // Worship & Remembrance section
+                        worshipSection
 
                         // Main sections
                         VStack(spacing: Spacing.sm) {
@@ -102,6 +107,160 @@ struct MoreView: View {
         .padding(.vertical, Spacing.md)
     }
 
+    // MARK: - Worship & Remembrance Section
+
+    private var worshipSection: some View {
+        VStack(spacing: Spacing.sm) {
+            // Section header
+            HStack {
+                Text("Worship & Remembrance")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(themeManager.currentTheme.textTertiary)
+                    .textCase(.uppercase)
+
+                Spacer()
+            }
+            .padding(.horizontal, Spacing.screenHorizontal + Spacing.xxxs)
+
+            // Dashboard card
+            todayActivityCard
+
+            // Tool links
+            VStack(spacing: Spacing.sm) {
+                // Daily Adhkar
+                NavigationLink {
+                    AdhkarView()
+                } label: {
+                    MoreMenuItem(
+                        icon: "sparkles",
+                        title: "Daily Adhkar",
+                        subtitle: "Morning, evening & prayer remembrances",
+                        accentColor: .orange,
+                        badge: adhkarTodayBadge
+                    )
+                }
+                .buttonStyle(PlainButtonStyle())
+
+                Divider()
+                    .padding(.horizontal, Spacing.sm)
+
+                // Fortress of the Muslim
+                NavigationLink {
+                    FortressDuasView()
+                } label: {
+                    MoreMenuItem(
+                        icon: "book.closed.fill",
+                        title: "Fortress of the Muslim",
+                        subtitle: "Duas for every life situation",
+                        accentColor: AppColors.primary.green
+                    )
+                }
+                .buttonStyle(PlainButtonStyle())
+
+                Divider()
+                    .padding(.horizontal, Spacing.sm)
+
+                // 99 Names of Allah
+                NavigationLink {
+                    NamesOfAllahView()
+                } label: {
+                    MoreMenuItem(
+                        icon: "moon.stars.fill",
+                        title: "99 Names of Allah",
+                        subtitle: "Learn the beautiful names",
+                        accentColor: .purple
+                    )
+                }
+                .buttonStyle(PlainButtonStyle())
+
+                Divider()
+                    .padding(.horizontal, Spacing.sm)
+
+                // Tasbih Counter
+                NavigationLink {
+                    TasbihCounterView()
+                } label: {
+                    MoreMenuItem(
+                        icon: "hand.tap.fill",
+                        title: "Tasbih Counter",
+                        subtitle: "Digital counting beads",
+                        accentColor: themeManager.currentTheme.featureAccent
+                    )
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
+            .padding(Spacing.sm)
+            .background(themeManager.currentTheme.cardColor)
+            .cornerRadius(BorderRadius.xl)
+            .padding(.horizontal, Spacing.screenHorizontal)
+        }
+    }
+
+    // MARK: - Today's Activity Card
+
+    private var todayActivityCard: some View {
+        HStack(spacing: 0) {
+            // Adhkar completed today
+            VStack(spacing: 4) {
+                Text("\(adhkarCompletedToday)/\(adhkarTotalToday)")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundColor(adhkarCompletedToday > 0 ? AppColors.primary.green : themeManager.currentTheme.textPrimary)
+
+                Text("Adhkar")
+                    .font(.system(size: 11))
+                    .foregroundColor(themeManager.currentTheme.textSecondary)
+            }
+            .frame(maxWidth: .infinity)
+
+            // Divider
+            Rectangle()
+                .fill(themeManager.currentTheme.divider)
+                .frame(width: 1, height: 32)
+
+            // Tasbih today
+            VStack(spacing: 4) {
+                Text("\(tasbihService.statistics.todayCount)")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundColor(tasbihService.statistics.todayCount > 0 ? themeManager.currentTheme.featureAccent : themeManager.currentTheme.textPrimary)
+
+                Text("Tasbih")
+                    .font(.system(size: 11))
+                    .foregroundColor(themeManager.currentTheme.textSecondary)
+            }
+            .frame(maxWidth: .infinity)
+
+            // Divider
+            Rectangle()
+                .fill(themeManager.currentTheme.divider)
+                .frame(width: 1, height: 32)
+
+            // Streak
+            VStack(spacing: 4) {
+                HStack(spacing: 2) {
+                    Text("\(adhkarService.progress.streak)")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundColor(adhkarService.progress.streak > 0 ? .orange : themeManager.currentTheme.textPrimary)
+
+                    if adhkarService.progress.streak > 0 {
+                        Image(systemName: "flame.fill")
+                            .font(.system(size: 12))
+                            .foregroundColor(.orange)
+                    }
+                }
+
+                Text("Streak")
+                    .font(.system(size: 11))
+                    .foregroundColor(themeManager.currentTheme.textSecondary)
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .padding(.vertical, Spacing.xs)
+        .padding(.horizontal, Spacing.sm)
+        .background(themeManager.currentTheme.cardColor)
+        .cornerRadius(BorderRadius.xl)
+        .padding(.horizontal, Spacing.screenHorizontal)
+    }
+
     // MARK: - Additional Section
 
     private var additionalSection: some View {
@@ -149,6 +308,19 @@ struct MoreView: View {
         let total = quranCount + spiritualCount
 
         return total > 0 ? total : nil
+    }
+
+    private var adhkarCompletedToday: Int {
+        adhkarService.allAdhkar.filter { adhkarService.isCompleted(dhikrId: $0.id) }.count
+    }
+
+    private var adhkarTotalToday: Int {
+        adhkarService.allAdhkar.count
+    }
+
+    private var adhkarTodayBadge: Int? {
+        let completed = adhkarCompletedToday
+        return completed > 0 ? completed : nil
     }
 }
 

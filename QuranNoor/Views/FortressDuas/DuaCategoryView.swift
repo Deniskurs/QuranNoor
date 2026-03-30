@@ -45,7 +45,9 @@ struct DuaCategoryView: View {
         .navigationBarTitleDisplayMode(.large)
         .sheet(isPresented: $showingDetail) {
             if let dua = selectedDua {
-                DuaDetailView(dua: dua, duaService: duaService)
+                NavigationStack {
+                    DuaDetailView(dua: dua, duaService: duaService, isSheet: true)
+                }
             }
         }
     }

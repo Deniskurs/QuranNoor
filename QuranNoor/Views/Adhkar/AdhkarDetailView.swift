@@ -11,20 +11,39 @@ struct AdhkarDetailView: View {
     @Environment(ThemeManager.self) var themeManager
     let dhikr: Dhikr
     @Bindable var adhkarService: AdhkarService
+    var allDhikrInCategory: [Dhikr]? = nil
+    var initialIndex: Int? = nil
 
     @State private var currentCount: Int = 0
+    @State private var currentDhikrIndex: Int = 0
     @State private var showTransliteration = true
     @State private var showTranslation = true
     @State private var showBenefits = false
+    @State private var tapScale: CGFloat = 1.0
+    @State private var showCompletionPulse = false
     @Environment(\.dismiss) private var dismiss
 
+    private var activeDhikr: Dhikr {
+        guard let allDhikr = allDhikrInCategory,
+              currentDhikrIndex >= 0,
+              currentDhikrIndex < allDhikr.count else {
+            return dhikr
+        }
+        return allDhikr[currentDhikrIndex]
+    }
+
     private var isCompleted: Bool {
-        adhkarService.isCompleted(dhikrId: dhikr.id)
+        adhkarService.isCompleted(dhikrId: activeDhikr.id)
     }
 
     private var progress: Double {
-        guard dhikr.repetitions > 0 else { return 0 }
-        return min(Double(currentCount) / Double(dhikr.repetitions), 1.0)
+        guard activeDhikr.repetitions > 0 else { return 0 }
+        return min(Double(currentCount) / Double(activeDhikr.repetitions), 1.0)
+    }
+
+    private var hasNextDhikr: Bool {
+        guard let allDhikr = allDhikrInCategory else { return false }
+        return currentDhikrIndex < allDhikr.count - 1
     }
 
     var body: some View {
@@ -48,7 +67,7 @@ struct AdhkarDetailView: View {
                     }
 
                     // Benefits
-                    if let benefits = dhikr.benefits {
+                    if let benefits = activeDhikr.benefits {
                         benefitsSection(benefits)
                     }
 
@@ -76,6 +95,9 @@ struct AdhkarDetailView: View {
                     }
                 }
             }
+            .onAppear {
+                currentDhikrIndex = initialIndex ?? 0
+            }
         }
     }
 
@@ -88,6 +110,15 @@ struct AdhkarDetailView: View {
                 Circle()
                     .stroke(.ultraThinMaterial, lineWidth: 12)
                     .frame(width: 120, height: 120)
+
+                // Milestone markers at 25%, 50%, 75%
+                ForEach([0.25, 0.5, 0.75], id: \.self) { milestone in
+                    Circle()
+                        .fill(progress >= milestone ? Color.white : Color.secondary.opacity(0.4))
+                        .frame(width: 6, height: 6)
+                        .offset(y: -60)
+                        .rotationEffect(.degrees(milestone * 360 - 90))
+                }
 
                 // Progress Circle
                 Circle()
@@ -104,19 +135,29 @@ struct AdhkarDetailView: View {
                     .rotationEffect(.degrees(-90))
                     .animation(.spring(duration: 0.5), value: progress)
 
+                // Completion pulse
+                if showCompletionPulse {
+                    Circle()
+                        .fill(.green.opacity(0.3))
+                        .frame(width: 140, height: 140)
+                        .scaleEffect(showCompletionPulse ? 1.3 : 1.0)
+                        .opacity(showCompletionPulse ? 0 : 0.5)
+                        .animation(.easeOut(duration: 0.8), value: showCompletionPulse)
+                }
+
                 // Count
                 VStack(spacing: 4) {
                     Text("\(currentCount)")
                         .font(.system(size: 36, weight: .bold, design: .rounded))
                         .contentTransition(.numericText())
 
-                    Text("/ \(dhikr.repetitions)")
+                    Text("/ \(activeDhikr.repetitions)")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
             }
 
-            if currentCount >= dhikr.repetitions && !isCompleted {
+            if currentCount >= activeDhikr.repetitions && !isCompleted {
                 Button {
                     markCompleted()
                 } label: {
@@ -138,12 +179,36 @@ struct AdhkarDetailView: View {
             }
 
             if isCompleted {
-                HStack(spacing: 6) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(.green)
-                    Text("Completed Today")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
+                VStack(spacing: 8) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                        Text("Completed Today")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                    }
+
+                    if hasNextDhikr {
+                        Button {
+                            advanceToNextDhikr()
+                        } label: {
+                            HStack(spacing: 6) {
+                                Text("Next Dhikr")
+                                Image(systemName: "chevron.right")
+                            }
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(themeManager.currentTheme.featureAccent)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .background(
+                                Capsule()
+                                    .fill(themeManager.currentTheme.featureAccent.opacity(0.15))
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                    }
                 }
             }
         }
@@ -153,7 +218,7 @@ struct AdhkarDetailView: View {
 
     private var arabicTextSection: some View {
         VStack(spacing: 8) {
-            Text(dhikr.arabicText)
+            Text(activeDhikr.arabicText)
                 .font(.system(size: 28, weight: .medium))
                 .multilineTextAlignment(.trailing)
                 .frame(maxWidth: .infinity, alignment: .trailing)
@@ -177,7 +242,7 @@ struct AdhkarDetailView: View {
                 Spacer()
             }
 
-            Text(dhikr.transliteration)
+            Text(activeDhikr.transliteration)
                 .font(.body)
                 .italic()
                 .foregroundStyle(.primary)
@@ -202,7 +267,7 @@ struct AdhkarDetailView: View {
                 Spacer()
             }
 
-            Text(dhikr.translation)
+            Text(activeDhikr.translation)
                 .font(.body)
                 .foregroundStyle(.primary)
                 .padding()
@@ -260,7 +325,7 @@ struct AdhkarDetailView: View {
         HStack {
             Image(systemName: "book.closed.fill")
                 .foregroundStyle(.secondary)
-            Text(dhikr.reference)
+            Text(activeDhikr.reference)
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -298,6 +363,7 @@ struct AdhkarDetailView: View {
                 }
                 .foregroundStyle(.white)
             }
+            .scaleEffect(tapScale)
         }
         .buttonStyle(.plain)
         .disabled(isCompleted)
@@ -323,29 +389,66 @@ struct AdhkarDetailView: View {
     private func incrementCount() {
         guard !isCompleted else { return }
 
+        // Bounce animation
+        withAnimation(.spring(response: 0.2, dampingFraction: 0.5)) {
+            tapScale = 0.92
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.5)) {
+                tapScale = 1.0
+            }
+        }
+
         withAnimation(.spring(duration: 0.3)) {
-            if currentCount < dhikr.repetitions {
+            if currentCount < activeDhikr.repetitions {
                 currentCount += 1
             }
         }
 
-        // Haptic feedback
-        let impact = UIImpactFeedbackGenerator(style: .light)
-        impact.impactOccurred()
+        // Haptic feedback - varies by milestone
+        let quarterTarget = activeDhikr.repetitions / 4
+        if quarterTarget > 0 && currentCount % quarterTarget == 0 && currentCount < activeDhikr.repetitions {
+            let impact = UIImpactFeedbackGenerator(style: .medium)
+            impact.impactOccurred()
+        } else {
+            let impact = UIImpactFeedbackGenerator(style: .light)
+            impact.impactOccurred()
+        }
 
-        // Special feedback on completion
-        if currentCount == dhikr.repetitions {
+        // Completion celebration
+        if currentCount == activeDhikr.repetitions {
             let notification = UINotificationFeedbackGenerator()
             notification.notificationOccurred(.success)
+
+            // Stronger haptic on completion
+            let heavyImpact = UIImpactFeedbackGenerator(style: .heavy)
+            heavyImpact.impactOccurred()
+
+            withAnimation {
+                showCompletionPulse = true
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                showCompletionPulse = false
+            }
         }
     }
 
     private func markCompleted() {
-        adhkarService.markCompleted(dhikrId: dhikr.id)
+        adhkarService.markCompleted(dhikrId: activeDhikr.id)
 
         // Success feedback
         let notification = UINotificationFeedbackGenerator()
         notification.notificationOccurred(.success)
+    }
+
+    private func advanceToNextDhikr() {
+        guard hasNextDhikr else { return }
+        withAnimation(.spring(duration: 0.4)) {
+            currentDhikrIndex += 1
+            currentCount = 0
+            showBenefits = false
+            showCompletionPulse = false
+        }
     }
 }
 

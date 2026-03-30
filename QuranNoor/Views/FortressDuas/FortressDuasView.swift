@@ -32,6 +32,10 @@ struct FortressDuasView: View {
         }
     }
 
+    private var recentlyUsedDuas: [FortressDua] {
+        duaService.getMostUsedDuas(limit: 5)
+    }
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -44,6 +48,11 @@ struct FortressDuasView: View {
 
                     // Toggle between categories and search results
                     if searchText.isEmpty && !showingFavorites {
+                        // Recently Used Section
+                        if !recentlyUsedDuas.isEmpty {
+                            recentlyUsedSection
+                        }
+
                         // Categories Grid
                         categoriesSection
                     } else {
@@ -73,6 +82,9 @@ struct FortressDuasView: View {
             }
             .navigationDestination(for: DuaCategory.self) { category in
                 DuaCategoryView(category: category, duaService: duaService)
+            }
+            .navigationDestination(for: FortressDua.self) { dua in
+                DuaDetailView(dua: dua, duaService: duaService, isSheet: false)
             }
         }
     }
@@ -142,6 +154,30 @@ struct FortressDuasView: View {
         )
     }
 
+    // MARK: - Recently Used Section
+
+    private var recentlyUsedSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "clock.arrow.circlepath")
+                    .foregroundStyle(themeManager.currentTheme.featureAccent)
+                Text("Recently Used")
+                    .font(.title3)
+                    .fontWeight(.semibold)
+            }
+            .padding(.horizontal, 4)
+
+            LazyVStack(spacing: 12) {
+                ForEach(recentlyUsedDuas) { dua in
+                    NavigationLink(value: dua) {
+                        FortressDuaCard(dua: dua, duaService: duaService)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+
     // MARK: - Categories Section
 
     private var categoriesSection: some View {
@@ -182,7 +218,7 @@ struct FortressDuasView: View {
             } else {
                 LazyVStack(spacing: 12) {
                     ForEach(filteredDuas) { dua in
-                        NavigationLink(value: dua.category) {
+                        NavigationLink(value: dua) {
                             FortressDuaCard(dua: dua, duaService: duaService)
                         }
                         .buttonStyle(.plain)

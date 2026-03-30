@@ -65,6 +65,11 @@ final class TasbihService {
             triggerHapticFeedback(count: session.currentCount, target: session.targetCount)
         }
 
+        // Sound feedback
+        if soundEnabled {
+            AudioServicesPlaySystemSound(1104)
+        }
+
         // Check if target reached
         if session.currentCount == session.targetCount && !session.isCompleted {
             completeSession()
@@ -208,19 +213,24 @@ final class TasbihService {
     // MARK: - Haptic Feedback
 
     private func triggerHapticFeedback(count: Int, target: Int) {
-        // Different haptics for milestones
+        let progressRatio = target > 0 ? Double(count) / Double(target) : 0
+
         if count == target {
-            // Target reached - success notification
+            // 100% - success notification
             let notification = UINotificationFeedbackGenerator()
             notification.notificationOccurred(.success)
-        } else if count % 10 == 0 && count > 0 {
-            // Every 10 counts - medium impact
-            let impact = UIImpactFeedbackGenerator(style: .medium)
-            impact.impactOccurred()
-        } else if count == target - 10 && target > 10 {
-            // 10 away from target - warning
+        } else if progressRatio >= 0.75 && Double(count - 1) / Double(target) < 0.75 {
+            // Just crossed 75% - warning notification
             let notification = UINotificationFeedbackGenerator()
             notification.notificationOccurred(.warning)
+        } else if progressRatio >= 0.50 && Double(count - 1) / Double(target) < 0.50 {
+            // Just crossed 50% - heavy impact
+            let impact = UIImpactFeedbackGenerator(style: .heavy)
+            impact.impactOccurred()
+        } else if progressRatio >= 0.25 && Double(count - 1) / Double(target) < 0.25 {
+            // Just crossed 25% - medium impact
+            let impact = UIImpactFeedbackGenerator(style: .medium)
+            impact.impactOccurred()
         } else {
             // Regular count - light impact
             let impact = UIImpactFeedbackGenerator(style: .light)

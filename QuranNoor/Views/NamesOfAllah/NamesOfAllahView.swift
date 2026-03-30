@@ -13,18 +13,33 @@ struct NamesOfAllahView: View {
     @State private var searchText = ""
     @State private var selectedName: NameOfAllah?
     @State private var showFavoritesOnly = false
+    @State private var selectedCategory: NamesCategory = .all
 
     private var filteredNames: [NameOfAllah] {
+        var names: [NameOfAllah]
+
         if showFavoritesOnly {
-            return searchText.isEmpty ? namesService.getFavoriteNames() :
+            names = searchText.isEmpty ? namesService.getFavoriteNames() :
                 namesService.getFavoriteNames().filter { name in
                     name.transliteration.lowercased().contains(searchText.lowercased()) ||
                     name.translation.lowercased().contains(searchText.lowercased())
                 }
         } else {
-            return searchText.isEmpty ? namesService.getAllNames() :
+            names = searchText.isEmpty ? namesService.getAllNames() :
                 namesService.searchNames(query: searchText)
         }
+
+        if selectedCategory != .all {
+            names = names.filter { $0.category == selectedCategory }
+        }
+
+        return names
+    }
+
+    private var nameOfTheDay: NameOfAllah? {
+        let dayIndex = Calendar.current.component(.dayOfYear, from: Date()) % 99
+        let nameNumber = dayIndex + 1
+        return namesService.allNames.first { $0.number == nameNumber }
     }
 
     var body: some View {
@@ -42,9 +57,17 @@ struct NamesOfAllahView: View {
                     // Header with Progress
                     headerSection
 
+                    // Category Filter Chips
+                    categoryChipsSection
+
                     // Names List
                     ScrollView {
                         LazyVStack(spacing: 12) {
+                            // Name of the Day
+                            if selectedCategory == .all && searchText.isEmpty && !showFavoritesOnly {
+                                nameOfTheDayCard
+                            }
+
                             ForEach(filteredNames) { name in
                                 NameCard(
                                     name: name,
@@ -123,10 +146,10 @@ struct NamesOfAllahView: View {
             }
 
             // Progress Card
-            HStack(spacing: 20) {
+            HStack(spacing: 16) {
                 VStack(spacing: 4) {
                     Text("\(namesService.progress.totalLearned)")
-                        .font(.title)
+                        .font(.title2)
                         .fontWeight(.bold)
                         .foregroundStyle(themeManager.currentTheme.featureAccent)
 
@@ -134,14 +157,13 @@ struct NamesOfAllahView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
-                .frame(maxWidth: .infinity)
 
                 Divider()
                     .frame(height: 40)
 
                 VStack(spacing: 4) {
                     Text("\(namesService.progress.totalFavorites)")
-                        .font(.title)
+                        .font(.title2)
                         .fontWeight(.bold)
                         .foregroundStyle(.red)
 
@@ -149,22 +171,12 @@ struct NamesOfAllahView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
-                .frame(maxWidth: .infinity)
 
                 Divider()
                     .frame(height: 40)
 
-                VStack(spacing: 4) {
-                    Text(String(format: "%.0f%%", namesService.progress.progressPercentage))
-                        .font(.title)
-                        .fontWeight(.bold)
-                        .foregroundStyle(themeManager.currentTheme.featureAccent)
-
-                    Text("Progress")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity)
+                // Progress Grid (10x10)
+                progressGrid
             }
             .padding()
             .background(
@@ -173,6 +185,110 @@ struct NamesOfAllahView: View {
             )
         }
         .padding()
+    }
+
+    // MARK: - Progress Grid
+
+    private var progressGrid: some View {
+        VStack(spacing: 2) {
+            ForEach(0..<10, id: \.self) { row in
+                HStack(spacing: 2) {
+                    ForEach(0..<10, id: \.self) { col in
+                        let number = row * 10 + col + 1
+                        if number <= 99 {
+                            Circle()
+                                .fill(namesService.isLearned(number: number) ? themeManager.currentTheme.featureAccent : Color.gray.opacity(0.3))
+                                .frame(width: 12, height: 12)
+                        } else {
+                            Color.clear
+                                .frame(width: 12, height: 12)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Category Chips
+
+    private var categoryChipsSection: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(NamesCategory.allCases) { category in
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            selectedCategory = category
+                        }
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: category.icon)
+                                .font(.caption)
+                            Text(category.displayName)
+                                .font(.caption)
+                                .fontWeight(.medium)
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(
+                            Capsule()
+                                .fill(selectedCategory == category ?
+                                      AnyShapeStyle(themeManager.currentTheme.featureAccent) :
+                                      AnyShapeStyle(.ultraThinMaterial))
+                        )
+                        .foregroundStyle(selectedCategory == category ? .white : .primary)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 8)
+        }
+    }
+
+    // MARK: - Name of the Day
+
+    @ViewBuilder
+    private var nameOfTheDayCard: some View {
+        if let name = nameOfTheDay {
+            VStack(spacing: 12) {
+                HStack {
+                    Image(systemName: "sparkles")
+                        .foregroundStyle(.yellow)
+                    Text("Name of the Day")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                    Spacer()
+                }
+
+                Text(name.arabicName)
+                    .font(.system(size: 36, weight: .medium))
+                    .foregroundStyle(.white)
+
+                Text(name.transliteration)
+                    .font(.title3)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.white)
+
+                Text(name.translation)
+                    .font(.subheadline)
+                    .foregroundStyle(.white.opacity(0.8))
+            }
+            .padding()
+            .frame(maxWidth: .infinity)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(
+                        .linearGradient(
+                            colors: [themeManager.currentTheme.featureAccent, themeManager.currentTheme.featureAccentSecondary],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+            )
+            .onTapGesture {
+                selectedName = name
+            }
+        }
     }
 }
 

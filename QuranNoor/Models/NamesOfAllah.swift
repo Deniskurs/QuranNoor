@@ -19,6 +19,7 @@ struct NameOfAllah: Identifiable, Codable, Hashable {
     let meaning: String
     let benefit: String?
     let reference: String?
+    let category: NamesCategory?
 
     init(
         id: UUID = UUID(),
@@ -28,7 +29,8 @@ struct NameOfAllah: Identifiable, Codable, Hashable {
         translation: String,
         meaning: String,
         benefit: String? = nil,
-        reference: String? = nil
+        reference: String? = nil,
+        category: NamesCategory? = nil
     ) {
         self.id = id
         self.number = number
@@ -38,6 +40,7 @@ struct NameOfAllah: Identifiable, Codable, Hashable {
         self.meaning = meaning
         self.benefit = benefit
         self.reference = reference
+        self.category = category
     }
 
     /// Full display title with number
@@ -54,7 +57,7 @@ struct NameOfAllah: Identifiable, Codable, Hashable {
 // MARK: - Names Category
 
 /// Categories for grouping Names of Allah
-enum NamesCategory: String, CaseIterable, Identifiable {
+enum NamesCategory: String, CaseIterable, Identifiable, Codable {
     case all = "all"
     case mercy = "mercy"
     case power = "power"

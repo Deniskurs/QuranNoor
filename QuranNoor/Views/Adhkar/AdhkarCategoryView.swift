@@ -47,7 +47,12 @@ struct AdhkarCategoryView: View {
         .navigationTitle(category.displayName)
         .navigationBarTitleDisplayMode(.inline)
         .sheet(item: $selectedDhikr) { dhikr in
-            AdhkarDetailView(dhikr: dhikr, adhkarService: adhkarService)
+            AdhkarDetailView(
+                dhikr: dhikr,
+                adhkarService: adhkarService,
+                allDhikrInCategory: adhkar,
+                initialIndex: adhkar.firstIndex(where: { $0.id == dhikr.id })
+            )
         }
     }
 
@@ -115,10 +120,6 @@ struct AdhkarCategoryView: View {
             return .green
         case .beforeSleep:
             return themeManager.currentTheme.featureAccent
-        case .waking:
-            return .yellow
-        case .general:
-            return .teal
         }
     }
 }
