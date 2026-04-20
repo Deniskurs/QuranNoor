@@ -31,7 +31,7 @@ class PrayerViewModel {
 
     // MARK: - Settings
 
-    var selectedCalculationMethod: CalculationMethod = .isna
+    var selectedCalculationMethod: CalculationMethod = .muslimWorldLeague
     var selectedMadhab: Madhab = .shafi
 
     // MARK: - Loading States
@@ -62,6 +62,7 @@ class PrayerViewModel {
     private let userDefaults = UserDefaults.standard
     private let calculationMethodKey = "selectedCalculationMethod"
     private let madhabKey = "selectedMadhab"
+    private let calculationMethodMigrationKey = "calculationMethodMigration_mwlDefault_v1"
 
     // MARK: - Computed Properties (Derived from PrayerPeriod)
 
@@ -129,6 +130,7 @@ class PrayerViewModel {
     // MARK: - Initializer
     init() {
         loadCalculationMethod()
+        migrateCalculationMethodIfNeeded()
         loadMadhab()
         setupNotificationCategories()
         setupNotificationPreferencesObserver()
@@ -503,6 +505,27 @@ class PrayerViewModel {
 
     private func saveCalculationMethod() {
         userDefaults.set(selectedCalculationMethod.rawValue, forKey: calculationMethodKey)
+    }
+
+    /// One-shot migration for users stuck on `.isna` from a broken onboarding window
+    /// (Nov 2025 – Feb 2026) where the onboarding method choice was never persisted,
+    /// or where users accepted the old `.isna` default without realising it's
+    /// unsuitable outside North America. ISNA's 15° Fajr angle produces times that
+    /// are materially too early at high latitudes (London, Paris, Berlin, etc.).
+    private func migrateCalculationMethodIfNeeded() {
+        guard !userDefaults.bool(forKey: calculationMethodMigrationKey) else { return }
+        userDefaults.set(true, forKey: calculationMethodMigrationKey)
+
+        let savedMethod = userDefaults.string(forKey: calculationMethodKey)
+        let isOnIsnaOrUnset = (savedMethod == nil) || (savedMethod == CalculationMethod.isna.rawValue)
+        guard isOnIsnaOrUnset else { return }
+
+        let region = Locale.current.region?.identifier
+        let isNorthAmerica = (region == "US" || region == "CA")
+        guard !isNorthAmerica else { return }
+
+        selectedCalculationMethod = .muslimWorldLeague
+        saveCalculationMethod()
     }
 
     private func loadMadhab() {
