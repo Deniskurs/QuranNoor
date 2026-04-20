@@ -7,63 +7,34 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		'0000000000000000001B8E5D' = {
-			isa = PBXBuildFile;
-			fileRef = 0000000000000000003BEE2C /* PrayerTimesProvider.swift */;
-		};
-		'00000000000000000038DCC9' = {
-			isa = PBXBuildFile;
-			fileRef = 0000000000000000007F7FA8 /* PrayerTimesWidget.swift */;
-		};
-		'0000000000000000004DEC7F' = {
-			isa = PBXBuildFile;
-			fileRef = 000000000000000000B680A1 /* QuranNoorWidgetBundle.swift */;
-		};
-		'0000000000000000004F5D02' = {
-			isa = PBXBuildFile;
-			fileRef = 0000000000000000008FB8C6 /* QuranNoor/Shared/WidgetSharedStore.swift */;
-		};
-		'0000000000000000004FDB6A' = {
-			isa = PBXBuildFile;
-			fileRef = 000000000000000000E2C9FD /* QuranProgressWidget.swift */;
-		};
-		'0000000000000000008D8383' = {
-			isa = PBXBuildFile;
-			fileRef = 000000000000000000C35ED2 /* ReadingProgressProvider.swift */;
-		};
-		'000000000000000000911325' = {
-			isa = PBXBuildFile;
-			fileRef = 000000000000000000ABA143 /* QuranNoor/Shared/WidgetDataModels.swift */;
-		};
-		'000000000000000000E95F62' = {
-			isa = PBXBuildFile;
-			fileRef = 000000000000000000B2BFB0 /* QuranNoorWidgets.appex */;
-			settings = {
-				ATTRIBUTES = (
-					RemoveHeadersOnCopy,
-				);
-			};
-		};
+		0000000000000000001B8E5D /* PrayerTimesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000003BEE2C /* PrayerTimesProvider.swift */; };
+		00000000000000000038DCC9 /* PrayerTimesWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000007F7FA8 /* PrayerTimesWidget.swift */; };
+		0000000000000000004DEC7F /* QuranNoorWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000B680A1 /* QuranNoorWidgetBundle.swift */; };
+		0000000000000000004F5D02 /* QuranNoor/Shared/WidgetSharedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000008FB8C6 /* QuranNoor/Shared/WidgetSharedStore.swift */; };
+		0000000000000000004FDB6A /* QuranProgressWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000E2C9FD /* QuranProgressWidget.swift */; };
+		0000000000000000008D8383 /* ReadingProgressProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000C35ED2 /* ReadingProgressProvider.swift */; };
+		000000000000000000911325 /* QuranNoor/Shared/WidgetDataModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000ABA143 /* QuranNoor/Shared/WidgetDataModels.swift */; };
+		000000000000000000E95F62 /* QuranNoorWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 000000000000000000B2BFB0 /* QuranNoorWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		'000000000000000000E6FCB0' = {
+		000000000000000000E6FCB0 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 92813D372EB4E1580018C9BA /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = 000000000000000000F7ECDF /* QuranNoorWidgets */;
+			remoteGlobalIDString = 000000000000000000F7ECDF;
 			remoteInfo = QuranNoorWidgets;
 		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
-		'000000000000000000D7122A' = {
+		000000000000000000D7122A /* Embed Foundation Extensions */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
-				000000000000000000E95F62,
+				000000000000000000E95F62 /* QuranNoorWidgets.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -71,76 +42,29 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		'00000000000000000013E7C9' = {
-			isa = PBXFileReference;
-			lastKnownFileType = text.plist.xml;
-			path = Info.plist;
-			sourceTree = "<group>";
-		};
-		'0000000000000000001C1633' = {
-			isa = PBXFileReference;
-			lastKnownFileType = text.plist.entitlements;
-			path = QuranNoorWidgets.entitlements;
-			sourceTree = "<group>";
-		};
-		'0000000000000000003BEE2C' = {
-			isa = PBXFileReference;
-			lastKnownFileType = sourcecode.swift;
-			path = PrayerTimesProvider.swift;
-			sourceTree = "<group>";
-		};
-		'0000000000000000007F7FA8' = {
-			isa = PBXFileReference;
-			lastKnownFileType = sourcecode.swift;
-			path = PrayerTimesWidget.swift;
-			sourceTree = "<group>";
-		};
-		'0000000000000000008FB8C6' = {
-			isa = PBXFileReference;
-			lastKnownFileType = sourcecode.swift;
-			path = QuranNoor/Shared/WidgetSharedStore.swift;
-			sourceTree = SOURCE_ROOT;
-		};
-		'000000000000000000ABA143' = {
-			isa = PBXFileReference;
-			lastKnownFileType = sourcecode.swift;
-			path = QuranNoor/Shared/WidgetDataModels.swift;
-			sourceTree = SOURCE_ROOT;
-		};
-		'000000000000000000B2BFB0' = {
-			isa = PBXFileReference;
-			explicitFileType = "wrapper.app-extension";
-			includeInIndex = 0;
-			path = QuranNoorWidgets.appex;
-			sourceTree = BUILT_PRODUCTS_DIR;
-		};
-		'000000000000000000B680A1' = {
-			isa = PBXFileReference;
-			lastKnownFileType = sourcecode.swift;
-			path = QuranNoorWidgetBundle.swift;
-			sourceTree = "<group>";
-		};
-		'000000000000000000C35ED2' = {
-			isa = PBXFileReference;
-			lastKnownFileType = sourcecode.swift;
-			path = ReadingProgressProvider.swift;
-			sourceTree = "<group>";
-		};
-		'000000000000000000E2C9FD' = {
-			isa = PBXFileReference;
-			lastKnownFileType = sourcecode.swift;
-			path = QuranProgressWidget.swift;
-			sourceTree = "<group>";
-		};
+		00000000000000000013E7C9 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		0000000000000000001C1633 /* QuranNoorWidgets.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = QuranNoorWidgets.entitlements; sourceTree = "<group>"; };
+		0000000000000000003BEE2C /* PrayerTimesProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrayerTimesProvider.swift; sourceTree = "<group>"; };
+		0000000000000000007F7FA8 /* PrayerTimesWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrayerTimesWidget.swift; sourceTree = "<group>"; };
+		0000000000000000008FB8C6 /* QuranNoor/Shared/WidgetSharedStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuranNoor/Shared/WidgetSharedStore.swift; sourceTree = SOURCE_ROOT; };
+		000000000000000000ABA143 /* QuranNoor/Shared/WidgetDataModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuranNoor/Shared/WidgetDataModels.swift; sourceTree = SOURCE_ROOT; };
+		000000000000000000B2BFB0 /* QuranNoorWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = QuranNoorWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		000000000000000000B680A1 /* QuranNoorWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuranNoorWidgetBundle.swift; sourceTree = "<group>"; };
+		000000000000000000C35ED2 /* ReadingProgressProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingProgressProvider.swift; sourceTree = "<group>"; };
+		000000000000000000E2C9FD /* QuranProgressWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuranProgressWidget.swift; sourceTree = "<group>"; };
 		92813D3F2EB4E1590018C9BA /* QuranNoor.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = QuranNoor.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		92813D412EB4E1590018C9BA /* QuranNoor */ = {isa = PBXFileSystemSynchronizedRootGroup; path = QuranNoor; sourceTree = "<group>"; };
+		92813D412EB4E1590018C9BA /* QuranNoor */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = QuranNoor;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		'0000000000000000002AA8FE' = {
+		0000000000000000002AA8FE /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -157,7 +81,7 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		'000000000000000000C7C3DD' = {
+		000000000000000000C7C3DD /* QuranNoorWidgets */ = {
 			isa = PBXGroup;
 			children = (
 				000000000000000000B680A1 /* QuranNoorWidgetBundle.swift */,
@@ -176,7 +100,8 @@
 			children = (
 				92813D402EB4E1590018C9BA /* Products */,
 				92813D412EB4E1590018C9BA /* QuranNoor */,
-				000000000000000000C7C3DD,
+				000000000000000000C7C3DD /* QuranNoorWidgets */,
+				92FA7C3D2F961DAB008AFC0D /* Recovered References */,
 			);
 			sourceTree = "<group>";
 		};
@@ -184,21 +109,30 @@
 			isa = PBXGroup;
 			children = (
 				92813D3F2EB4E1590018C9BA /* QuranNoor.app */,
-				000000000000000000B2BFB0,
+				000000000000000000B2BFB0 /* QuranNoorWidgets.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		92FA7C3D2F961DAB008AFC0D /* Recovered References */ = {
+			isa = PBXGroup;
+			children = (
+				000000000000000000ABA143 /* QuranNoor/Shared/WidgetDataModels.swift */,
+				0000000000000000008FB8C6 /* QuranNoor/Shared/WidgetSharedStore.swift */,
+			);
+			name = "Recovered References";
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		'000000000000000000F7ECDF' = {
+		000000000000000000F7ECDF /* QuranNoorWidgets */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 0000000000000000002B5AE6;
+			buildConfigurationList = 0000000000000000002B5AE6 /* Build configuration list for PBXNativeTarget "QuranNoorWidgets" */;
 			buildPhases = (
-				0000000000000000004B2903,
-				0000000000000000002AA8FE,
-				00000000000000000056E2AD,
+				0000000000000000004B2903 /* Sources */,
+				0000000000000000002AA8FE /* Frameworks */,
+				00000000000000000056E2AD /* Resources */,
 			);
 			buildRules = (
 			);
@@ -216,12 +150,12 @@
 				92813D3B2EB4E1580018C9BA /* Sources */,
 				92813D3C2EB4E1580018C9BA /* Frameworks */,
 				92813D3D2EB4E1580018C9BA /* Resources */,
-				000000000000000000D7122A,
+				000000000000000000D7122A /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
-				000000000000000000D28DDB,
+				000000000000000000D28DDB /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				92813D412EB4E1590018C9BA /* QuranNoor */,
@@ -263,13 +197,13 @@
 			projectRoot = "";
 			targets = (
 				92813D3E2EB4E1580018C9BA /* QuranNoor */,
-				000000000000000000F7ECDF,
+				000000000000000000F7ECDF /* QuranNoorWidgets */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		'00000000000000000056E2AD' = {
+		00000000000000000056E2AD /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -286,17 +220,17 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		'0000000000000000004B2903' = {
+		0000000000000000004B2903 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				0000000000000000004DEC7F,
-				0000000000000000001B8E5D,
-				00000000000000000038DCC9,
-				0000000000000000004FDB6A,
-				0000000000000000008D8383,
-				000000000000000000911325,
-				0000000000000000004F5D02,
+				0000000000000000004DEC7F /* QuranNoorWidgetBundle.swift in Sources */,
+				0000000000000000001B8E5D /* PrayerTimesProvider.swift in Sources */,
+				00000000000000000038DCC9 /* PrayerTimesWidget.swift in Sources */,
+				0000000000000000004FDB6A /* QuranProgressWidget.swift in Sources */,
+				0000000000000000008D8383 /* ReadingProgressProvider.swift in Sources */,
+				000000000000000000911325 /* QuranNoor/Shared/WidgetDataModels.swift in Sources */,
+				0000000000000000004F5D02 /* QuranNoor/Shared/WidgetSharedStore.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -310,28 +244,32 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		'000000000000000000D28DDB' = {
+		000000000000000000D28DDB /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 000000000000000000F7ECDF /* QuranNoorWidgets */;
-			targetProxy = 000000000000000000E6FCB0;
+			targetProxy = 000000000000000000E6FCB0 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
-		'0000000000000000002AD0E7' = {
+		0000000000000000002AD0E7 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = QuranNoorWidgets/QuranNoorWidgets.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = QuranNoorWidgets/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "QuranNoor Widgets";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
-				MARKETING_VERSION = 1.1.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.qurannoor.app.widgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -345,19 +283,23 @@
 			};
 			name = Debug;
 		};
-		'000000000000000000800C60' = {
+		000000000000000000800C60 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = QuranNoorWidgets/QuranNoorWidgets.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = QuranNoorWidgets/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "QuranNoor Widgets";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
-				MARKETING_VERSION = 1.1.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.qurannoor.app.widgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -498,7 +440,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = QuranNoor/QuranNoor.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Info.plist;
@@ -522,7 +464,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 1.1.0;
+				MARKETING_VERSION = 1.1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.qurannoor.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -546,7 +488,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = QuranNoor/QuranNoor.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Info.plist;
@@ -570,7 +512,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 1.1.0;
+				MARKETING_VERSION = 1.1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.qurannoor.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -590,7 +532,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		'0000000000000000002B5AE6' = {
+		0000000000000000002B5AE6 /* Build configuration list for PBXNativeTarget "QuranNoorWidgets" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				0000000000000000002AD0E7 /* Debug */,
