@@ -206,10 +206,12 @@ class PrayerViewModel {
             // Step 3.6: Publish Maghrib time for Hijri day transition
             MaghribTimeStore.shared.update(maghribTime: adjustedPrayerTimes.maghrib)
 
-            // Step 3.7: Push data to widget
+            // Step 3.7: Push data to widget (carries tomorrow if already loaded so
+            // the widget can roll over at midnight without the app running).
             let hijriString = HijriCalendarService().getCachedHijriDate()?.formatted
             WidgetUpdateService.shared.updatePrayerWidget(
                 prayerTimes: adjustedPrayerTimes,
+                tomorrow: tomorrowPrayerTimes,
                 location: userLocation,
                 hijriDateString: hijriString
             )
@@ -255,6 +257,19 @@ class PrayerViewModel {
             // Apply manual adjustments (if any)
             let adjustedTomorrowPrayers = PrayerTimeAdjustmentService.shared.applyAdjustments(to: tomorrowPrayers)
             tomorrowPrayerTimes = adjustedTomorrowPrayers
+
+            // Re-push widget data now that tomorrow is available — this is what
+            // lets the widget render the next calendar day correctly after
+            // midnight even while the app is suspended.
+            if let today = todayPrayerTimes {
+                let hijriString = HijriCalendarService().getCachedHijriDate()?.formatted
+                WidgetUpdateService.shared.updatePrayerWidget(
+                    prayerTimes: today,
+                    tomorrow: adjustedTomorrowPrayers,
+                    location: userLocation,
+                    hijriDateString: hijriString
+                )
+            }
         } catch {
             // Not critical - will fetch when needed
         }

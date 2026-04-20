@@ -8,6 +8,24 @@
 
 import Foundation
 
+// MARK: - Widget Prayer Day
+
+/// Minimal set of prayer times for a single day, used to pre-stage future
+/// days (e.g. tomorrow) inside a `WidgetPrayerEntry` so the widget extension
+/// can roll over at midnight without the main app pushing fresh data.
+struct WidgetPrayerDay: Codable {
+    let date: Date
+    let fajr: Date
+    let sunrise: Date
+    let dhuhr: Date
+    let asr: Date
+    let maghrib: Date
+    let isha: Date
+    let imsak: Date?
+    let midnight: Date?
+    let lastThird: Date?
+}
+
 // MARK: - Widget Prayer Entry
 
 /// Snapshot of today's prayer times for the widget timeline
@@ -29,6 +47,11 @@ struct WidgetPrayerEntry: Codable {
 
     /// Hijri date string (pre-formatted)
     let hijriDateString: String?
+
+    /// Tomorrow's prayer times, pushed alongside today so the widget can
+    /// transition at midnight even while the main app is suspended. Optional
+    /// for backward-compat with entries encoded by older app builds.
+    let tomorrow: WidgetPrayerDay?
 
     // MARK: - Helpers
 
@@ -101,6 +124,53 @@ struct WidgetPrayerEntry: Codable {
               let year = components.year else { return "" }
         return "\(day) \(Self.hijriMonthNames[month - 1]) \(year)"
     }
+
+    // MARK: - Day Rollover
+
+    /// Returns the entry that should drive the widget at `referenceDate`.
+    ///
+    /// - If `referenceDate` falls on the same calendar day as `self.date`,
+    ///   returns `self` (today's entry, with completions preserved).
+    /// - Otherwise, if `tomorrow` exists and `referenceDate` falls on
+    ///   `tomorrow.date`, returns a fresh entry built from the tomorrow data
+    ///   with **empty completions** (new day, nothing prayed yet).
+    /// - Otherwise (data is more than one day stale), returns `self` as a
+    ///   best-effort fallback so the widget still renders something.
+    func entry(validFor referenceDate: Date) -> WidgetPrayerEntry {
+        let calendar = Calendar.current
+        if calendar.isDate(date, inSameDayAs: referenceDate) {
+            return self
+        }
+        if let tomorrow, calendar.isDate(tomorrow.date, inSameDayAs: referenceDate) {
+            return WidgetPrayerEntry(
+                date: tomorrow.date,
+                location: location,
+                fajr: tomorrow.fajr,
+                sunrise: tomorrow.sunrise,
+                dhuhr: tomorrow.dhuhr,
+                asr: tomorrow.asr,
+                maghrib: tomorrow.maghrib,
+                isha: tomorrow.isha,
+                imsak: tomorrow.imsak,
+                midnight: tomorrow.midnight,
+                lastThird: tomorrow.lastThird,
+                completions: [:],
+                hijriDateString: nil,
+                tomorrow: nil
+            )
+        }
+        return self
+    }
+
+    /// True when `referenceDate` is at least one calendar day past this entry
+    /// and there is no pre-staged `tomorrow` covering that date. Used by the
+    /// widget provider to decide whether to pin a short refresh interval.
+    func isStale(at referenceDate: Date) -> Bool {
+        let calendar = Calendar.current
+        if calendar.isDate(date, inSameDayAs: referenceDate) { return false }
+        if let tomorrow, calendar.isDate(tomorrow.date, inSameDayAs: referenceDate) { return false }
+        return true
+    }
 }
 
 // MARK: - Widget Reading Entry
@@ -154,7 +224,8 @@ extension WidgetPrayerEntry {
             midnight: time(0, 15),
             lastThird: time(2, 30),
             completions: [:],
-            hijriDateString: nil
+            hijriDateString: nil,
+            tomorrow: nil
         )
     }()
 }

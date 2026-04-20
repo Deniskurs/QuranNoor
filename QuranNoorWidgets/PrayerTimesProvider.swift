@@ -43,55 +43,100 @@ struct PrayerTimesProvider: TimelineProvider {
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<PrayerTimelineEntry>) -> Void) {
-        let currentEntry = makeCurrentEntry()
-        let prayerData = currentEntry.prayerData
-
-        // Build entries at each future prayer boundary
-        var entries: [PrayerTimelineEntry] = [currentEntry]
         let now = Date()
+        let calendar = Calendar.current
 
-        // Add an entry at each upcoming prayer time so the widget refreshes
-        let futureTimes = prayerData.orderedPrayers
-            .map(\.time)
-            .filter { $0 > now }
-
-        for prayerTime in futureTimes {
-            // Offset by 1 second so nextPrayer(after:) correctly advances
-            // to the following prayer when this entry renders
-            let entry = PrayerTimelineEntry(
-                date: prayerTime.addingTimeInterval(1),
-                prayerData: prayerData,
-                isPlaceholder: false
-            )
-            entries.append(entry)
+        guard let stored = WidgetSharedStore.loadPrayerEntry() else {
+            // No data at all — render placeholder, ask for a retry in 15 min.
+            let entry = PrayerTimelineEntry(date: now, prayerData: .placeholder, isPlaceholder: true)
+            let retryAt = now.addingTimeInterval(15 * 60)
+            completion(Timeline(entries: [entry], policy: .after(retryAt)))
+            return
         }
 
-        // Add an end-of-day entry to trigger refresh for tomorrow
-        // Only if no prayer time extends past 23:55 (e.g. Isha in northern latitudes)
-        if let endOfDay = Calendar.current.date(bySettingHour: 23, minute: 55, second: 0, of: now) {
-            let lastPrayerTime = futureTimes.last ?? now
-            if lastPrayerTime < endOfDay {
-                let eodEntry = PrayerTimelineEntry(
-                    date: endOfDay,
-                    prayerData: prayerData,
-                    isPlaceholder: false
+        var entries: [PrayerTimelineEntry] = []
+
+        // Entry for "now" — pick today's or tomorrow's bundle based on calendar day.
+        let activeNow = stored.entry(validFor: now)
+        entries.append(
+            PrayerTimelineEntry(date: now, prayerData: activeNow, isPlaceholder: false)
+        )
+
+        // Append one entry at each remaining prayer boundary within `activeNow`
+        // so the widget re-renders when the next prayer changes.
+        appendPrayerBoundaries(of: activeNow, after: now, into: &entries)
+
+        // If we're still within the stored entry's "today" and we have a
+        // pre-staged tomorrow, schedule a midnight flip so the widget rolls
+        // over without the main app needing to push fresh data.
+        let storedDayIsNow = calendar.isDate(stored.date, inSameDayAs: now)
+        if storedDayIsNow, let tomorrow = stored.tomorrow {
+            if let nextDay = calendar.date(byAdding: .day, value: 1, to: now),
+               case let midnight = calendar.startOfDay(for: nextDay),
+               midnight > now {
+
+                let tomorrowEntry = stored.entry(validFor: tomorrow.date)
+
+                // One entry right at midnight carrying tomorrow's data. Using
+                // +1 second so `nextPrayer(after: entry.date)` correctly
+                // returns tomorrow's Fajr instead of possibly matching midnight itself.
+                entries.append(
+                    PrayerTimelineEntry(
+                        date: midnight.addingTimeInterval(1),
+                        prayerData: tomorrowEntry,
+                        isPlaceholder: false
+                    )
                 )
-                entries.append(eodEntry)
+
+                // And entries at each of tomorrow's prayer boundaries.
+                appendPrayerBoundaries(of: tomorrowEntry, after: midnight, into: &entries)
             }
         }
 
-        // Use .atEnd so WidgetKit requests new timeline after last entry
-        let timeline = Timeline(entries: entries, policy: .atEnd)
-        completion(timeline)
+        // Reload policy:
+        // - If the stored entry is stale at `now` (more than a day old with no
+        //   tomorrow covering today), ask WidgetKit to retry in 30 min so we
+        //   pick up fresh data as soon as the app runs again.
+        // - Otherwise use `.atEnd` — after the last scheduled prayer boundary,
+        //   WidgetKit will ask for a new timeline and we'll re-read storage.
+        let policy: TimelineReloadPolicy
+        if stored.isStale(at: now) {
+            policy = .after(now.addingTimeInterval(30 * 60))
+        } else {
+            policy = .atEnd
+        }
+
+        completion(Timeline(entries: entries, policy: policy))
     }
 
     // MARK: - Helpers
+
+    /// Append one timeline entry at each future prayer boundary of `entry`.
+    ///
+    /// Each entry is placed at `prayer.time + 1s` so that
+    /// `nextPrayer(after: entry.date)` inside the widget view correctly
+    /// advances past the prayer that just elapsed.
+    private func appendPrayerBoundaries(
+        of entry: WidgetPrayerEntry,
+        after referenceDate: Date,
+        into entries: inout [PrayerTimelineEntry]
+    ) {
+        for prayer in entry.orderedPrayers where prayer.time > referenceDate {
+            entries.append(
+                PrayerTimelineEntry(
+                    date: prayer.time.addingTimeInterval(1),
+                    prayerData: entry,
+                    isPlaceholder: false
+                )
+            )
+        }
+    }
 
     private func makeCurrentEntry() -> PrayerTimelineEntry {
         if let stored = WidgetSharedStore.loadPrayerEntry() {
             return PrayerTimelineEntry(
                 date: Date(),
-                prayerData: stored,
+                prayerData: stored.entry(validFor: Date()),
                 isPlaceholder: false
             )
         }
