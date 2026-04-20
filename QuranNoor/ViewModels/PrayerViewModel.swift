@@ -31,7 +31,7 @@ class PrayerViewModel {
 
     // MARK: - Settings
 
-    var selectedCalculationMethod: CalculationMethod = .isna
+    var selectedCalculationMethod: CalculationMethod = .muslimWorldLeague
     var selectedMadhab: Madhab = .shafi
 
     // MARK: - Loading States
@@ -62,6 +62,7 @@ class PrayerViewModel {
     private let userDefaults = UserDefaults.standard
     private let calculationMethodKey = "selectedCalculationMethod"
     private let madhabKey = "selectedMadhab"
+    private let calculationMethodMigrationKey = "calculationMethodMigration_mwlDefault_v1"
 
     // MARK: - Computed Properties (Derived from PrayerPeriod)
 
@@ -129,6 +130,7 @@ class PrayerViewModel {
     // MARK: - Initializer
     init() {
         loadCalculationMethod()
+        migrateCalculationMethodIfNeeded()
         loadMadhab()
         setupNotificationCategories()
         setupNotificationPreferencesObserver()
@@ -204,10 +206,12 @@ class PrayerViewModel {
             // Step 3.6: Publish Maghrib time for Hijri day transition
             MaghribTimeStore.shared.update(maghribTime: adjustedPrayerTimes.maghrib)
 
-            // Step 3.7: Push data to widget
+            // Step 3.7: Push data to widget (carries tomorrow if already loaded so
+            // the widget can roll over at midnight without the app running).
             let hijriString = HijriCalendarService().getCachedHijriDate()?.formatted
             WidgetUpdateService.shared.updatePrayerWidget(
                 prayerTimes: adjustedPrayerTimes,
+                tomorrow: tomorrowPrayerTimes,
                 location: userLocation,
                 hijriDateString: hijriString
             )
@@ -253,6 +257,19 @@ class PrayerViewModel {
             // Apply manual adjustments (if any)
             let adjustedTomorrowPrayers = PrayerTimeAdjustmentService.shared.applyAdjustments(to: tomorrowPrayers)
             tomorrowPrayerTimes = adjustedTomorrowPrayers
+
+            // Re-push widget data now that tomorrow is available — this is what
+            // lets the widget render the next calendar day correctly after
+            // midnight even while the app is suspended.
+            if let today = todayPrayerTimes {
+                let hijriString = HijriCalendarService().getCachedHijriDate()?.formatted
+                WidgetUpdateService.shared.updatePrayerWidget(
+                    prayerTimes: today,
+                    tomorrow: adjustedTomorrowPrayers,
+                    location: userLocation,
+                    hijriDateString: hijriString
+                )
+            }
         } catch {
             // Not critical - will fetch when needed
         }
@@ -503,6 +520,27 @@ class PrayerViewModel {
 
     private func saveCalculationMethod() {
         userDefaults.set(selectedCalculationMethod.rawValue, forKey: calculationMethodKey)
+    }
+
+    /// One-shot migration for users stuck on `.isna` from a broken onboarding window
+    /// (Nov 2025 – Feb 2026) where the onboarding method choice was never persisted,
+    /// or where users accepted the old `.isna` default without realising it's
+    /// unsuitable outside North America. ISNA's 15° Fajr angle produces times that
+    /// are materially too early at high latitudes (London, Paris, Berlin, etc.).
+    private func migrateCalculationMethodIfNeeded() {
+        guard !userDefaults.bool(forKey: calculationMethodMigrationKey) else { return }
+        userDefaults.set(true, forKey: calculationMethodMigrationKey)
+
+        let savedMethod = userDefaults.string(forKey: calculationMethodKey)
+        let isOnIsnaOrUnset = (savedMethod == nil) || (savedMethod == CalculationMethod.isna.rawValue)
+        guard isOnIsnaOrUnset else { return }
+
+        let region = Locale.current.region?.identifier
+        let isNorthAmerica = (region == "US" || region == "CA")
+        guard !isNorthAmerica else { return }
+
+        selectedCalculationMethod = .muslimWorldLeague
+        saveCalculationMethod()
     }
 
     private func loadMadhab() {

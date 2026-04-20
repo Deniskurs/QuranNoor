@@ -18,9 +18,15 @@ final class WidgetUpdateService {
 
     // MARK: - Prayer Times
 
-    /// Push current prayer times + completion state to the widget store
+    /// Push current prayer times + completion state to the widget store.
+    ///
+    /// Pass `tomorrow` whenever available so the widget can auto-roll over
+    /// at midnight without the main app needing to push fresh data. If
+    /// `tomorrow` is nil, the widget will fall back to showing today's data
+    /// after midnight (until the user opens the app).
     func updatePrayerWidget(
         prayerTimes: DailyPrayerTimes,
+        tomorrow: DailyPrayerTimes? = nil,
         location: String,
         hijriDateString: String? = nil
     ) {
@@ -42,7 +48,8 @@ final class WidgetUpdateService {
             midnight: prayerTimes.midnight,
             lastThird: prayerTimes.lastThird,
             completions: completionDict,
-            hijriDateString: hijriDateString
+            hijriDateString: hijriDateString,
+            tomorrow: tomorrow.map(widgetDay(from:))
         )
 
         WidgetSharedStore.savePrayerEntry(entry)
@@ -59,7 +66,7 @@ final class WidgetUpdateService {
             uniqueKeysWithValues: completions.map { ($0.key.rawValue, $0.value) }
         )
 
-        // Create updated entry with new completions
+        // Create updated entry with new completions (preserves tomorrow)
         let updated = WidgetPrayerEntry(
             date: entry.date,
             location: entry.location,
@@ -73,11 +80,27 @@ final class WidgetUpdateService {
             midnight: entry.midnight,
             lastThird: entry.lastThird,
             completions: completionDict,
-            hijriDateString: entry.hijriDateString
+            hijriDateString: entry.hijriDateString,
+            tomorrow: entry.tomorrow
         )
 
         WidgetSharedStore.savePrayerEntry(updated)
         WidgetCenter.shared.reloadTimelines(ofKind: "PrayerTimesWidget")
+    }
+
+    private func widgetDay(from times: DailyPrayerTimes) -> WidgetPrayerDay {
+        WidgetPrayerDay(
+            date: times.date,
+            fajr: times.fajr,
+            sunrise: times.sunrise,
+            dhuhr: times.dhuhr,
+            asr: times.asr,
+            maghrib: times.maghrib,
+            isha: times.isha,
+            imsak: times.imsak,
+            midnight: times.midnight,
+            lastThird: times.lastThird
+        )
     }
 
     // MARK: - Reading Progress

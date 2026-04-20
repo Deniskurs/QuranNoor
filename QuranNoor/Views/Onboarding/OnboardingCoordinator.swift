@@ -132,7 +132,7 @@ final class OnboardingCoordinator {
             self.currentStep = .welcomePermissions
             self.locationPermission = .notRequested
             self.notificationPermission = .notRequested
-            self.selectedCalculationMethod = "ISNA"
+            self.selectedCalculationMethod = "MWL"
             self.selectedTheme = "light"
             self.isComplete = false
             self.startTime = Date()

@@ -112,7 +112,7 @@ final class PrayerTimeService {
     private let userDefaults = UserDefaults.standard
     private let cacheKeyPrefix = "cachedPrayerTimes" // Will append date
     private let cacheVersionKey = "cacheVersion" // Add versioning for cache invalidation
-    private let currentCacheVersion = "3.2" // Fixed Moonsighting API code, added Tehran method
+    private let currentCacheVersion = "3.3" // MWL default + high-lat adjustment (invalidates ISNA-tainted cache)
     private let cacheSettingsKey = "cachedPrayerSettings" // Store method + madhab used for cache
     private let offlineService = OfflinePrayerCalculationService.shared
 
@@ -125,13 +125,13 @@ final class PrayerTimeService {
     /// - Parameters:
     ///   - coordinates: Location coordinates
     ///   - date: The date to calculate prayer times for (default: today)
-    ///   - method: Calculation method (default: ISNA)
+    ///   - method: Calculation method (default: Muslim World League)
     ///   - madhab: Madhab (school) for Asr calculation (default: Shafi)
     /// - Returns: Daily prayer times
     func calculatePrayerTimes(
         coordinates: LocationCoordinates,
         date: Date = Date(),
-        method: CalculationMethod = .isna,
+        method: CalculationMethod = .muslimWorldLeague,
         madhab: Madhab = .shafi
     ) async throws -> DailyPrayerTimes {
         isCalculating = true
@@ -167,12 +167,25 @@ final class PrayerTimeService {
             throw PrayerTimeError.calculationFailed
         }
 
-        components.queryItems = [
+        var queryItems: [URLQueryItem] = [
             URLQueryItem(name: "latitude", value: String(coordinates.latitude)),
             URLQueryItem(name: "longitude", value: String(coordinates.longitude)),
             URLQueryItem(name: "method", value: String(methodCode)),
             URLQueryItem(name: "school", value: mapMadhab(madhab))
         ]
+
+        // At latitudes > 48° (London, Paris, Berlin, Nordics…) astronomical
+        // twilight can fail to reach the Fajr/Isha angles in summer, so Aladhan's
+        // implicit default gives nonsensical times. Pin Angle-Based (3) so the
+        // online path stays consistent year-round and roughly matches the
+        // offline service's behaviour.
+        if abs(coordinates.latitude) > 48 {
+            queryItems.append(
+                URLQueryItem(name: "latitudeAdjustmentMethod", value: "3")
+            )
+        }
+
+        components.queryItems = queryItems
 
         guard let url = components.url else {
             throw PrayerTimeError.calculationFailed

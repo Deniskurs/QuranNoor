@@ -7,6 +7,7 @@
 
 import Foundation
 import MapKit
+import os
 
 import Observation
 
@@ -16,6 +17,8 @@ enum DistanceFilter: Double, CaseIterable, Identifiable {
     case threeKm = 3000
     case fiveKm = 5000
     case tenKm = 10000
+    case twentyFiveKm = 25000
+    case fiftyKm = 50000
 
     var id: Double { rawValue }
 
@@ -25,7 +28,14 @@ enum DistanceFilter: Double, CaseIterable, Identifiable {
         case .threeKm: return "3 km"
         case .fiveKm: return "5 km"
         case .tenKm: return "10 km"
+        case .twentyFiveKm: return "25 km"
+        case .fiftyKm: return "50 km"
         }
+    }
+
+    /// Resolve from a persisted raw value, falling back to `.fiveKm`.
+    static func from(rawValue: Double) -> DistanceFilter {
+        DistanceFilter(rawValue: rawValue) ?? .fiveKm
     }
 }
 
@@ -50,6 +60,8 @@ struct CachedMosqueSearch {
 
 // MARK: - Mosque Finder Error
 enum MosqueFinderError: LocalizedError {
+    /// Only thrown by keyword search — `findNearbyMosques` now returns `[]`
+    /// instead of throwing so callers can render an empty state naturally.
     case noResults
     case searchFailed
     case locationUnavailable
@@ -57,7 +69,7 @@ enum MosqueFinderError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .noResults:
-            return "No mosques found nearby. Try increasing the search radius."
+            return "No mosques found matching that search."
         case .searchFailed:
             return "Failed to search for mosques. Please try again."
         case .locationUnavailable:
@@ -80,16 +92,23 @@ final class MosqueFinderService {
 
     // MARK: - Private Properties
     private var cachedSearch: CachedMosqueSearch?
+    private let userDefaults = UserDefaults.standard
+    private let preferredRadiusKey = "mosqueSearchRadius"
 
     // MARK: - Initialization
-    private init() {}
+    private init() {
+        let saved = userDefaults.double(forKey: preferredRadiusKey)
+        if saved > 0 {
+            selectedDistanceFilter = DistanceFilter.from(rawValue: saved)
+        }
+    }
 
     // MARK: - Public Methods
 
-    /// Set distance filter
-    /// - Parameter filter: The distance filter to apply
+    /// Set distance filter and persist it as the user's preferred radius.
     func setDistanceFilter(_ filter: DistanceFilter) {
         selectedDistanceFilter = filter
+        userDefaults.set(filter.rawValue, forKey: preferredRadiusKey)
     }
 
     /// Clear cached results
@@ -157,7 +176,8 @@ final class MosqueFinderService {
             // Update published property
             nearbyMosques = sortedMosques
 
-            // Cache the results
+            // Cache the results — including empty results, so repeated taps at
+            // the same radius don't pound MKLocalSearch.
             cachedSearch = CachedMosqueSearch(
                 mosques: sortedMosques,
                 location: coordinates,
@@ -165,17 +185,63 @@ final class MosqueFinderService {
                 timestamp: Date()
             )
 
-            guard !sortedMosques.isEmpty else {
-                throw MosqueFinderError.noResults
-            }
+            AppLogger.location.info("Mosque search at \(Int(radius))m returned \(sortedMosques.count) results")
 
+            // Return results (possibly empty). Empty is a legitimate outcome
+            // for low-density areas and should drive empty-state UI, not an
+            // error alert.
             return sortedMosques
 
-        } catch is MosqueFinderError {
-            throw MosqueFinderError.noResults
         } catch {
+            AppLogger.location.error("Mosque search failed: \(error.localizedDescription, privacy: .public)")
             throw MosqueFinderError.searchFailed
         }
+    }
+
+    /// Search progressively widening radii until mosques are found or the
+    /// largest radius is exhausted. Auto-updates (and persists) the selected
+    /// filter to whichever tier succeeded so the UI reflects the actual
+    /// search distance.
+    ///
+    /// - Parameters:
+    ///   - coordinates: User location.
+    ///   - startingFilter: Radius to start with (defaults to the current
+    ///     persisted preference).
+    ///   - forceRefresh: Bypass cache on the first attempt only; subsequent
+    ///     tiers always hit MKLocalSearch since the radius differs.
+    /// - Returns: `results` (may be empty), `matchedFilter` (the radius that
+    ///   produced results, or the widest tier if nothing was found), and
+    ///   `didExpand` — true when the search had to step past `startingFilter`.
+    func findNearbyMosquesAutoExpanding(
+        coordinates: LocationCoordinates,
+        startingFilter: DistanceFilter? = nil,
+        forceRefresh: Bool = false
+    ) async throws -> (results: [Mosque], matchedFilter: DistanceFilter, didExpand: Bool) {
+        let start = startingFilter ?? selectedDistanceFilter
+        let tiers = DistanceFilter.allCases.filter { $0.rawValue >= start.rawValue }
+
+        for (index, filter) in tiers.enumerated() {
+            let force = forceRefresh && index == 0
+            let results = try await findNearbyMosques(
+                coordinates: coordinates,
+                radiusInMeters: filter.rawValue,
+                forceRefresh: force
+            )
+            if !results.isEmpty {
+                if filter != selectedDistanceFilter {
+                    setDistanceFilter(filter)
+                }
+                return (results, filter, filter != start)
+            }
+        }
+
+        // Every tier empty — settle on the widest tier so the picker reflects
+        // the furthest we actually searched.
+        let widest = tiers.last ?? start
+        if widest != selectedDistanceFilter {
+            setDistanceFilter(widest)
+        }
+        return ([], widest, widest != start)
     }
 
     /// Search mosques by name or keyword
