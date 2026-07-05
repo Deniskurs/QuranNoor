@@ -69,6 +69,19 @@ struct VerseReaderView: View {
     @State private var didScrollToTarget = false
     @State private var highlightedVerseNumber: Int?
 
+    // MARK: - Reader Interaction
+    /// Immersive reading: chrome (nav bar, floating controls) hidden;
+    /// toggled by tapping the page like Books/Photos.
+    @State private var isImmersed = false
+    @State private var showGoToVerse = false
+    @State private var goToVerseText = ""
+    /// Set by "Go to Verse" — consumed by an onChange inside the ScrollViewReader
+    @State private var pendingScrollVerse: Int?
+    @State private var didRestorePosition = false
+    @State private var fontSizeHUDText: String?
+    @State private var fontSizeHUDTask: Task<Void, Never>?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     // MARK: - Initializer
     init(surah: Surah, viewModel: QuranViewModel, targetVerse: Int? = nil) {
         self.initialSurah = surah
@@ -101,6 +114,20 @@ struct VerseReaderView: View {
                     errorState(error)
                 } else {
                     contentView
+                }
+            }
+            .overlay(alignment: .top) {
+                // Transient HUD confirming a pinch font-size change
+                if let hud = fontSizeHUDText {
+                    Text(hud)
+                        .font(.footnote.weight(.semibold))
+                        .foregroundColor(theme.textPrimary)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .glassEffect(.regular, in: .capsule)
+                        .transition(.opacity.combined(with: .scale(scale: 0.92)))
+                        .padding(.top, 8)
+                        .accessibilityHidden(true)
                 }
             }
             .toolbar {
@@ -167,6 +194,13 @@ struct VerseReaderView: View {
                             Label("Font Size: \(settings.fontSize.displayName)", systemImage: "textformat.size")
                         }
 
+                        Button {
+                            goToVerseText = ""
+                            showGoToVerse = true
+                        } label: {
+                            Label("Go to Verse…", systemImage: "number")
+                        }
+
                         Divider()
 
                         // Tajweed toggle
@@ -207,6 +241,9 @@ struct VerseReaderView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(theme.backgroundColor.opacity(0.95), for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
+            // Immersive reading: tap the page to hide/show all chrome
+            .toolbar(isImmersed ? .hidden : .visible, for: .navigationBar)
+            .statusBarHidden(isImmersed)
             .onAppear {
                 selectedTranslation = quranService.getTranslationPreferences().primaryTranslation
                 Task {
@@ -271,6 +308,19 @@ struct VerseReaderView: View {
                 .presentationDragIndicator(.visible)
             }
             .toast(message: toastMessage, style: toastStyle, isPresented: $showToast)
+            .alert("Go to Verse", isPresented: $showGoToVerse) {
+                TextField("1 – \(surah.numberOfVerses)", text: $goToVerseText)
+                    .keyboardType(.numberPad)
+                Button("Go") {
+                    if let number = Int(goToVerseText),
+                       (1...surah.numberOfVerses).contains(number) {
+                        pendingScrollVerse = number
+                    }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Jump to a verse in \(surah.englishName) (1 – \(surah.numberOfVerses))")
+            }
             .sheet(isPresented: $showFullPlayer) {
                 AudioPlayerView {
                     showFullPlayer = false
@@ -404,6 +454,13 @@ struct VerseReaderView: View {
                                     verseNumber: verse.verseNumber
                                 )
                             }
+                            // Verses settle softly at the viewport edges;
+                            // opacity-only under Reduce Motion
+                            .scrollTransition(.interactive) { content, phase in
+                                content
+                                    .opacity(phase.isIdentity ? 1 : 0.85)
+                                    .offset(y: reduceMotion ? 0 : phase.value * -4)
+                            }
                         }
 
                         // End ornament
@@ -418,10 +475,25 @@ struct VerseReaderView: View {
                         Color.clear.frame(height: 100)
                     }
                     .padding(.horizontal, 4)
+                    // Tap the page (anywhere that isn't a control) to toggle
+                    // immersive reading — buttons/menus in rows win the tap
+                    .onTapGesture {
+                        withAnimation(AppAnimation.standard) {
+                            isImmersed.toggle()
+                        }
+                    }
                 }
                 .refreshable {
                     await loadVerses()
                 }
+                // One deliberate font step per pinch gesture — continuous
+                // resizing fights the stepped size model and re-layout cost
+                .simultaneousGesture(
+                    MagnifyGesture()
+                        .onEnded { value in
+                            handlePinch(value.magnification)
+                        }
+                )
                 .onChange(of: audioService.currentVerse) { oldVerse, newVerse in
                     if let playingVerse = newVerse, audioService.playbackState.isPlaying {
                         // Find matching verse in our loaded list (UUIDs differ between loads)
@@ -438,39 +510,63 @@ struct VerseReaderView: View {
                         }
                     }
                 }
+                .onChange(of: pendingScrollVerse) { _, target in
+                    guard let target,
+                          let match = verses.first(where: { $0.verseNumber == target }) else {
+                        pendingScrollVerse = nil
+                        return
+                    }
+                    withAnimation(AppAnimation.standard) {
+                        proxy.scrollTo(match.id, anchor: UnitPoint(x: 0.5, y: 0.3))
+                    }
+                    highlightedVerseNumber = target
+                    Task {
+                        try? await Task.sleep(nanoseconds: 2_000_000_000)
+                        if highlightedVerseNumber == target {
+                            highlightedVerseNumber = nil
+                        }
+                        pendingScrollVerse = nil
+                    }
+                }
                 .onAppear {
                     // contentView only renders once verses are loaded, so the
                     // target row id is resolvable here (bookmark tap, "2:255" search)
                     scrollToTargetVerse(proxy: proxy)
+                    // Otherwise, reopen where the user left off
+                    restoreReadingPosition(proxy: proxy)
                 }
             }
 
-            // Floating controls + mini audio player
-            VStack(spacing: 8) {
-                ReaderFloatingPill(
-                    showTranslation: settings.showTranslation,
-                    showTransliteration: settings.showTransliteration,
-                    showWordByWord: settings.showWordByWord,
-                    onToggleTranslation: { settings.toggleTranslation() },
-                    onToggleTransliteration: { settings.toggleTransliteration() },
-                    onToggleWordByWord: {
-                        settings.toggleWordByWord()
-                        if settings.showWordByWord && wordData.isEmpty {
-                            Task { await loadWordData() }
+            // Floating controls + mini audio player (hidden while immersed)
+            if !isImmersed {
+                VStack(spacing: 8) {
+                    ReaderFloatingPill(
+                        showTranslation: settings.showTranslation,
+                        showTransliteration: settings.showTransliteration,
+                        showWordByWord: settings.showWordByWord,
+                        onToggleTranslation: { settings.toggleTranslation() },
+                        onToggleTransliteration: { settings.toggleTransliteration() },
+                        onToggleWordByWord: {
+                            settings.toggleWordByWord()
+                            if settings.showWordByWord && wordData.isEmpty {
+                                Task { await loadWordData() }
+                            }
                         }
-                    }
-                )
+                    )
 
-                // Now Playing indicator (taps to open full player)
-                MiniAudioPlayerView(
-                    showSkipControls: false,
-                    showCloseButton: false,
-                    animationNamespace: nil,
-                    onTap: { showFullPlayer = true }
-                )
+                    // Now Playing indicator (taps to open full player)
+                    MiniAudioPlayerView(
+                        showSkipControls: false,
+                        showCloseButton: false,
+                        animationNamespace: nil,
+                        onTap: { showFullPlayer = true }
+                    )
+                }
+                .padding(.bottom, Spacing.xxs)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
             }
-            .padding(.bottom, Spacing.xxs)
         }
+        .animation(AppAnimation.standard, value: isImmersed)
     }
 
     // MARK: - Surah Header
@@ -484,6 +580,19 @@ struct VerseReaderView: View {
                 .font(AppTypography.arabicFont(for: settings.mushafType, size: settings.fontSize.arabicSize * 1.25))
                 .foregroundColor(theme.accent)
                 .environment(\.layoutDirection, .rightToLeft)
+                .padding(.horizontal, 28)
+                .padding(.vertical, 12)
+                // Double-ruled title frame, echoing printed mushaf surah
+                // headers — accent at low opacity so it recedes in all themes
+                .overlay {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .strokeBorder(theme.accent.opacity(0.35), lineWidth: 1)
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .strokeBorder(theme.accent.opacity(0.18), lineWidth: 0.5)
+                            .padding(4)
+                    }
+                }
 
             // English name and translation
             VStack(spacing: 4) {
@@ -759,30 +868,15 @@ struct VerseReaderView: View {
     // MARK: - Verse Number Badge
 
     private func verseNumberBadge(number: Int, isPlaying: Bool) -> some View {
-        let theme = themeManager.currentTheme
-
-        return ZStack {
-            Circle()
-                .stroke(
-                    isPlaying ? theme.accent : theme.borderColor,
-                    lineWidth: isPlaying ? 2 : 1
-                )
-                .frame(width: 32, height: 32)
-                .background(
-                    Circle()
-                        .fill(
-                            isPlaying
-                                ? theme.accent.opacity(0.12)
-                                : theme.backgroundColor.opacity(0.5)
-                        )
-                )
-
-            Text("\(number)")
-                .font(.system(size: 13, weight: .medium))
-                .foregroundColor(isPlaying ? theme.accent : theme.textSecondary)
-        }
-        .scaleEffect(isPlaying ? 1.05 : 1.0)
-        .animation(isPlaying ? .easeInOut(duration: 0.8).repeatForever(autoreverses: true) : AppAnimation.gentle, value: isPlaying)
+        // Rosette medallion matching printed mushaf ayah markers
+        AyahMedallion(number: number, isPlaying: isPlaying)
+            .scaleEffect(isPlaying && !reduceMotion ? 1.05 : 1.0)
+            .animation(
+                isPlaying && !reduceMotion
+                    ? .easeInOut(duration: 0.8).repeatForever(autoreverses: true)
+                    : AppAnimation.gentle,
+                value: isPlaying
+            )
     }
 
     // MARK: - Translation Section
@@ -1137,6 +1231,64 @@ struct VerseReaderView: View {
             // Let the glow linger long enough to register, then fade
             try? await Task.sleep(nanoseconds: 2_000_000_000)
             highlightedVerseNumber = nil
+        }
+    }
+
+    /// Reopen the reader at the most recently read verse of THIS surah.
+    /// Skipped when an explicit target verse is being navigated to.
+    private func restoreReadingPosition(proxy: ScrollViewProxy) {
+        guard targetVerse == nil, !didRestorePosition else { return }
+        didRestorePosition = true
+
+        let progress = quranService.getReadingProgress()
+        let keyPrefix = "\(surah.id):"
+        let lastRead = progress.readVerses
+            .filter { $0.key.hasPrefix(keyPrefix) }
+            .max { $0.value.timestamp < $1.value.timestamp }
+
+        guard let key = lastRead?.key,
+              let verseNumber = Int(key.split(separator: ":").last ?? ""),
+              verseNumber > 3, // near the top: restoring would just jitter
+              let match = verses.first(where: { $0.verseNumber == verseNumber }) else {
+            return
+        }
+
+        Task {
+            // Give the lazy stack a beat to lay out before jumping
+            try? await Task.sleep(nanoseconds: 300_000_000)
+            // No flash and no animation — the page simply opens where the
+            // reader left off, like a physical bookmark
+            proxy.scrollTo(match.id, anchor: UnitPoint(x: 0.5, y: 0.35))
+        }
+    }
+
+    // MARK: - Pinch Font Sizing
+
+    /// One font step per pinch gesture: deliberate, haptic-confirmed, and
+    /// avoids continuous re-layout of the whole mushaf while pinching.
+    private func handlePinch(_ magnification: CGFloat) {
+        let newSize: QuranFontSize?
+        if magnification > 1.15 {
+            newSize = settings.fontSize.larger
+        } else if magnification < 0.87 {
+            newSize = settings.fontSize.smaller
+        } else {
+            newSize = nil
+        }
+        guard let newSize else { return }
+
+        settings.setFontSize(newSize)
+        HapticManager.shared.trigger(.selection)
+        showFontSizeHUD("Text Size: \(newSize.displayName)")
+    }
+
+    private func showFontSizeHUD(_ text: String) {
+        fontSizeHUDTask?.cancel()
+        withAnimation(AppAnimation.fast) { fontSizeHUDText = text }
+        fontSizeHUDTask = Task {
+            try? await Task.sleep(nanoseconds: 1_200_000_000)
+            guard !Task.isCancelled else { return }
+            withAnimation(AppAnimation.fast) { fontSizeHUDText = nil }
         }
     }
 

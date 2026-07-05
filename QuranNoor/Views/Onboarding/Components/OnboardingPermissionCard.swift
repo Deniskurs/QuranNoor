@@ -44,7 +44,7 @@ struct OnboardingPermissionCard: View {
     var body: some View {
         let theme = themeManager.currentTheme
 
-        CardView(showPattern: false, intensity: .subtle) {
+        VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: Spacing.xs) {
                 // Icon + Title row
                 HStack(spacing: Spacing.xs) {
@@ -95,9 +95,9 @@ struct OnboardingPermissionCard: View {
                             Text("Enable")
                                 .frame(maxWidth: .infinity)
                         }
-                        .buttonStyle(.borderedProminent)
+                        .buttonStyle(.glassProminent)
                         .controlSize(.regular)
-                        .tint(theme.accentMuted)
+                        .tint(theme.accent)
 
                         // Open Settings link (shown after denial)
                         if let onOpenSettings {
@@ -119,6 +119,14 @@ struct OnboardingPermissionCard: View {
                 }
             }
         }
+        .padding(Spacing.sm)
+        // Floating glass card over the onboarding gradient; granted state
+        // gets a soft accent wash
+        .glassEffect(
+            isGranted ? .regular.tint(theme.accent.opacity(0.15)) : .regular,
+            in: .rect(cornerRadius: 20, style: .continuous)
+        )
+        .animation(AppAnimation.standard, value: isGranted)
         .accessibleElement(
             label: "\(title). \(isGranted ? "Enabled" : "Not enabled"). \(subtitle)",
             hint: isGranted ? nil : "Double tap the enable button to grant permission",

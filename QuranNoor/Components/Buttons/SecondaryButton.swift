@@ -71,13 +71,12 @@ struct SecondaryButton: View {
             .foregroundColor(textColor)
             .frame(maxWidth: .infinity)
             .frame(height: 52)
-            .background(
-                RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous)
-                    .fill(backgroundColor)
-            )
+            // Plain interactive glass replaces the clear fill; the styled
+            // border stays — it carries the button's semantic color
+            .glassEffect(.regular.interactive(), in: .rect(cornerRadius: BorderRadius.xl, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous)
-                    .stroke(borderColor, lineWidth: 2)
+                    .stroke(borderColor, lineWidth: 1.5)
             )
             .scaleEffect(isPressed ? 0.97 : 1.0)
             .opacity(isDisabled ? 0.5 : 1.0)
@@ -121,10 +120,6 @@ struct SecondaryButton: View {
         case .neutral:
             return themeManager.currentTheme.textPrimary
         }
-    }
-
-    private var backgroundColor: Color {
-        isPressed ? borderColor.opacity(0.1) : Color.clear
     }
 
     // MARK: - Audio & Haptic Feedback

@@ -65,6 +65,18 @@ enum TimeOfDayPeriod: CaseIterable {
 
         return min(1.0, max(0.0, (totalMinutes - start) / (end - start)))
     }
+
+    /// The period that follows this one (wraps around the day)
+    var next: TimeOfDayPeriod {
+        switch self {
+        case .preDawn: return .dawn
+        case .dawn: return .morning
+        case .morning: return .afternoon
+        case .afternoon: return .sunset
+        case .sunset: return .night
+        case .night: return .preDawn
+        }
+    }
 }
 
 /// Animated sky gradient view that changes based on time of day
@@ -139,9 +151,12 @@ struct TimeOfDaySkyView: View {
     }
 
     private func drawHorizonGlow(context: GraphicsContext, size: CGSize) {
+        // Glow swells toward the middle of dawn/sunset and fades at the
+        // edges, tracking the sun's approach to the horizon
+        let intensity = sin(periodProgress * .pi)
         let glowColor = currentPeriod == .dawn
-            ? Color(hex: "#FFB347").opacity(0.4)  // Warm orange for dawn
-            : Color(hex: "#FF6B6B").opacity(0.3)   // Warm red for sunset
+            ? Color(hex: "#FFB347").opacity(0.4 * intensity)  // Warm orange for dawn
+            : Color(hex: "#FF6B6B").opacity(0.3 * intensity)   // Warm red for sunset
 
         let glowGradient = Gradient(colors: [
             glowColor,
@@ -165,20 +180,31 @@ struct TimeOfDaySkyView: View {
     // MARK: - Colors
 
     private var gradientColors: [Color] {
+        // Blend the current period's palette toward the next period's during
+        // the final quarter of the period — the sky drifts through the day
+        // instead of hard-switching at clock boundaries.
+        let current = palette(for: currentPeriod)
+        let blend = max(0, periodProgress - 0.75) / 0.25
+        guard blend > 0 else { return current }
+        let next = palette(for: currentPeriod.next)
+        return zip(current, next).map { $0.mix(with: $1, by: blend) }
+    }
+
+    private func palette(for period: TimeOfDayPeriod) -> [Color] {
         switch themeManager.currentTheme {
         case .light:
-            return lightThemeGradient
+            return lightThemeGradient(for: period)
         case .dark:
-            return darkThemeGradient
+            return darkThemeGradient(for: period)
         case .night:
-            return nightThemeGradient
+            return nightThemeGradient(for: period)
         case .sepia:
             return [themeManager.currentTheme.backgroundColor] // Solid for sepia
         }
     }
 
-    private var lightThemeGradient: [Color] {
-        switch currentPeriod {
+    private func lightThemeGradient(for period: TimeOfDayPeriod) -> [Color] {
+        switch period {
         case .preDawn:
             return [
                 Color(hex: "#1A1A2E"),
@@ -218,8 +244,8 @@ struct TimeOfDaySkyView: View {
         }
     }
 
-    private var darkThemeGradient: [Color] {
-        switch currentPeriod {
+    private func darkThemeGradient(for period: TimeOfDayPeriod) -> [Color] {
+        switch period {
         case .preDawn:
             return [
                 Color(hex: "#0A0A15"),
@@ -253,9 +279,9 @@ struct TimeOfDaySkyView: View {
         }
     }
 
-    private var nightThemeGradient: [Color] {
+    private func nightThemeGradient(for period: TimeOfDayPeriod) -> [Color] {
         // OLED optimization: mostly pure black with subtle accent at horizon
-        switch currentPeriod {
+        switch period {
         case .preDawn, .dawn:
             return [
                 Color.black,
@@ -315,20 +341,28 @@ private struct AtmosphericParticlesView: View {
     @State private var particles: [StarParticle] = []
 
     var body: some View {
-        Canvas { context, size in
-            for particle in particles {
-                let rect = CGRect(
-                    x: particle.position.x * size.width,
-                    y: particle.position.y * size.height,
-                    width: particle.size,
-                    height: particle.size
-                )
+        // 1s cadence is enough for a slow 8-12s twinkle cycle; 30 tiny
+        // circles per redraw is negligible GPU work, and this view only
+        // exists at night/pre-dawn with Reduce Motion off.
+        TimelineView(.periodic(from: .now, by: 1.0)) { timeline in
+            Canvas { context, size in
+                let time = timeline.date.timeIntervalSinceReferenceDate
+                for particle in particles {
+                    let rect = CGRect(
+                        x: particle.position.x * size.width,
+                        y: particle.position.y * size.height,
+                        width: particle.size,
+                        height: particle.size
+                    )
 
-                context.opacity = particle.opacity
-                context.fill(
-                    Circle().path(in: rect),
-                    with: .color(.white)
-                )
+                    // Slow sinusoidal twinkle, phase-offset per star
+                    let twinkle = 0.65 + 0.35 * sin(time * particle.speed + particle.phase)
+                    context.opacity = particle.opacity * twinkle
+                    context.fill(
+                        Circle().path(in: rect),
+                        with: .color(.white)
+                    )
+                }
             }
         }
         .onAppear {
@@ -344,7 +378,9 @@ private struct AtmosphericParticlesView: View {
                     y: Double.random(in: 0...0.6) // Stars in upper portion
                 ),
                 size: Double.random(in: 1...3),
-                opacity: Double.random(in: 0.3...0.8)
+                opacity: Double.random(in: 0.3...0.8),
+                phase: Double.random(in: 0...(2 * .pi)),
+                speed: Double.random(in: 0.5...0.9)
             )
         }
     }
@@ -354,6 +390,10 @@ private struct StarParticle {
     let position: CGPoint
     let size: Double
     let opacity: Double
+    /// Twinkle phase offset so stars don't pulse in unison
+    let phase: Double
+    /// Twinkle angular speed (rad/s) — full cycle every ~7-12s
+    let speed: Double
 }
 
 // MARK: - Preview

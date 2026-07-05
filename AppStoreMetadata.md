@@ -118,7 +118,34 @@ Keyword strategy notes:
 
 ---
 
-## 5. What's New (v1.0.0)
+## 5. What's New (v1.2.0)
+
+```
+Assalamu Alaikum! This update focuses on prayer time accuracy and a beautiful new look.
+
+PRAYER TIMES, WORLDWIDE
+- Fajr and Isha now match your local mosque timetables far more closely — especially in the UK, Ireland, and other high-latitude regions (Moonsighting Committee method adopted where appropriate)
+- Accurate times everywhere on Earth, from polar regions to the Pacific islands
+- Prayer notifications now stay scheduled for almost a week ahead, even if you don't open the app daily
+
+A REFRESHED EXPERIENCE
+- Redesigned with Apple's new Liquid Glass design language
+- A more fluid, animated onboarding
+- Text now scales with your preferred reading size
+- New in-app language picker (English, with Arabic and Urdu on the way)
+
+RELIABILITY
+- Adhkar completions, reading streaks, and Tasbih history are now rock solid across relaunches
+- Bookmarks open directly at your saved verse; "2:255"-style search jumps straight to the ayah
+- Widgets reset correctly at midnight and always show today's progress
+- Dozens of fixes across audio playback, Hijri dates, and mosque search
+
+We pray this app brings light and ease to your daily worship. JazakAllahu Khairan for your continued feedback.
+```
+
+---
+
+### Previous: What's New (v1.0.0)
 
 ```
 Assalamu Alaikum! Welcome to Qur'an Noor.
@@ -277,7 +304,7 @@ This is correct for a religious reference and lifestyle app with no objectionabl
 ### Version Number
 
 ```
-1.0.0
+1.2.0
 ```
 
 ### Build Number

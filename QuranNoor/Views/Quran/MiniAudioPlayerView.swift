@@ -35,88 +35,86 @@ struct MiniAudioPlayerView: View {
 
         if audioService.hasActivePlayback,
            let verse = audioService.currentVerse {
-            VStack(spacing: 0) {
-                // Progress bar at top with glow
-                AudioProgressBar(
-                    style: .mini,
-                    progress: audioService.duration > 0
-                        ? audioService.currentTime / audioService.duration
-                        : 0,
-                    currentTime: audioService.currentTime,
-                    duration: audioService.duration,
-                    onSeek: { time in audioService.seek(to: time) },
-                    animationNamespace: animationNamespace,
-                    isGeometrySource: !audioService.isFullPlayerPresented
-                )
-
-                // Player content
-                HStack(spacing: Spacing.xs) {
-                    // Artwork badge
-                    SurahArtworkBadge(
-                        surahNumber: verse.surahNumber,
-                        size: .mini,
+            // One container so the card glass and the transport-button glass
+            // render in a single pass and blend where they overlap.
+            GlassEffectContainer(spacing: Spacing.xs) {
+                VStack(spacing: 0) {
+                    // Progress bar at top with glow
+                    AudioProgressBar(
+                        style: .mini,
+                        progress: audioService.duration > 0
+                            ? audioService.currentTime / audioService.duration
+                            : 0,
+                        currentTime: audioService.currentTime,
+                        duration: audioService.duration,
+                        onSeek: { time in audioService.seek(to: time) },
                         animationNamespace: animationNamespace,
                         isGeometrySource: !audioService.isFullPlayerPresented
                     )
 
-                    // Verse info
-                    verseInfo(verse: verse, theme: theme)
+                    // Player content
+                    HStack(spacing: Spacing.xs) {
+                        // Artwork badge
+                        SurahArtworkBadge(
+                            surahNumber: verse.surahNumber,
+                            size: .mini,
+                            animationNamespace: animationNamespace,
+                            isGeometrySource: !audioService.isFullPlayerPresented
+                        )
 
-                    // Play/pause button
-                    playPauseButton(theme: theme)
+                        // Verse info
+                        verseInfo(verse: verse, theme: theme)
 
-                    // Skip controls (only when enabled + continuous mode)
-                    if showSkipControls,
-                       audioService.continuousPlaybackEnabled,
-                       audioService.playingVerses.count > 1 {
-                        skipForwardButton(theme: theme)
+                        // Play/pause button
+                        playPauseButton(theme: theme)
+
+                        // Skip controls (only when enabled + continuous mode)
+                        if showSkipControls,
+                           audioService.continuousPlaybackEnabled,
+                           audioService.playingVerses.count > 1 {
+                            skipForwardButton(theme: theme)
+                        }
+
+                        // Close button
+                        if showCloseButton {
+                            closeButton(theme: theme)
+                        }
                     }
-
-                    // Close button
-                    if showCloseButton {
-                        closeButton(theme: theme)
-                    }
+                    .padding(.horizontal, Spacing.sm)
+                    .padding(.vertical, Spacing.xs)
                 }
-                .padding(.horizontal, Spacing.sm)
-                .padding(.vertical, Spacing.xs)
+                // Clip keeps the progress bar inside the corners; glass
+                // replaces the old card fill + shadow + accent stroke.
+                .clipShape(RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous))
+                .glassEffect(in: .rect(cornerRadius: BorderRadius.xl, style: .continuous))
+                .scaleEffect(isDragging ? 1.02 : 1.0)
+                .offset(y: min(0, dragOffset))
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    HapticManager.shared.trigger(.medium)
+                    onTap()
+                }
+                .gesture(
+                    DragGesture(minimumDistance: 20, coordinateSpace: .local)
+                        .onChanged { value in
+                            // Only respond to upward drags
+                            if value.translation.height < 0 {
+                                isDragging = true
+                                dragOffset = value.translation.height * 0.3
+                            }
+                        }
+                        .onEnded { value in
+                            isDragging = false
+                            if value.translation.height < -40 {
+                                HapticManager.shared.trigger(.medium)
+                                onTap()
+                            }
+                            withAnimation(AppAnimation.fast) {
+                                dragOffset = 0
+                            }
+                        }
+                )
             }
-            .clipShape(RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous))
-            .background(
-                RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous)
-                    .fill(theme.cardColor)
-                    .shadow(color: theme.cardShadow, radius: theme.cardShadowRadius / 2, x: 0, y: -2)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous)
-                    .stroke(theme.accent.opacity(0.15), lineWidth: 0.5)
-            )
-            .scaleEffect(isDragging ? 1.02 : 1.0)
-            .offset(y: min(0, dragOffset))
-            .contentShape(Rectangle())
-            .onTapGesture {
-                HapticManager.shared.trigger(.medium)
-                onTap()
-            }
-            .gesture(
-                DragGesture(minimumDistance: 20, coordinateSpace: .local)
-                    .onChanged { value in
-                        // Only respond to upward drags
-                        if value.translation.height < 0 {
-                            isDragging = true
-                            dragOffset = value.translation.height * 0.3
-                        }
-                    }
-                    .onEnded { value in
-                        isDragging = false
-                        if value.translation.height < -40 {
-                            HapticManager.shared.trigger(.medium)
-                            onTap()
-                        }
-                        withAnimation(AppAnimation.fast) {
-                            dragOffset = 0
-                        }
-                    }
-            )
             .padding(.horizontal, Spacing.screenHorizontal)
             .transition(.move(edge: .bottom).combined(with: .opacity))
             .animation(AppAnimation.fast, value: audioService.hasActivePlayback)

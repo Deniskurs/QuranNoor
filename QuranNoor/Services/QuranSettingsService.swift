@@ -64,19 +64,36 @@ enum QuranFontSize: String, CaseIterable, Identifiable, Codable {
         }
     }
 
+    /// Line spacing for the Arabic text. Ratios follow printed mushaf
+    /// conventions (~0.42 of glyph size) — the previous ~0.3 ratio read
+    /// cramped for Uthmanic script with its tall diacritics.
     var lineSpacing: CGFloat {
         switch self {
         case .small:
-            return 6
-        case .medium:
             return 8
+        case .medium:
+            return 11
         case .large:
-            return 10
-        case .extraLarge:
-            return 12
-        case .extraExtraLarge:
             return 14
+        case .extraLarge:
+            return 17
+        case .extraExtraLarge:
+            return 20
         }
+    }
+
+    /// Next step up, if any (pinch-to-zoom support)
+    var larger: QuranFontSize? {
+        let all = Self.allCases
+        guard let index = all.firstIndex(of: self), index + 1 < all.count else { return nil }
+        return all[index + 1]
+    }
+
+    /// Next step down, if any (pinch-to-zoom support)
+    var smaller: QuranFontSize? {
+        let all = Self.allCases
+        guard let index = all.firstIndex(of: self), index > 0 else { return nil }
+        return all[index - 1]
     }
 }
 

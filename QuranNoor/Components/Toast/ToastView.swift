@@ -102,20 +102,10 @@ struct ToastView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
-            .background(
-                RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
-                    .fill(themeManager.currentTheme.cardColor)
-                    .shadow(
-                        color: themeManager.currentTheme.textPrimary.opacity(0.15),
-                        radius: 12,
-                        x: 0,
-                        y: 4
-                    )
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
-                    .stroke(style.color(for: themeManager.currentTheme).opacity(0.3), lineWidth: 1)
-            )
+            // Liquid Glass surface; rounded rect because the message can wrap
+            // up to four lines. Icon keeps its semantic tint, text stays on
+            // theme tokens via ThemedText.
+            .glassEffect(in: .rect(cornerRadius: BorderRadius.xl, style: .continuous))
             .padding(.horizontal, 20)
             .offset(y: offset)
             .opacity(opacity)

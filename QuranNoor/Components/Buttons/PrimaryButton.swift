@@ -61,15 +61,14 @@ struct PrimaryButton: View {
             .foregroundColor(themeManager.currentTheme.onAccent)
             .frame(maxWidth: .infinity)
             .frame(height: 52)
-            .background(backgroundGradient)
-            .clipShape(RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous))
-            .shadow(
-                color: themeManager.currentTheme.cardShadow,
-                radius: isPressed ? 5 : 10,
-                x: 0,
-                y: isPressed ? 2 : 4
+            // Accent-tinted interactive Liquid Glass. Replacing the old
+            // accent→accentMuted gradient also removes its mid-tone contrast
+            // dip — onAccent is contrast-computed against the pure accent.
+            .glassEffect(
+                .regular.tint(themeManager.currentTheme.accent).interactive(),
+                in: .rect(cornerRadius: BorderRadius.xl, style: .continuous)
             )
-            .scaleEffect(isPressed ? 0.95 : 1.0)
+            .scaleEffect(isPressed ? 0.97 : 1.0)
             .opacity(isDisabled ? 0.5 : 1.0)
             .animation(AppAnimation.fast, value: isPressed)
         }
@@ -90,17 +89,6 @@ struct PrimaryButton: View {
         )
     }
 
-    // MARK: - Background Gradient
-    private var backgroundGradient: LinearGradient {
-        LinearGradient(
-            gradient: Gradient(colors: [
-                themeManager.currentTheme.accent,
-                themeManager.currentTheme.accentMuted.opacity(0.8)
-            ]),
-            startPoint: .leading,
-            endPoint: .trailing
-        )
-    }
 
     // MARK: - Audio & Haptic Feedback
     private func handleTap() {

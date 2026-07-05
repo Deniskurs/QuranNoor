@@ -81,20 +81,16 @@ struct PrayerReminderPopup: View {
                 HStack(spacing: 16) {
                     // Not Yet button
                     Button {
-                        // Play back sound + haptic for "Not Yet"
-                        // AudioHapticCoordinator.shared.playBack() // Removed: button press sound
                         dismiss()
                     } label: {
                         Text("Not Yet")
                             .font(.body.weight(.semibold))
-                            .foregroundColor(themeManager.currentTheme.textPrimary.opacity(0.6))
+                            .foregroundColor(themeManager.currentTheme.textPrimary.opacity(0.7))
                             .frame(maxWidth: .infinity)
                             .frame(height: 50)
-                            .background(
-                                RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
-                                    .stroke(themeManager.currentTheme.textPrimary.opacity(0.2), lineWidth: 1.5)
-                            )
                     }
+                    // Secondary action: plain glass capsule-rect
+                    .glassEffect(.regular.interactive(), in: .rect(cornerRadius: BorderRadius.lg, style: .continuous))
 
                     // Yes, Alhamdulillah button
                     Button {
@@ -118,25 +114,23 @@ struct PrayerReminderPopup: View {
                             Text("Yes, Alhamdulillah")
                                 .font(.body.weight(.semibold))
                         }
-                        .foregroundColor(.white)
+                        .foregroundColor(themeManager.currentTheme.onAccent)
                         .frame(maxWidth: .infinity)
                         .frame(height: 50)
-                        .background(
-                            RoundedRectangle(cornerRadius: BorderRadius.lg, style: .continuous)
-                                .fill(themeManager.currentTheme.accent)
-                        )
                     }
+                    // Primary action: accent-tinted interactive glass
+                    .glassEffect(
+                        .regular.tint(themeManager.currentTheme.accent).interactive(),
+                        in: .rect(cornerRadius: BorderRadius.lg, style: .continuous)
+                    )
                 }
                 .padding(.horizontal, 24)
                 .padding(.top, 32)
                 .padding(.bottom, 32)
             }
             .frame(maxWidth: 380)
-            .background(
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .fill(themeManager.currentTheme.cardColor)
-                    .shadow(color: .black.opacity(0.3), radius: 20, x: 0, y: 10)
-            )
+            // Liquid Glass card floating over the dimmed backdrop
+            .glassEffect(in: .rect(cornerRadius: 24, style: .continuous))
             .padding(.horizontal, 20)
             .scaleEffect(scale)
             .opacity(opacity)

@@ -209,7 +209,7 @@ struct PrayerSetupView: View {
                     .labelStyle(.titleAndIcon)
                     .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.glassProminent)
             .controlSize(.large)
             .tint(themeManager.currentTheme.accent)
             .padding(.horizontal, Spacing.screenHorizontal)

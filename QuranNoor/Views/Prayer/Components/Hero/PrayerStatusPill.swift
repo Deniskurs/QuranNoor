@@ -2,8 +2,8 @@
 //  PrayerStatusPill.swift
 //  QuranNoor
 //
-//  Glassmorphic status badge showing prayer state and time
-//  Uses liquid glass effect with edge highlights
+//  Status badge showing prayer state and time on a Liquid Glass capsule
+//  with a subtle status tint
 //
 
 import SwiftUI
@@ -55,73 +55,11 @@ struct PrayerStatusPill: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
-        .background(pillBackground)
+        // Native Liquid Glass adapts to all four themes; the status color is
+        // only a subtle wash — text contrast still comes from theme tokens.
+        .glassEffect(.regular.tint(statusColor.opacity(0.2)), in: .capsule)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityDescription)
-    }
-
-    // MARK: - Background
-
-    private var pillBackground: some View {
-        Capsule()
-            .fill(.ultraThinMaterial)
-            .background(
-                Capsule()
-                    .fill(glassBackgroundTint)
-            )
-            .overlay(
-                Capsule()
-                    .strokeBorder(
-                        LinearGradient(
-                            colors: [
-                                glassEdgeHighlight.opacity(0.6),
-                                glassEdgeHighlight.opacity(0.2),
-                                Color.clear
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 1
-                    )
-            )
-            .shadow(color: glassShadowColor, radius: 8, x: 0, y: 4)
-    }
-
-    // MARK: - Glass Colors
-
-    private var glassBackgroundTint: Color {
-        switch themeManager.currentTheme {
-        case .light:
-            return Color.white.opacity(0.3)
-        case .dark:
-            return themeManager.currentTheme.accent.opacity(0.1)
-        case .night:
-            return Color.white.opacity(0.05)
-        case .sepia:
-            return themeManager.currentTheme.accentMuted.opacity(0.1)
-        }
-    }
-
-    private var glassEdgeHighlight: Color {
-        switch themeManager.currentTheme {
-        case .light, .sepia:
-            return Color.white
-        case .dark:
-            return Color.white.opacity(0.3)
-        case .night:
-            return Color.white.opacity(0.15)
-        }
-    }
-
-    private var glassShadowColor: Color {
-        switch themeManager.currentTheme {
-        case .light, .sepia:
-            return Color.black.opacity(0.1)
-        case .dark:
-            return Color.black.opacity(0.3)
-        case .night:
-            return Color.black.opacity(0.5)
-        }
     }
 
     // MARK: - Status Properties
@@ -141,7 +79,7 @@ struct PrayerStatusPill: View {
 
     private var statusColor: Color {
         if isUrgent {
-            return .orange
+            return themeManager.currentTheme.semanticWarning
         }
 
         switch state {

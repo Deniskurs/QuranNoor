@@ -54,15 +54,9 @@ struct ReaderFloatingPill: View {
                 action: onToggleWordByWord
             )
         }
-        .background(
-            Capsule()
-                .fill(.ultraThinMaterial)
-                .shadow(color: .black.opacity(0.12), radius: 8, x: 0, y: 2)
-        )
-        .overlay(
-            Capsule()
-                .stroke(theme.borderColor.opacity(0.3), lineWidth: 0.5)
-        )
+        // Liquid Glass capsule replaces the old material + shadow + stroke
+        // stack; interactive so the pill responds to touch like a control.
+        .glassEffect(.regular.interactive(), in: .capsule)
     }
 
     private func pillButton(
