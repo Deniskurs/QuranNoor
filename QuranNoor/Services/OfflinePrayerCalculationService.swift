@@ -72,7 +72,8 @@ final class OfflinePrayerCalculationService {
     ) throws -> DailyPrayerTimes {
 
         let params = MethodParameters.forMethod(method)
-        let calendar = Calendar.current
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
         let components = calendar.dateComponents([.year, .month, .day], from: date)
 
         guard let year = components.year,
@@ -84,6 +85,7 @@ final class OfflinePrayerCalculationService {
         let lat = coordinates.latitude
         let lng = coordinates.longitude
         let timeZoneOffset = Double(timeZone.secondsFromGMT(for: date)) / 3600.0
+        let dayOfYear = calendar.ordinality(of: .day, in: .year, for: date) ?? 1
 
         // Julian date for the given day
         let jd = julianDate(year: year, month: month, day: day)
@@ -92,53 +94,77 @@ final class OfflinePrayerCalculationService {
         let sunDeclination = sunDeclination(jd: jd)
         let equationOfTime = equationOfTime(jd: jd)
 
-        // Dhuhr (solar noon) in hours
-        let dhuhrHours = 12.0 + timeZoneOffset - lng / 15.0 - equationOfTime
+        // Dhuhr (solar noon) in local clock hours, normalized into 0..<24 so
+        // extreme timezone/longitude combinations (e.g. Kiritimati at UTC+14)
+        // don't push the whole day out of range.
+        let rawDhuhr = 12.0 + timeZoneOffset - lng / 15.0 - equationOfTime
+        let dhuhrHours = (rawDhuhr.truncatingRemainder(dividingBy: 24.0) + 24.0)
+            .truncatingRemainder(dividingBy: 24.0)
 
-        // Sunrise and Sunset (0.833° accounts for atmospheric refraction)
-        guard let sunriseHA = hourAngle(lat: lat, decl: sunDeclination, angle: 0.833),
-              let sunsetHA = hourAngle(lat: lat, decl: sunDeclination, angle: 0.833) else {
-            // Permanent polar day or night — cannot compute any prayer times
+        // Sunrise and Sunset (0.833° accounts for atmospheric refraction).
+        // During polar day/night the sun never crosses the horizon; fall back
+        // to the geometry of the nearest latitude where it does (aqrab
+        // al-bilad convention, clamped to ±48°) so the app still produces
+        // usable times everywhere on Earth.
+        let effectiveLat: Double = hourAngle(lat: lat, decl: sunDeclination, angle: 0.833) != nil
+            ? lat
+            : (lat >= 0 ? 48.0 : -48.0)
+        guard let sunriseHA = hourAngle(lat: effectiveLat, decl: sunDeclination, angle: 0.833) else {
+            // Unreachable: the sun always crosses 0.833° below the horizon at 48°
             throw PrayerTimeError.calculationFailed
         }
         let sunriseHours = dhuhrHours - sunriseHA / 15.0
-        let sunsetHours = dhuhrHours + sunsetHA / 15.0
+        let sunsetHours = dhuhrHours + sunriseHA / 15.0
 
-        // Night duration for high-latitude fallback (1/7th of night rule)
-        let nightDuration = 24.0 - sunsetHours + sunriseHours
+        // Night duration (sunset → next sunrise) for high-latitude rules
+        let nightDuration = 24.0 - (sunsetHours - sunriseHours)
 
-        // Fajr — with high-latitude fallback
+        // Fajr — Moonsighting Committee uses season-adjusted twilight; other
+        // methods fall back to the angle-based rule when the sun never reaches
+        // the required depression angle (high latitudes in summer). The
+        // angle-based rule matches Aladhan's ANGLE_BASED adjustment, so the
+        // online and offline paths agree.
         let fajrHours: Double
-        if let fajrHA = hourAngle(lat: lat, decl: sunDeclination, angle: params.fajrAngle) {
+        if method == .moonsightingCommittee {
+            if abs(lat) >= 55 {
+                // Moonsighting Committee prescribes 1/7 of the night above 55°
+                fajrHours = sunriseHours - nightDuration / 7.0
+            } else {
+                let minutes = moonsightingFajrMinutes(latitude: lat, dayOfYear: dayOfYear, year: year)
+                fajrHours = sunriseHours - minutes / 60.0
+            }
+        } else if let fajrHA = hourAngle(lat: effectiveLat, decl: sunDeclination, angle: params.fajrAngle) {
             fajrHours = dhuhrHours - fajrHA / 15.0
         } else {
-            // 1/7th of night rule: Fajr = Sunrise - (nightDuration / 7)
-            fajrHours = sunriseHours - nightDuration / 7.0
+            // Angle-based rule: twilight portion = (angle / 60) of the night
+            fajrHours = sunriseHours - (params.fajrAngle / 60.0) * nightDuration
         }
 
         // Asr - shadow ratio depends on madhab
         let shadowRatio: Double = madhab == .hanafi ? 2.0 : 1.0
-        let asrHours = dhuhrHours + asrHourAngle(lat: lat, decl: sunDeclination, shadowRatio: shadowRatio) / 15.0
+        let asrHours = dhuhrHours + asrHourAngle(lat: effectiveLat, decl: sunDeclination, shadowRatio: shadowRatio) / 15.0
 
         // Maghrib = sunset
         let maghribHours = sunsetHours
 
-        // Isha — with high-latitude fallback
+        // Isha — same policy as Fajr
         let ishaHours: Double
-        if let ishaAngle = params.ishaAngle {
-            if let ishaHA = hourAngle(lat: lat, decl: sunDeclination, angle: ishaAngle) {
-                ishaHours = dhuhrHours + ishaHA / 15.0
-            } else {
-                // 1/7th of night rule: Isha = Sunset + (nightDuration / 7)
+        if method == .moonsightingCommittee {
+            if abs(lat) >= 55 {
                 ishaHours = sunsetHours + nightDuration / 7.0
+            } else {
+                let minutes = moonsightingIshaMinutes(latitude: lat, dayOfYear: dayOfYear, year: year)
+                ishaHours = sunsetHours + minutes / 60.0
             }
         } else if let ishaInterval = params.ishaInterval {
             ishaHours = maghribHours + ishaInterval / 60.0
         } else {
-            if let ishaHA = hourAngle(lat: lat, decl: sunDeclination, angle: 17.0) {
+            let ishaAngle = params.ishaAngle ?? 17.0
+            if let ishaHA = hourAngle(lat: effectiveLat, decl: sunDeclination, angle: ishaAngle) {
                 ishaHours = dhuhrHours + ishaHA / 15.0
             } else {
-                ishaHours = sunsetHours + nightDuration / 7.0
+                // Angle-based rule: twilight portion = (angle / 60) of the night
+                ishaHours = sunsetHours + (ishaAngle / 60.0) * nightDuration
             }
         }
 
@@ -157,19 +183,16 @@ final class OfflinePrayerCalculationService {
             throw PrayerTimeError.calculationFailed
         }
 
+        // Convert local clock hours (offset from local midnight of `date`) to
+        // absolute instants. No wrapping: an Isha that crosses midnight must
+        // land on the next calendar day as a correct future instant.
         func hoursToDate(_ hours: Double) -> Date {
-            var normalizedHours = hours
-            if normalizedHours >= 24.0 { normalizedHours -= 24.0 }
-            if normalizedHours < 0.0 { normalizedHours += 24.0 }
-            let totalSeconds = normalizedHours * 3600.0
-            return baseDate.addingTimeInterval(totalSeconds)
+            baseDate.addingTimeInterval(hours * 3600.0)
         }
 
-        // Validate: core times should be reasonable
-        guard sunriseHours > 0, sunriseHours < 24,
-              dhuhrHours > 0, dhuhrHours < 24,
-              asrHours > 0, asrHours < 24,
-              maghribHours > 0, maghribHours < 24 else {
+        // Validate: every value must be finite (NaN would corrupt Date math)
+        let coreHours = [fajrHours, sunriseHours, dhuhrHours, asrHours, maghribHours, ishaHours]
+        guard coreHours.allSatisfy(\.isFinite) else {
             throw PrayerTimeError.calculationFailed
         }
 
@@ -213,6 +236,70 @@ final class OfflinePrayerCalculationService {
         degrees = (degrees + 360.0).truncatingRemainder(dividingBy: 360.0)
 
         return degrees
+    }
+
+    // MARK: - Moonsighting Committee (season-adjusted twilight)
+    //
+    // The Moonsighting Committee method does not use fixed depression angles.
+    // Fajr/Isha are offsets from sunrise/sunset, piecewise-linearly
+    // interpolated over days since the winter solstice, fitted to
+    // moonsighting.com observational data. Constants match adhan-swift's
+    // Astronomical.seasonAdjustedMorningTwilight / EveningTwilight
+    // (general shafaq), which Aladhan's method 15 also implements.
+
+    /// Minutes before sunrise for Moonsighting Committee Fajr
+    private func moonsightingFajrMinutes(latitude: Double, dayOfYear: Int, year: Int) -> Double {
+        let latFactor = abs(latitude) / 55.0
+        return seasonalAdjustment(
+            a: 75.0 + 28.65 * latFactor,
+            b: 75.0 + 19.44 * latFactor,
+            c: 75.0 + 32.74 * latFactor,
+            d: 75.0 + 48.10 * latFactor,
+            dayOfYear: dayOfYear, year: year, latitude: latitude
+        )
+    }
+
+    /// Minutes after sunset for Moonsighting Committee Isha (general shafaq)
+    private func moonsightingIshaMinutes(latitude: Double, dayOfYear: Int, year: Int) -> Double {
+        let latFactor = abs(latitude) / 55.0
+        return seasonalAdjustment(
+            a: 75.0 + 25.60 * latFactor,
+            b: 75.0 + 2.05 * latFactor,
+            c: 75.0 - 9.21 * latFactor,
+            d: 75.0 + 6.14 * latFactor,
+            dayOfYear: dayOfYear, year: year, latitude: latitude
+        )
+    }
+
+    /// Piecewise-linear seasonal interpolation between the four anchor values
+    private func seasonalAdjustment(
+        a: Double, b: Double, c: Double, d: Double,
+        dayOfYear: Int, year: Int, latitude: Double
+    ) -> Double {
+        let dyy = Double(daysSinceSolstice(dayOfYear: dayOfYear, year: year, latitude: latitude))
+        switch dyy {
+        case ..<91:  return a + (b - a) / 91.0 * dyy
+        case ..<137: return b + (c - b) / 46.0 * (dyy - 91)
+        case ..<183: return c + (d - c) / 46.0 * (dyy - 137)
+        case ..<229: return d + (c - d) / 46.0 * (dyy - 183)
+        case ..<275: return c + (b - c) / 46.0 * (dyy - 229)
+        default:     return b + (a - b) / 91.0 * (dyy - 275)
+        }
+    }
+
+    /// Days elapsed since the nearest winter solstice (hemisphere-aware)
+    private func daysSinceSolstice(dayOfYear: Int, year: Int, latitude: Double) -> Int {
+        let isLeap = (year % 4 == 0 && year % 100 != 0) || year % 400 == 0
+        let daysInYear = isLeap ? 366 : 365
+        if latitude >= 0 {
+            var days = dayOfYear + 10
+            if days >= daysInYear { days -= daysInYear }
+            return days
+        } else {
+            var days = dayOfYear - (isLeap ? 173 : 172)
+            if days < 0 { days += daysInYear }
+            return days
+        }
     }
 
     // MARK: - Astronomical Calculations

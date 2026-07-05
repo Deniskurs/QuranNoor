@@ -31,7 +31,11 @@ class PlaybackSessionStore {
 
     func restore() -> PlaybackSession? {
         guard let data = UserDefaults.standard.data(forKey: key) else { return nil }
-        return try? JSONDecoder().decode(PlaybackSession.self, from: data)
+        guard let session = try? JSONDecoder().decode(PlaybackSession.self, from: data) else {
+            UserDefaults.standard.backupCorruptedBlob(data, forKey: key)
+            return nil
+        }
+        return session
     }
 
     func clear() {

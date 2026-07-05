@@ -61,6 +61,13 @@ final class WidgetUpdateService {
         // Load existing entry, update completions, save back
         guard let entry = WidgetSharedStore.loadPrayerEntry() else { return }
 
+        // The completions fetched below are *today's*. If the stored entry is
+        // from a previous day (the app hasn't pushed fresh prayer times yet,
+        // e.g. a completion toggled right after midnight), stamping it would
+        // attach today's completions to yesterday's date. Skip the write —
+        // the next updatePrayerWidget() push carries the correct state.
+        guard Calendar.current.isDate(entry.date, inSameDayAs: Date()) else { return }
+
         let completions = PrayerCompletionService.shared.getTodayCompletions()
         let completionDict = Dictionary(
             uniqueKeysWithValues: completions.map { ($0.key.rawValue, $0.value) }

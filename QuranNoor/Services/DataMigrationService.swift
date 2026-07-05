@@ -32,6 +32,16 @@ final class DataMigrationService {
         UserDefaults.standard.bool(forKey: migrationCompleteKey)
     }
 
+    /// Outcome of one migration step — distinguishes "no legacy data" from
+    /// "legacy data present but unreadable", which must NOT complete the
+    /// migration (a fixed build retries; unique constraints make re-runs
+    /// upsert-safe).
+    private enum StepResult {
+        case nothingToMigrate
+        case migrated(Int)
+        case failed
+    }
+
     /// Perform migration from UserDefaults to SwiftData
     /// - Parameter context: The SwiftData ModelContext to insert records into
     /// - Returns: Migration statistics (verses migrated, bookmarks migrated)
@@ -42,21 +52,37 @@ final class DataMigrationService {
             return (0, 0)
         }
 
+        let progressResult = await migrateReadingProgress(context: context)
+        let bookmarksResult = await migrateBookmarks(context: context)
+
         var versesMigrated = 0
         var bookmarksMigrated = 0
+        var anyStepFailed = false
 
-        // Migrate reading progress
-        versesMigrated = await migrateReadingProgress(context: context)
+        switch progressResult {
+        case .migrated(let count): versesMigrated = count
+        case .failed: anyStepFailed = true
+        case .nothingToMigrate: break
+        }
+        switch bookmarksResult {
+        case .migrated(let count): bookmarksMigrated = count
+        case .failed: anyStepFailed = true
+        case .nothingToMigrate: break
+        }
 
-        // Migrate bookmarks
-        bookmarksMigrated = await migrateBookmarks(context: context)
-
-        // Save changes
+        // Save whatever succeeded — partial data is safe because records are
+        // unique-keyed (re-runs upsert).
         do {
             try context.save()
 
-            // Mark migration as complete
-            UserDefaults.standard.set(true, forKey: migrationCompleteKey)
+            if anyStepFailed {
+                // Leave the complete flag UNSET and the legacy keys intact so a
+                // later build can retry. Setting the flag here permanently
+                // discarded users' legacy progress when a decode failed.
+                AppLogger.migration.error("Migration partially failed — will retry on next launch")
+            } else {
+                UserDefaults.standard.set(true, forKey: migrationCompleteKey)
+            }
         } catch {
             AppLogger.migration.error("Failed to save SwiftData migration: \(error.localizedDescription, privacy: .public)")
         }
@@ -67,9 +93,9 @@ final class DataMigrationService {
     // MARK: - Private Migration Methods
 
     /// Migrate reading progress from UserDefaults to SwiftData
-    private func migrateReadingProgress(context: ModelContext) async -> Int {
+    private func migrateReadingProgress(context: ModelContext) async -> StepResult {
         guard let data = UserDefaults.standard.data(forKey: progressKey) else {
-            return 0
+            return .nothingToMigrate
         }
 
         do {
@@ -88,17 +114,17 @@ final class DataMigrationService {
 
             }
 
-            return count
+            return .migrated(count)
         } catch {
             AppLogger.migration.error("Failed to decode reading progress for migration: \(error.localizedDescription, privacy: .public)")
-            return 0
+            return .failed
         }
     }
 
     /// Migrate bookmarks from UserDefaults to SwiftData
-    private func migrateBookmarks(context: ModelContext) async -> Int {
+    private func migrateBookmarks(context: ModelContext) async -> StepResult {
         guard let data = UserDefaults.standard.data(forKey: bookmarksKey) else {
-            return 0
+            return .nothingToMigrate
         }
 
         do {
@@ -109,19 +135,16 @@ final class DataMigrationService {
                 context.insert(record)
             }
 
-            return bookmarks.count
+            return .migrated(bookmarks.count)
         } catch {
             AppLogger.migration.error("Failed to decode bookmarks for migration: \(error.localizedDescription, privacy: .public)")
-            return 0
+            return .failed
         }
     }
 
-    /// Clean up old UserDefaults data after successful migration
-    /// Note: Called optionally - keeping data as backup is safer
-    private func cleanupOldData() {
-        UserDefaults.standard.removeObject(forKey: progressKey)
-        UserDefaults.standard.removeObject(forKey: bookmarksKey)
-    }
+    // cleanupOldData() intentionally removed: it deleted the legacy
+    // UserDefaults keys that a failed migration needs for retry, and nothing
+    // ever called it. Legacy keys stay as a permanent backup.
 
     // MARK: - Utility Methods
 

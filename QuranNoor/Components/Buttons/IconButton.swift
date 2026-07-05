@@ -82,7 +82,6 @@ struct IconButton: View {
         .disabled(isDisabled)
         .accessibilityLabel(label ?? accessibilityLabelText)
         .accessibilityAddTraits(.isButton)
-        .accessibilityHint("Tap to activate")
         .simultaneousGesture(
             DragGesture(minimumDistance: 0)
                 .onChanged { _ in

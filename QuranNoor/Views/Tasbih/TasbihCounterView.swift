@@ -95,6 +95,7 @@ struct TasbihCounterView: View {
                     } label: {
                         Image(systemName: "ellipsis.circle")
                     }
+                    .accessibilityLabel("Tasbih options")
                 }
             }
             .sheet(isPresented: $showingPresetPicker) {

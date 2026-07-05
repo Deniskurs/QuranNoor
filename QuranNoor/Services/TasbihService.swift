@@ -70,12 +70,19 @@ final class TasbihService {
             triggerHapticFeedback(count: session.currentCount, target: session.targetCount)
         }
 
-        // Check if target reached
+        // Completion must be decided on the incremented copy and written back
+        // BEFORE recording: the old flow called completeSession() first, which
+        // re-read the stale stored session (count = target-1), recorded stats
+        // and history off by one, and was then overwritten with
+        // isCompleted == false — the session never counted as completed.
         if session.currentCount == session.targetCount && !session.isCompleted {
-            completeSession()
+            session.isCompleted = true
+            session.endDate = Date()
+            currentSession = session
+            recordCompletion(of: session)
+        } else {
+            currentSession = session
         }
-
-        currentSession = session
     }
 
     /// Decrement current session count
@@ -108,14 +115,9 @@ final class TasbihService {
         }
     }
 
-    /// Complete current session
-    private func completeSession() {
-        guard var session = currentSession else { return }
-
-        session.isCompleted = true
-        session.endDate = Date()
-        currentSession = session
-
+    /// Celebrate and record a completed session (statistics + history).
+    /// The session passed in is the final, already-stored value.
+    private func recordCompletion(of session: TasbihSession) {
         // Success haptic + vibration
         if hapticEnabled {
             let notification = UINotificationFeedbackGenerator()
@@ -137,17 +139,20 @@ final class TasbihService {
         saveToHistory(session)
     }
 
-    /// Save current session and start new one
+    /// Save current session and start new one.
+    /// Completed sessions were already recorded at the moment of completion.
     func saveAndStartNew(preset: TasbihPreset, target: Int) {
-        if let session = currentSession {
+        if let session = currentSession, !session.isCompleted, session.currentCount > 0 {
             saveToHistory(session)
         }
         startSession(preset: preset, target: target)
     }
 
-    /// End current session without completing
+    /// End current session without completing.
+    /// Completed sessions were already recorded — saving again here used to
+    /// duplicate the history entry.
     func endSession() {
-        if let session = currentSession {
+        if let session = currentSession, !session.isCompleted, session.currentCount > 0 {
             // Save partial session to history
             var partialSession = session
             partialSession.endDate = Date()

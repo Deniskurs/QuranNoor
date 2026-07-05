@@ -200,6 +200,36 @@ struct WidgetReadingEntry: Codable {
         }
         return "\(surah) \(verse)"
     }
+
+    // MARK: - Day Rollover
+
+    /// Returns the entry that should drive the widget at `referenceDate`.
+    ///
+    /// The stored payload is only refreshed while the main app runs, so after
+    /// midnight it still carries the previous day's counters. When
+    /// `lastUpdated` falls on an earlier calendar day than `referenceDate`,
+    /// the day-scoped counters (`versesReadToday`, `prayersCompleted`) are
+    /// zeroed — nothing has been read or prayed on the new day yet. Cumulative
+    /// stats (totals, completion, juz, last-read location) are preserved, and
+    /// `streakDays` is kept because a streak only breaks once the new day
+    /// ends without reading.
+    func entry(validFor referenceDate: Date) -> WidgetReadingEntry {
+        if Calendar.current.isDate(lastUpdated, inSameDayAs: referenceDate) {
+            return self
+        }
+        return WidgetReadingEntry(
+            streakDays: streakDays,
+            versesReadToday: 0,
+            totalVersesRead: totalVersesRead,
+            overallCompletion: overallCompletion,
+            currentJuz: currentJuz,
+            juzProgress: juzProgress,
+            lastReadSurahName: lastReadSurahName,
+            lastReadVerseNumber: lastReadVerseNumber,
+            prayersCompleted: 0,
+            lastUpdated: lastUpdated
+        )
+    }
 }
 
 // MARK: - Placeholder Data

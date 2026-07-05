@@ -63,6 +63,7 @@ class PrayerViewModel {
     private let calculationMethodKey = "selectedCalculationMethod"
     private let madhabKey = "selectedMadhab"
     private let calculationMethodMigrationKey = "calculationMethodMigration_mwlDefault_v1"
+    private let ukMoonsightingMigrationKey = "calculationMethodMigration_ukMoonsighting_v2"
 
     // MARK: - Computed Properties (Derived from PrayerPeriod)
 
@@ -191,6 +192,10 @@ class PrayerViewModel {
             userLocation = city
             isLoadingLocation = false
 
+            // Step 2.5: One-shot regional method correction (UK/Ireland) —
+            // must run before today's times are calculated below.
+            migrateUKMethodIfNeeded()
+
             // Step 3: Calculate TODAY's prayer times
             let prayerTimes = try await prayerTimeService.calculatePrayerTimes(
                 coordinates: coordinates,
@@ -208,7 +213,7 @@ class PrayerViewModel {
 
             // Step 3.7: Push data to widget (carries tomorrow if already loaded so
             // the widget can roll over at midnight without the app running).
-            let hijriString = HijriCalendarService().getCachedHijriDate()?.formatted
+            let hijriString = HijriCalendarService.shared.getCachedHijriDate()?.formatted
             WidgetUpdateService.shared.updatePrayerWidget(
                 prayerTimes: adjustedPrayerTimes,
                 tomorrow: tomorrowPrayerTimes,
@@ -216,20 +221,9 @@ class PrayerViewModel {
                 hijriDateString: hijriString
             )
 
-            // Step 4: Schedule notifications (if enabled)
+            // Step 4: Schedule notifications for the days ahead (if enabled)
             // Non-blocking: notification failures must not affect prayer time display
-            if notificationService.isAuthorized && notificationService.notificationsEnabled {
-                let locationInfo = getLocationInfo()
-                do {
-                    try await notificationService.schedulePrayerNotifications(
-                        prayerTimes,
-                        city: locationInfo.city,
-                        countryCode: locationInfo.countryCode
-                    )
-                } catch {
-                    // Notification scheduling is non-critical
-                }
-            }
+            await scheduleNotificationsAhead(todayTimes: adjustedPrayerTimes)
 
             isLoadingPrayerTimes = false
 
@@ -262,7 +256,7 @@ class PrayerViewModel {
             // lets the widget render the next calendar day correctly after
             // midnight even while the app is suspended.
             if let today = todayPrayerTimes {
-                let hijriString = HijriCalendarService().getCachedHijriDate()?.formatted
+                let hijriString = HijriCalendarService.shared.getCachedHijriDate()?.formatted
                 WidgetUpdateService.shared.updatePrayerWidget(
                     prayerTimes: today,
                     tomorrow: adjustedTomorrowPrayers,
@@ -433,19 +427,10 @@ class PrayerViewModel {
             notificationService.saveNotificationSettings()
 
             // Schedule or cancel notifications if we have prayer times
-            if let prayerTimes = todayPrayerTimes {
-                if enabled {
-                    // Enable - schedule notifications
-                    let locationInfo = getLocationInfo()
-                    try await notificationService.schedulePrayerNotifications(
-                        prayerTimes,
-                        city: locationInfo.city,
-                        countryCode: locationInfo.countryCode
-                    )
-                } else {
-                    // Disable - cancel notifications
-                    await notificationService.cancelPrayerNotifications()
-                }
+            if enabled {
+                await scheduleNotificationsAhead(todayTimes: todayPrayerTimes)
+            } else {
+                await notificationService.cancelPrayerNotifications()
             }
         } catch {
             handleError(error)
@@ -454,21 +439,59 @@ class PrayerViewModel {
 
     /// Reschedule notifications (called when preferences change)
     func rescheduleNotifications() async {
+        await scheduleNotificationsAhead(todayTimes: todayPrayerTimes)
+    }
+
+    /// Days of notifications kept scheduled ahead. At worst 10 slots/day
+    /// (5 prayers + 5 reminders) this fits the service's 60-slot budget —
+    /// alerts keep firing for nearly a week even if the app isn't opened.
+    private static let notificationLookaheadDays = 6
+
+    /// Calculate adjusted prayer times for today plus the following days and
+    /// schedule notifications for all of them. Individual failed days are
+    /// skipped — scheduling the nearer days beats scheduling nothing.
+    private func scheduleNotificationsAhead(todayTimes: DailyPrayerTimes?) async {
         guard notificationService.isAuthorized,
               notificationService.notificationsEnabled,
-              let prayerTimes = todayPrayerTimes else {
+              let coordinates = locationService.currentLocation else {
             return
         }
+
+        var days: [DailyPrayerTimes] = []
+        if let todayTimes {
+            days.append(todayTimes)
+        }
+
+        // Future days always go through the calculation service (per-date
+        // cache makes repeats cheap) so stale tomorrowPrayerTimes can never
+        // leak into the schedule.
+        let calendar = Calendar.current
+        for offset in 1..<Self.notificationLookaheadDays {
+            guard let date = calendar.date(byAdding: .day, value: offset, to: Date()) else { continue }
+            do {
+                let times = try await prayerTimeService.calculatePrayerTimes(
+                    coordinates: coordinates,
+                    date: date,
+                    method: selectedCalculationMethod,
+                    madhab: selectedMadhab
+                )
+                days.append(PrayerTimeAdjustmentService.shared.applyAdjustments(to: times))
+            } catch {
+                continue
+            }
+        }
+
+        guard !days.isEmpty else { return }
 
         let locationInfo = getLocationInfo()
         do {
             try await notificationService.schedulePrayerNotifications(
-                prayerTimes,
+                days: days,
                 city: locationInfo.city,
                 countryCode: locationInfo.countryCode
             )
         } catch {
-            // Not critical — will retry on next preference change
+            // Notification scheduling is non-critical
         }
     }
 
@@ -498,15 +521,20 @@ class PrayerViewModel {
         notificationService.registerNotificationCategories()
     }
 
+    /// Cache: name → ISO code. The lookup scans ~250 ISO regions doing
+    /// localized-string comparisons and runs on every notification reschedule.
+    @ObservationIgnored private var countryCodeCache: [String: String] = [:]
+
     /// Convert country name to 2-letter country code using system locale data
     private func convertToCountryCode(_ countryName: String) -> String {
-        // Use efficient Locale-based conversion
-        if let code = Locale.Region.isoRegions.map(\.identifier).first(where: { code in
-            Locale.current.localizedString(forRegionCode: code) == countryName
-        }) {
-            return code
+        if let cached = countryCodeCache[countryName] {
+            return cached
         }
-        return countryName  // fallback to the name itself
+        let code = Locale.Region.isoRegions.map(\.identifier).first(where: { code in
+            Locale.current.localizedString(forRegionCode: code) == countryName
+        }) ?? countryName // fallback to the name itself
+        countryCodeCache[countryName] = code
+        return code
     }
 
     // MARK: - UserDefaults
@@ -520,6 +548,26 @@ class PrayerViewModel {
 
     private func saveCalculationMethod() {
         userDefaults.set(selectedCalculationMethod.rawValue, forKey: calculationMethodKey)
+    }
+
+    /// One-shot migration: UK/Ireland users left on the MWL default get
+    /// Moonsighting Committee. MWL's 18° twilight does not exist at UK
+    /// latitudes in summer and sits ~20 min off London mosque timetables
+    /// year-round; Moonsighting Committee is what UK timetables follow.
+    /// Users who explicitly chose a non-MWL method are never touched.
+    private func migrateUKMethodIfNeeded() {
+        guard !userDefaults.bool(forKey: ukMoonsightingMigrationKey) else { return }
+        // Only decide once the country is actually known — otherwise retry
+        // on the next prayer-times load.
+        guard let countryName = locationService.countryName, !countryName.isEmpty else { return }
+        userDefaults.set(true, forKey: ukMoonsightingMigrationKey)
+
+        let code = convertToCountryCode(countryName)
+        guard code == "GB" || code == "IE",
+              selectedCalculationMethod == .muslimWorldLeague else { return }
+
+        selectedCalculationMethod = .moonsightingCommittee
+        saveCalculationMethod()
     }
 
     /// One-shot migration for users stuck on `.isna` from a broken onboarding window

@@ -37,8 +37,9 @@ struct QuranNoorApp: App {
 
         // Initialize SwiftData ModelContainer with versioned schema
         do {
-            // Use the versioned schema for safe migrations across app updates
-            let schema = Schema(versionedSchema: QuranNoorSchemaV1.self)
+            // Use the current versioned schema for safe migrations across app
+            // updates (V2 = V1 + BookmarkRecord.category, lightweight stage)
+            let schema = Schema(versionedSchema: QuranNoorSchemaV2.self)
             let modelConfiguration = ModelConfiguration(
                 schema: schema,
                 isStoredInMemoryOnly: false,
@@ -132,7 +133,9 @@ struct QuranNoorApp: App {
                 }
             }
             .preferredColorScheme(themeManager.colorScheme)
-            // Apply RTL layout direction based on current language (Arabic, Urdu)
+            // Layout direction follows the user's explicit language choice
+            // (Settings → Language), never the device locale: it defaults to
+            // English/LTR and flips RTL live when Arabic or Urdu is selected.
             .environment(\.layoutDirection, localizationManager.layoutDirection)
             .environment(localizationManager)
             // Inject SwiftData model container

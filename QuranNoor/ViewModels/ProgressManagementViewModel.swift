@@ -304,6 +304,11 @@ class ProgressManagementViewModel {
             quranService.resetAllProgress()
         case .surah(let surahNumber):
             quranService.resetSurahProgress(surahNumber: surahNumber)
+            // Toast only fires on the CONFIRMED path — resetSurah used to
+            // show it when merely opening the confirmation dialog
+            if let surah = getSurah(forNumber: surahNumber) {
+                showResetToast(for: surah.englishName, surahNumber: surahNumber)
+            }
         case .verseRange(let surahNumber, let fromVerse, let toVerse):
             quranService.resetVerseRange(
                 surahNumber: surahNumber,
@@ -325,10 +330,6 @@ class ProgressManagementViewModel {
 
     func resetSurah(_ surahNumber: Int) {
         requestReset(type: .surah(surahNumber))
-
-        if let surah = getSurah(forNumber: surahNumber) {
-            showResetToast(for: surah.englishName, surahNumber: surahNumber)
-        }
     }
 
     func resetAllProgress() {
@@ -420,10 +421,15 @@ class ProgressManagementViewModel {
         guard let progress = readingProgress else { return [] }
 
         return progress.readVerses
-            .map { (key, value) -> (surahNumber: Int, verseNumber: Int, timestamp: Date) in
+            .compactMap { (key, value) -> (surahNumber: Int, verseNumber: Int, timestamp: Date)? in
+                // Keys can come from user-imported JSON — a malformed key
+                // (no ":") used to crash on components[1]
                 let components = key.split(separator: ":")
-                let surahNumber = Int(components[0]) ?? 0
-                let verseNumber = Int(components[1]) ?? 0
+                guard components.count == 2,
+                      let surahNumber = Int(components[0]),
+                      let verseNumber = Int(components[1]) else {
+                    return nil
+                }
                 return (surahNumber, verseNumber, value.timestamp)
             }
             .sorted { $0.timestamp > $1.timestamp }

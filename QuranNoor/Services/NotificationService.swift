@@ -173,19 +173,27 @@ class NotificationService {
         }
     }
 
-    /// Check current authorization status
+    /// Check current authorization status.
+    /// Provisional/ephemeral grants can schedule notifications too — treating
+    /// them as unauthorized made scheduling throw for quietly-delivered users.
     func checkAuthorizationStatus() async {
         let settings = await center.notificationSettings()
-        isAuthorized = settings.authorizationStatus == .authorized
+        isAuthorized = [.authorized, .provisional, .ephemeral]
+            .contains(settings.authorizationStatus)
     }
 
-    /// Schedule notifications for all prayers
-    /// - Parameters:
-    ///   - prayerTimes: Daily prayer times to schedule
-    ///   - city: City name for notification title
-    ///   - countryCode: Country code (e.g., "GB", "US") for notification title
+    /// iOS keeps at most 64 pending local notifications per app; leave
+    /// headroom for urgent deadline alerts scheduled outside this path.
+    private static let notificationSlotBudget = 60
+
+    /// Schedule notifications for multiple days of prayer times.
+    /// - Days are scheduled nearest-first and only as WHOLE days: a day that
+    ///   would exceed the slot budget is dropped entirely, so a user never
+    ///   gets a half-notified day.
+    /// - Prayers already in the past are skipped (a past trigger never fires
+    ///   but would still consume one of the 64 slots).
     func schedulePrayerNotifications(
-        _ prayerTimes: DailyPrayerTimes,
+        days: [DailyPrayerTimes],
         city: String = "Unknown",
         countryCode: String = "Unknown"
     ) async throws {
@@ -196,27 +204,48 @@ class NotificationService {
         // Remove existing prayer notifications
         await cancelPrayerNotifications()
 
-        // Get per-prayer preferences
         let prefs = NotificationPreferencesService.shared
+        let now = Date()
+        var budget = Self.notificationSlotBudget
 
-        // Schedule for each prayer (respecting per-prayer preferences)
-        for prayer in prayerTimes.prayerTimes {
-            // Check if this prayer has notifications enabled
-            guard prefs.isNotificationEnabled(for: prayer.name) else { continue }
+        for day in days.sorted(by: { $0.date < $1.date }) {
+            let candidates = day.prayerTimes.filter { prayer in
+                prayer.time > now && prefs.isNotificationEnabled(for: prayer.name)
+            }
+            // Conservative day cost: main + optional reminder per prayer
+            let cost = candidates.reduce(0) { acc, prayer in
+                acc + 1 + (prefs.getReminderMinutes(for: prayer.name) > 0 ? 1 : 0)
+            }
+            guard cost > 0 else { continue }
+            guard cost <= budget else { break }
+            budget -= cost
 
-            // Schedule main notification
-            try await scheduleNotification(
-                for: prayer,
-                city: city,
-                countryCode: countryCode
-            )
+            for prayer in candidates {
+                try await scheduleNotification(
+                    for: prayer,
+                    city: city,
+                    countryCode: countryCode
+                )
 
-            // Schedule reminder if configured
-            let reminderMinutes = prefs.getReminderMinutes(for: prayer.name)
-            if reminderMinutes > 0 {
-                try await scheduleReminderNotification(for: prayer, minutesBefore: reminderMinutes)
+                let reminderMinutes = prefs.getReminderMinutes(for: prayer.name)
+                if reminderMinutes > 0 {
+                    try await scheduleReminderNotification(for: prayer, minutesBefore: reminderMinutes)
+                }
             }
         }
+    }
+
+    /// Schedule notifications for a single day of prayer times
+    /// - Parameters:
+    ///   - prayerTimes: Daily prayer times to schedule
+    ///   - city: City name for notification title
+    ///   - countryCode: Country code (e.g., "GB", "US") for notification title
+    func schedulePrayerNotifications(
+        _ prayerTimes: DailyPrayerTimes,
+        city: String = "Unknown",
+        countryCode: String = "Unknown"
+    ) async throws {
+        try await schedulePrayerNotifications(days: [prayerTimes], city: city, countryCode: countryCode)
     }
 
     /// Schedule a single prayer notification with rich formatting
@@ -311,7 +340,9 @@ class NotificationService {
 
         let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
 
-        let identifier = "reminder-\(prayer.name.rawValue)-\(minutesBefore)min"
+        // Identifier must include the prayer instant — a static per-name id
+        // made every extra day's reminder overwrite the previous day's
+        let identifier = "reminder-\(prayer.name.rawValue)-\(prayer.time.timeIntervalSince1970)"
         let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
 
         try await center.add(request)
@@ -400,18 +431,6 @@ class NotificationService {
     /// Cancel all notifications
     func cancelAllNotifications() {
         center.removeAllPendingNotificationRequests()
-    }
-
-    /// Toggle notifications on/off
-    func toggleNotifications() async throws {
-        if notificationsEnabled {
-            // Disable
-            await cancelPrayerNotifications()
-            NotificationPreferencesService.shared.disableAllNotifications()
-        } else {
-            // Enable (will need prayer times from ViewModel)
-            NotificationPreferencesService.shared.enableAllNotifications()
-        }
     }
 
     /// Get count of pending notifications

@@ -18,8 +18,8 @@ struct PrayerTimesView: View {
     @State private var transitionHandler: PrayerTransitionHandler?
 
     // Note: Access singletons directly - don't wrap in @State
-    private let hijriService = HijriCalendarService()
-    @State private var islamicCalendarService = IslamicCalendarService()
+    private let hijriService = HijriCalendarService.shared
+    private let islamicCalendarService = IslamicCalendarService.shared
 
     // UI State
     @State private var showMethodPicker: Bool = false
@@ -137,6 +137,7 @@ struct PrayerTimesView: View {
                             .font(.system(size: FontSizes.lg, weight: .medium))
                             .foregroundColor(themeManager.currentTheme.accentMuted)
                     }
+                    .accessibilityLabel("Refresh prayer times")
                 }
             }
             .task {

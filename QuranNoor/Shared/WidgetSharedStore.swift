@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import os
 
 /// Shared data store for widget ↔ app communication via App Group
 enum WidgetSharedStore {
@@ -17,13 +18,21 @@ enum WidgetSharedStore {
     static let appGroupID = "group.com.qurannoor.shared"
 
     /// Shared UserDefaults suite
-    static let defaults: UserDefaults = {
-        guard let defaults = UserDefaults(suiteName: appGroupID) else {
-            assertionFailure("App Group '\(appGroupID)' is not configured. Check entitlements.")
-            return .standard
+    static let defaults: UserDefaults = resolveAppGroupDefaults()
+
+    /// Resolve the App Group suite, falling back to `.standard` when the
+    /// entitlement is missing (misconfigured build). The fallback keeps both
+    /// targets rendering, but data will NOT cross the app ↔ widget boundary,
+    /// so log loudly instead of failing silently in release.
+    private static func resolveAppGroupDefaults() -> UserDefaults {
+        if let shared = UserDefaults(suiteName: appGroupID) {
+            return shared
         }
-        return defaults
-    }()
+        Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.quranoor", category: "WidgetSharedStore")
+            .fault("App Group '\(appGroupID, privacy: .public)' unavailable — falling back to standard UserDefaults; widget data will not be shared between app and extension.")
+        assertionFailure("App Group '\(appGroupID)' is not configured. Check entitlements.")
+        return .standard
+    }
 
     // MARK: - Keys
 

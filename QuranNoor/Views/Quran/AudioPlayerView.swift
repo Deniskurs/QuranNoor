@@ -207,6 +207,7 @@ struct AudioPlayerView: View {
                             .fill(theme.cardColor.opacity(0.8))
                     )
             }
+            .accessibilityLabel("Close player")
         }
         .padding(.horizontal, Spacing.screenHorizontal)
         .padding(.top, Spacing.xs)
@@ -315,6 +316,7 @@ struct AudioPlayerView: View {
             }
             .disabled(previousDisabled)
             .frame(width: Spacing.tapTarget, height: Spacing.tapTarget)
+            .accessibilityLabel("Previous verse")
 
             // Skip back 15s
             Button {
@@ -327,6 +329,7 @@ struct AudioPlayerView: View {
                     .foregroundColor(theme.textPrimary.opacity(0.7))
             }
             .frame(width: Spacing.tapTarget, height: Spacing.tapTarget)
+            .accessibilityLabel("Skip back 15 seconds")
 
             // Play/Pause (72pt)
             Button {
@@ -340,6 +343,7 @@ struct AudioPlayerView: View {
             .onLongPressGesture(minimumDuration: .infinity, pressing: { pressing in
                 isPlayPausePressed = pressing
             }, perform: {})
+            .accessibilityLabel(audioService.playbackState.isPlaying ? "Pause" : "Play")
 
             // Skip forward 15s
             Button {
@@ -352,6 +356,7 @@ struct AudioPlayerView: View {
                     .foregroundColor(theme.textPrimary.opacity(0.7))
             }
             .frame(width: Spacing.tapTarget, height: Spacing.tapTarget)
+            .accessibilityLabel("Skip forward 15 seconds")
 
             // Next verse
             Button {
@@ -364,6 +369,7 @@ struct AudioPlayerView: View {
             }
             .disabled(nextDisabled)
             .frame(width: Spacing.tapTarget, height: Spacing.tapTarget)
+            .accessibilityLabel("Next verse")
         }
     }
 

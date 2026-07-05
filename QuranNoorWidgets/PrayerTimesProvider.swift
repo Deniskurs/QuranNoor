@@ -97,11 +97,19 @@ struct PrayerTimesProvider: TimelineProvider {
         // - If the stored entry is stale at `now` (more than a day old with no
         //   tomorrow covering today), ask WidgetKit to retry in 30 min so we
         //   pick up fresh data as soon as the app runs again.
+        // - If only the "now" entry exists (all of today's boundaries have
+        //   passed and no tomorrow is staged), `.atEnd` would end the timeline
+        //   immediately and WidgetKit would re-request in a tight loop all
+        //   evening. Sleep until the next local midnight instead — nothing on
+        //   screen changes before then anyway.
         // - Otherwise use `.atEnd` — after the last scheduled prayer boundary,
         //   WidgetKit will ask for a new timeline and we'll re-read storage.
         let policy: TimelineReloadPolicy
         if stored.isStale(at: now) {
             policy = .after(now.addingTimeInterval(30 * 60))
+        } else if entries.count == 1 {
+            let nextMidnight = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: now))
+            policy = .after(nextMidnight ?? now.addingTimeInterval(30 * 60))
         } else {
             policy = .atEnd
         }

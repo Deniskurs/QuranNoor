@@ -34,6 +34,8 @@ struct PrayerSetupView: View {
         ("Egyptian", "Egyptian General Authority", "Fajr 19.5° / Isha 17.5°", "Egypt, Africa"),
         ("Makkah", "Umm al-Qura", "Fajr 18.5° / Isha 90min after Maghrib", "Saudi Arabia"),
         ("Karachi", "University of Islamic Sciences", "Fajr 18° / Isha 18°", "Pakistan, India"),
+        ("Dubai", "Dubai (GCAS)", "Fajr 18.2° / Isha 18.2°", "UAE"),
+        ("Moonsighting", "Moonsighting Committee", "Fajr 18° / Isha 18°", "Worldwide"),
         ("Tehran", "Institute of Geophysics", "Fajr 17.7° / Isha 14°", "Iran")
     ]
 
@@ -253,19 +255,24 @@ struct PrayerSetupView: View {
             longitude: location.longitude
         )
 
-        // Use CLGeocoder to get the actual country from GPS coordinates
+        // Use MKReverseGeocodingRequest to get the actual country from GPS coordinates
         // (not Locale.current.region which returns the device's locale setting)
-        let geocoder = CLGeocoder()
+        guard let request = MKReverseGeocodingRequest(location: clLocation) else { return }
 
         do {
-            let placemarks = try await geocoder.reverseGeocodeLocation(clLocation)
+            let mapItems = try await request.mapItems
 
-            if let countryCode = placemarks.first?.isoCountryCode {
-                await MainActor.run {
-                    detectedCountry = countryCode
-                    let recommended = coordinator.recommendedCalculationMethod(for: countryCode)
-                    coordinator.selectedCalculationMethod = recommended
-                }
+            if let countryName = mapItems.first?.addressRepresentations?.regionName {
+                // Convert country name to ISO 3166-1 code
+                let countryCode = Locale.Region.isoRegions
+                    .map(\.identifier)
+                    .first { code in
+                        Locale.current.localizedString(forRegionCode: code) == countryName
+                    } ?? countryName
+
+                detectedCountry = countryCode
+                let recommended = coordinator.recommendedCalculationMethod(for: countryCode)
+                coordinator.selectedCalculationMethod = recommended
             }
         } catch {
             AppLogger.prayer.error("Reverse geocoding error: \(error.localizedDescription, privacy: .public)")

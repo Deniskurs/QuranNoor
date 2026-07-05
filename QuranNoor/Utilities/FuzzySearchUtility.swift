@@ -87,16 +87,22 @@ struct FuzzySearchUtility {
         text.lowercased().contains(query.lowercased())
     }
 
-    /// Find all ranges where query matches in text
+    /// Find all ranges where query matches in text.
+    /// Searches the ORIGINAL string with .caseInsensitive — indices from a
+    /// lowercased copy are invalid on the original when case mapping changes
+    /// length (e.g. İ → i̇), which corrupted or dropped highlights.
     static func findMatchRanges(_ text: String, query: String) -> [Range<String.Index>] {
         var ranges: [Range<String.Index>] = []
-        let lowercasedText = text.lowercased()
-        let lowercasedQuery = query.lowercased()
+        guard !query.isEmpty else { return ranges }
 
-        var searchStartIndex = lowercasedText.startIndex
+        var searchStartIndex = text.startIndex
 
-        while searchStartIndex < lowercasedText.endIndex,
-              let range = lowercasedText.range(of: lowercasedQuery, range: searchStartIndex..<lowercasedText.endIndex) {
+        while searchStartIndex < text.endIndex,
+              let range = text.range(
+                of: query,
+                options: [.caseInsensitive, .diacriticInsensitive],
+                range: searchStartIndex..<text.endIndex
+              ) {
             ranges.append(range)
             searchStartIndex = range.upperBound
         }

@@ -19,26 +19,47 @@ struct FontSizes {
 }
 
 // MARK: - App Typography
+//
+// `Font.system(size:)` returns a fixed-size font that ignores the user's
+// Dynamic Type setting. SwiftUI has no `relativeTo:` overload for system
+// fonts, so each token scales its base size through UIFontMetrics along the
+// curve of an appropriate text style — the same effect `relativeTo:` gives
+// the custom Arabic fonts below. Tokens are computed (not cached `let`s) so
+// a text-size change is picked up on the next view update.
 struct AppTypography {
+    /// Scales `size` with the Dynamic Type curve of `style` (system font).
+    private static func scaled(
+        _ size: CGFloat,
+        relativeTo style: UIFont.TextStyle,
+        weight: Font.Weight,
+        design: Font.Design = .default
+    ) -> Font {
+        Font.system(
+            size: UIFontMetrics(forTextStyle: style).scaledValue(for: size),
+            weight: weight,
+            design: design
+        )
+    }
+
     // MARK: - Headings
-    static let h1 = Font.system(size: FontSizes.xxxl, weight: .bold, design: .default)
-    static let h2 = Font.system(size: FontSizes.xxl, weight: .bold, design: .default)
-    static let h3 = Font.system(size: FontSizes.xl, weight: .semibold, design: .default)
+    static var h1: Font { scaled(FontSizes.xxxl, relativeTo: .largeTitle, weight: .bold) }
+    static var h2: Font { scaled(FontSizes.xxl, relativeTo: .title2, weight: .bold) }
+    static var h3: Font { scaled(FontSizes.xl, relativeTo: .title3, weight: .semibold) }
 
     // MARK: - Body Text
-    static let body = Font.system(size: FontSizes.base, weight: .regular, design: .default)
-    static let bodyLarge = Font.system(size: FontSizes.lg, weight: .regular, design: .default)
-    static let caption = Font.system(size: FontSizes.sm, weight: .regular, design: .default)
+    static var body: Font { scaled(FontSizes.base, relativeTo: .body, weight: .regular) }
+    static var bodyLarge: Font { scaled(FontSizes.lg, relativeTo: .body, weight: .regular) }
+    static var caption: Font { scaled(FontSizes.sm, relativeTo: .caption1, weight: .regular) }
 
     // MARK: - Interactive
-    static let button = Font.system(size: FontSizes.base, weight: .semibold, design: .default)
+    static var button: Font { scaled(FontSizes.base, relativeTo: .body, weight: .semibold) }
 
     // MARK: - Semantic Styles (missing from original design system)
-    static let sectionHeader = Font.system(size: FontSizes.sm, weight: .semibold, design: .default)
-    static let statValue = Font.system(size: FontSizes.xxl, weight: .bold, design: .rounded)
-    static let tabLabel = Font.system(size: FontSizes.xs, weight: .medium, design: .default)
-    static let badge = Font.system(size: 11, weight: .bold, design: .default)
-    static let countdown = Font.system(size: FontSizes.xxl, weight: .ultraLight, design: .default)
+    static var sectionHeader: Font { scaled(FontSizes.sm, relativeTo: .footnote, weight: .semibold) }
+    static var statValue: Font { scaled(FontSizes.xxl, relativeTo: .title2, weight: .bold, design: .rounded) }
+    static var tabLabel: Font { scaled(FontSizes.xs, relativeTo: .caption1, weight: .medium) }
+    static var badge: Font { scaled(11, relativeTo: .caption2, weight: .bold) }
+    static var countdown: Font { scaled(FontSizes.xxl, relativeTo: .title2, weight: .ultraLight) }
 
     // MARK: - Arabic Text (Uthmanic Hafs) — Dynamic Type scaling via relativeTo:
     //

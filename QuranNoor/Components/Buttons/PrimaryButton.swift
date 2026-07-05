@@ -48,7 +48,7 @@ struct PrimaryButton: View {
             HStack(spacing: 8) {
                 if isLoading {
                     ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        .progressViewStyle(CircularProgressViewStyle(tint: themeManager.currentTheme.onAccent))
                         .scaleEffect(0.8)
                 } else if let icon = icon {
                     Image(systemName: icon)
@@ -58,7 +58,7 @@ struct PrimaryButton: View {
                 Text(title)
                     .font(.body.weight(.semibold))
             }
-            .foregroundColor(.white)
+            .foregroundColor(themeManager.currentTheme.onAccent)
             .frame(maxWidth: .infinity)
             .frame(height: 52)
             .background(backgroundGradient)

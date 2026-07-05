@@ -333,8 +333,8 @@ struct NextPrayerCardView: View {
         switch period.state {
         case .beforeFajr:
             return "Next Prayer"
-        case .inProgress:
-            return "Current"
+        case .inProgress(let prayer, _):
+            return "\(prayer.displayName) Time"
         case .betweenPrayers:
             return "Next Prayer"
         case .afterIsha:

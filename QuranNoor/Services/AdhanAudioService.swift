@@ -24,8 +24,19 @@ final class AdhanAudioService: NSObject {
     /// Current audio player
     private var audioPlayer: AVAudioPlayer?
 
-    /// Is Adhan currently playing
-    private(set) var isPlaying: Bool = false
+    /// Explicit playback state — a lone isPlaying Bool made "paused" and
+    /// "stopped" indistinguishable, so a paused adhan could never be stopped
+    /// and its audio session was never released.
+    enum PlaybackState {
+        case stopped
+        case playing
+        case paused
+    }
+
+    private(set) var playbackState: PlaybackState = .stopped
+
+    /// Is Adhan currently playing (kept for existing UI call sites)
+    var isPlaying: Bool { playbackState == .playing }
 
     /// Selected Adhan audio
     private(set) var selectedAdhan: AdhanAudio
@@ -70,7 +81,7 @@ final class AdhanAudioService: NSObject {
     /// - Parameter prayer: The prayer for which Adhan is being played (optional, for logging)
     func playAdhan(for prayer: PrayerName? = nil) async {
         guard isEnabled else { return }
-        guard !isPlaying else { return }
+        guard playbackState == .stopped else { return }
 
         // Get the audio file URL
         guard let audioURL = selectedAdhan.fileURL else {
@@ -104,21 +115,21 @@ final class AdhanAudioService: NSObject {
             let success = player.play()
             if success {
                 audioPlayer = player
-                isPlaying = true
+                playbackState = .playing
             }
         } catch {
             AppLogger.audio.error("Error playing Adhan: \(error.localizedDescription, privacy: .public)")
-            isPlaying = false
+            playbackState = .stopped
         }
     }
 
-    /// Stop the currently playing Adhan
+    /// Stop the Adhan — works from both playing and paused states
     func stopAdhan() {
-        guard isPlaying else { return }
+        guard playbackState != .stopped else { return }
 
         audioPlayer?.stop()
         audioPlayer = nil
-        isPlaying = false
+        playbackState = .stopped
 
         // Release audio session
         AudioSessionManager.shared.releaseSession(for: .adhanCall)
@@ -126,18 +137,18 @@ final class AdhanAudioService: NSObject {
 
     /// Pause the currently playing Adhan
     func pauseAdhan() {
-        guard isPlaying else { return }
+        guard playbackState == .playing else { return }
 
         audioPlayer?.pause()
-        isPlaying = false
+        playbackState = .paused
     }
 
     /// Resume the paused Adhan
     func resumeAdhan() {
-        guard !isPlaying, audioPlayer != nil else { return }
+        guard playbackState == .paused, audioPlayer != nil else { return }
 
         audioPlayer?.play()
-        isPlaying = true
+        playbackState = .playing
     }
 
     /// Change the selected Adhan audio
@@ -173,7 +184,7 @@ final class AdhanAudioService: NSObject {
         selectedAdhan = adhan
         await playAdhan()
         // Restore after audio finishes (delegate sets isPlaying = false)
-        while isPlaying {
+        while playbackState != .stopped {
             try? await Task.sleep(for: .milliseconds(200))
         }
         selectedAdhan = previousAdhan
@@ -187,7 +198,7 @@ final class AdhanAudioService: NSObject {
 extension AdhanAudioService: AVAudioPlayerDelegate {
     nonisolated func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
         Task { @MainActor in
-            isPlaying = false
+            playbackState = .stopped
             audioPlayer = nil
 
             // Release audio session
@@ -197,8 +208,10 @@ extension AdhanAudioService: AVAudioPlayerDelegate {
 
     nonisolated func audioPlayerDecodeErrorDidOccur(_ player: AVAudioPlayer, error: Error?) {
         Task { @MainActor in
-            isPlaying = false
+            playbackState = .stopped
             audioPlayer = nil
+            // Release the session here too — the decode-error path leaked it
+            AudioSessionManager.shared.releaseSession(for: .adhanCall)
             AppLogger.audio.error("Adhan decode error: \(error?.localizedDescription ?? "Unknown error", privacy: .public)")
         }
     }

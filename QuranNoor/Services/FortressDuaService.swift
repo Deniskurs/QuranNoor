@@ -101,8 +101,11 @@ final class FortressDuaService {
     }
 
     private static func loadProgress() -> DuaProgress {
-        guard let data = UserDefaults.standard.data(forKey: "fortress_dua_progress"),
-              let progress = try? decoder.decode(DuaProgress.self, from: data) else {
+        guard let data = UserDefaults.standard.data(forKey: "fortress_dua_progress") else {
+            return DuaProgress()
+        }
+        guard let progress = try? decoder.decode(DuaProgress.self, from: data) else {
+            UserDefaults.standard.backupCorruptedBlob(data, forKey: "fortress_dua_progress")
             return DuaProgress()
         }
         return progress

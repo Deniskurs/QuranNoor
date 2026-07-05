@@ -22,7 +22,11 @@ final class PerformanceOptimizationService {
     // MARK: - Cached Formatter (Performance: avoid repeated allocation)
     private static let cacheDateFormatter: DateFormatter = {
         let f = DateFormatter()
-        f.dateFormat = "MM/dd/yyyy"
+        // Must match PrayerTimeService.cacheKey(for:) — locale-pinned so keys
+        // parse identically on every device
+        f.dateFormat = "yyyy-MM-dd"
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.timeZone = .current
         return f
     }()
 
@@ -131,7 +135,7 @@ final class PerformanceOptimizationService {
 
         // Find and remove old prayer time caches (older than 7 days)
         for key in allKeys where key.hasPrefix("cachedPrayerTimes") {
-            // Extract date from key (format: cachedPrayerTimes_MM/DD/YYYY)
+            // Extract date from key (format: cachedPrayerTimes_yyyy-MM-dd)
             if let dateString = key.split(separator: "_").last {
                 if let cacheDate = Self.cacheDateFormatter.date(from: String(dateString)) {
                     let daysDifference = calendar.dateComponents([.day], from: cacheDate, to: today).day ?? 0
@@ -164,7 +168,9 @@ final class PerformanceOptimizationService {
         let allKeys = Array(userDefaults.dictionaryRepresentation().keys)
         var removedCount = 0
 
-        for key in allKeys where key.hasPrefix("cachedPrayerTimes") || key.hasPrefix("qadhaHistory") {
+        // ONLY cache keys. qadhaHistory* was previously swept here too —
+        // that's user data (missed-prayer history), not cache.
+        for key in allKeys where key.hasPrefix("cachedPrayerTimes") {
             userDefaults.removeObject(forKey: key)
             removedCount += 1
         }

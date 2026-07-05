@@ -173,7 +173,12 @@ class QuranAudioService: NSObject {
     var playbackSpeed: Float = 1.0 {
         didSet {
             UserDefaults.standard.set(playbackSpeed, forKey: "playback_speed")
-            player?.rate = playbackSpeed
+            // Setting a non-zero rate on a paused AVPlayer STARTS playback —
+            // apply live only while playing; play()/resume() pick up the new
+            // value otherwise.
+            if playbackState.isPlaying {
+                player?.rate = playbackSpeed
+            }
         }
     }
 
@@ -985,18 +990,29 @@ class QuranAudioService: NSObject {
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             var observation: NSKeyValueObservation?
             var timeoutTask: Task<Void, Never>?
+
+            // Resume-once gate. The KVO callback fires on an arbitrary thread
+            // and races the timeout task; the previous plain-Bool flag could
+            // double-resume the continuation — a guaranteed crash.
+            let lock = NSLock()
             var resumed = false
+            func tryResume() -> Bool {
+                lock.lock()
+                defer { lock.unlock() }
+                if resumed { return false }
+                resumed = true
+                return true
+            }
 
             observation = playerItem.observe(\.status, options: [.new]) { item, _ in
-                guard !resumed else { return }
                 switch item.status {
                 case .readyToPlay:
-                    resumed = true
+                    guard tryResume() else { return }
                     timeoutTask?.cancel()
                     observation?.invalidate()
                     continuation.resume()
                 case .failed:
-                    resumed = true
+                    guard tryResume() else { return }
                     timeoutTask?.cancel()
                     observation?.invalidate()
                     continuation.resume(throwing: item.error ?? AudioError.playerNotReady)
@@ -1010,8 +1026,7 @@ class QuranAudioService: NSObject {
             // 10-second timeout
             timeoutTask = Task { [weak observation] in
                 try? await Task.sleep(nanoseconds: 10_000_000_000)
-                guard !Task.isCancelled, !resumed else { return }
-                resumed = true
+                guard !Task.isCancelled, tryResume() else { return }
                 observation?.invalidate()
                 continuation.resume(throwing: AudioError.timeout)
             }

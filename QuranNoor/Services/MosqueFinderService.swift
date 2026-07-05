@@ -150,9 +150,13 @@ final class MosqueFinderService {
             latitude: coordinates.latitude,
             longitude: coordinates.longitude
         )
+        // A degree of longitude shrinks by cos(latitude) away from the
+        // equator — without the correction the search region at 60°N was
+        // half the requested E-W width. Clamp near the poles.
+        let latitudeCosine = max(0.01, cos(coordinates.latitude * .pi / 180))
         let span = MKCoordinateSpan(
             latitudeDelta: radius / 111_000, // ~111km per degree
-            longitudeDelta: radius / 111_000
+            longitudeDelta: radius / (111_000 * latitudeCosine)
         )
         request.region = MKCoordinateRegion(center: center, span: span)
 
@@ -265,34 +269,43 @@ final class MosqueFinderService {
             latitude: coordinates.latitude,
             longitude: coordinates.longitude
         )
+        let latitudeCosine = max(0.01, cos(coordinates.latitude * .pi / 180))
         let span = MKCoordinateSpan(
             latitudeDelta: radiusInMeters / 111_000,
-            longitudeDelta: radiusInMeters / 111_000
+            longitudeDelta: radiusInMeters / (111_000 * latitudeCosine)
         )
         request.region = MKCoordinateRegion(center: center, span: span)
 
         let search = MKLocalSearch(request: request)
 
+        let response: MKLocalSearch.Response
         do {
-            let response = try await search.start()
-
-            let mosques = response.mapItems.compactMap { mapItem in
-                Mosque(mapItem: mapItem, userLocation: coordinates)
-            }
-
-            let sortedMosques = mosques.sorted { $0.distance < $1.distance }
-
-            self.nearbyMosques = sortedMosques
-
-            guard !sortedMosques.isEmpty else {
-                throw MosqueFinderError.noResults
-            }
-
-            return sortedMosques
-
+            response = try await search.start()
+        } catch let error as MKError where error.code == .placemarkNotFound || error.code == .directionsNotFound {
+            // MapKit reports "nothing there" as an error — that's a
+            // legitimate no-results outcome, not a failure
+            self.nearbyMosques = []
+            throw MosqueFinderError.noResults
         } catch {
+            AppLogger.location.error("Mosque keyword search failed: \(error.localizedDescription, privacy: .public)")
             throw MosqueFinderError.searchFailed
         }
+
+        let mosques = response.mapItems.compactMap { mapItem in
+            Mosque(mapItem: mapItem, userLocation: coordinates)
+        }
+
+        let sortedMosques = mosques.sorted { $0.distance < $1.distance }
+
+        self.nearbyMosques = sortedMosques
+
+        // Thrown OUTSIDE the do/catch — the old code threw .noResults inside
+        // its own catch block, which remapped it to "search failed"
+        guard !sortedMosques.isEmpty else {
+            throw MosqueFinderError.noResults
+        }
+
+        return sortedMosques
     }
 
     /// Get the closest mosque

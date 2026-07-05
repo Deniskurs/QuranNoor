@@ -13,6 +13,10 @@ struct BookmarksView: View {
     @State private var viewModel = BookmarksViewModel()
     @State private var selectedBookmark: SpiritualBookmark?
     @State private var showDetailSheet = false
+    @State private var selectedQuranBookmark: Bookmark?
+    // Owns its own QuranViewModel so bookmark taps can open the verse reader
+    // directly; all persistence flows through QuranService.shared regardless.
+    @State private var quranVM = QuranViewModel()
 
     var body: some View {
         ZStack {
@@ -85,6 +89,11 @@ struct BookmarksView: View {
                 accentColor: getAccentColor(for: bookmark.contentType)
             )
         }
+        .fullScreenCover(item: $selectedQuranBookmark) { bookmark in
+            if let surah = quranVM.surahs.first(where: { $0.id == bookmark.surahNumber }) {
+                VerseReaderView(surah: surah, viewModel: quranVM, targetVerse: bookmark.verseNumber)
+            }
+        }
     }
 
     // MARK: - Search Bar
@@ -155,16 +164,15 @@ struct BookmarksView: View {
                             SpiritualBookmarkCard(bookmark: bookmark) {
                                 selectedBookmark = bookmark
                             }
-                            .swipeActions(edge: .leading) {
+                            // swipeActions is a List-only modifier; inside a ScrollView
+                            // it silently does nothing, so expose actions via long-press.
+                            .contextMenu {
                                 Button {
-                                    // Share bookmark
                                     shareBookmark(bookmark)
                                 } label: {
                                     Label("Share", systemImage: "square.and.arrow.up")
                                 }
-                                .tint(themeManager.currentTheme.accent)
-                            }
-                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+
                                 Button(role: .destructive) {
                                     withAnimation {
                                         viewModel.deleteSpiritualBookmark(bookmark)
@@ -196,13 +204,11 @@ struct BookmarksView: View {
                         LazyVStack(spacing: Spacing.sm) {
                             ForEach(viewModel.filteredQuranBookmarks) { bookmark in
                                 QuranBookmarkCard(bookmark: bookmark) {
-                                    // Navigation to QuranReaderView is handled by parent HomeView's NavigationStack
-                                    // This would require passing a binding or using an environment object
-                                    #if DEBUG
-                                    print("Navigate to Surah \(bookmark.surahNumber):\(bookmark.verseNumber)")
-                                    #endif
+                                    selectedQuranBookmark = bookmark
                                 }
-                                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                // swipeActions is a List-only modifier; inside a ScrollView
+                                // it silently does nothing, so expose delete via long-press.
+                                .contextMenu {
                                     Button(role: .destructive) {
                                         withAnimation {
                                             viewModel.deleteQuranBookmark(bookmark)

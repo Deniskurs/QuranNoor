@@ -9,7 +9,7 @@ import SwiftUI
 
 struct IslamicCalendarView: View {
     @Environment(ThemeManager.self) var themeManager
-    @State private var calendarService = IslamicCalendarService()
+    private let calendarService = IslamicCalendarService.shared
     @State private var selectedEvent: IslamicEvent?
     @State private var showingRamadanTracker = false
     @State private var searchText = ""

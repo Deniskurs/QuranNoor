@@ -394,47 +394,42 @@ class QuranService {
     }
 
     private func getVersesFromAlQuranCloud(forSurah surahNumber: Int) async throws -> [Verse] {
-        do {
-            let response: QuranSurahResponse = try await apiClient.fetchDirect(
-                url: "https://api.alquran.cloud/v1/surah/\(surahNumber)/\(arabicEdition)",
-                cacheKey: surahCacheKey(surahNumber)
-            )
+        // Errors propagate — the old sample-verse fallback rendered a fake
+        // 1-verse surah with a warning string as Arabic text, and reading
+        // progress could be tracked against it.
+        let response: QuranSurahResponse = try await apiClient.fetchDirect(
+            url: "https://api.alquran.cloud/v1/surah/\(surahNumber)/\(arabicEdition)",
+            cacheKey: surahCacheKey(surahNumber)
+        )
 
-            return response.ayahs.map { ayah in
-                Verse(
-                    number: ayah.number,
-                    surahNumber: surahNumber,
-                    verseNumber: ayah.numberInSurah,
-                    text: ayah.text,
-                    juz: ayah.juz
-                )
-            }
-        } catch {
-            return getSampleVerses(forSurah: surahNumber)
+        return response.ayahs.map { ayah in
+            Verse(
+                number: ayah.number,
+                surahNumber: surahNumber,
+                verseNumber: ayah.numberInSurah,
+                text: ayah.text,
+                juz: ayah.juz
+            )
         }
     }
 
     private func getVersesFromFawazahmed0(forSurah surahNumber: Int, edition: String) async throws -> [Verse] {
-        do {
-            let response: Fawazahmed0ChapterResponse = try await apiClient.fetchDirect(
-                url: "https://cdn.jsdelivr.net/gh/fawazahmed0/quran-api@1/editions/\(edition)/\(surahNumber).json",
-                cacheKey: surahCacheKey(surahNumber)
+        let response: Fawazahmed0ChapterResponse = try await apiClient.fetchDirect(
+            url: "https://cdn.jsdelivr.net/gh/fawazahmed0/quran-api@1/editions/\(edition)/\(surahNumber).json",
+            cacheKey: surahCacheKey(surahNumber)
+        )
+
+        let juz = Self.surahToJuz[surahNumber] ?? 1
+        let startingAbsoluteNumber = Self.surahStartVerse[surahNumber] ?? 1
+
+        return response.chapter.map { fawazVerse in
+            Verse(
+                number: startingAbsoluteNumber + fawazVerse.verse - 1,
+                surahNumber: surahNumber,
+                verseNumber: fawazVerse.verse,
+                text: fawazVerse.text,
+                juz: juz
             )
-
-            let juz = Self.surahToJuz[surahNumber] ?? 1
-            let startingAbsoluteNumber = Self.surahStartVerse[surahNumber] ?? 1
-
-            return response.chapter.map { fawazVerse in
-                Verse(
-                    number: startingAbsoluteNumber + fawazVerse.verse - 1,
-                    surahNumber: surahNumber,
-                    verseNumber: fawazVerse.verse,
-                    text: fawazVerse.text,
-                    juz: juz
-                )
-            }
-        } catch {
-            return getSampleVerses(forSurah: surahNumber)
         }
     }
 
@@ -444,26 +439,24 @@ class QuranService {
         let selectedEdition = edition ?? translationPreferences.primaryTranslation
         let editionId = selectedEdition.rawValue
 
-        do {
-            let response: QuranSurahResponse = try await apiClient.fetchDirect(
-                url: "https://api.alquran.cloud/v1/surah/\(surahNumber)/\(editionId)",
-                cacheKey: "surah_translation_\(surahNumber)_\(editionId)"
-            )
+        // Errors propagate so the UI can say "translation unavailable"
+        // instead of silently showing nothing
+        let response: QuranSurahResponse = try await apiClient.fetchDirect(
+            url: "https://api.alquran.cloud/v1/surah/\(surahNumber)/\(editionId)",
+            cacheKey: "surah_translation_\(surahNumber)_\(editionId)"
+        )
 
-            var result: [Int: Translation] = [:]
-            result.reserveCapacity(response.ayahs.count)
-            for ayah in response.ayahs {
-                result[ayah.number] = Translation(
-                    verseNumber: ayah.number,
-                    language: selectedEdition.language,
-                    text: ayah.text,
-                    author: selectedEdition.author
-                )
-            }
-            return result
-        } catch {
-            return [:]
+        var result: [Int: Translation] = [:]
+        result.reserveCapacity(response.ayahs.count)
+        for ayah in response.ayahs {
+            result[ayah.number] = Translation(
+                verseNumber: ayah.number,
+                language: selectedEdition.language,
+                text: ayah.text,
+                author: selectedEdition.author
+            )
         }
+        return result
     }
 
     /// Get translation for a verse from API using stored preferences
@@ -471,22 +464,19 @@ class QuranService {
         let selectedEdition = edition ?? translationPreferences.primaryTranslation
         let editionId = selectedEdition.rawValue
 
-        do {
-            let response: QuranAyahResponse = try await apiClient.fetchDirect(
-                url: "https://api.alquran.cloud/v1/ayah/\(verse.surahNumber):\(verse.verseNumber)/\(editionId)",
-                cacheKey: "\(editionId)_\(verse.surahNumber)_\(verse.verseNumber)"
-            )
+        // Errors propagate — the old fallback returned Al-Fatiha's
+        // translation for ANY verse in the Quran
+        let response: QuranAyahResponse = try await apiClient.fetchDirect(
+            url: "https://api.alquran.cloud/v1/ayah/\(verse.surahNumber):\(verse.verseNumber)/\(editionId)",
+            cacheKey: "\(editionId)_\(verse.surahNumber)_\(verse.verseNumber)"
+        )
 
-            return Translation(
-                verseNumber: verse.number,
-                language: selectedEdition.language,
-                text: response.text,
-                author: selectedEdition.author
-            )
-        } catch {
-            // Return fallback translation if API fails
-            return getSampleTranslation(forVerse: verse)
-        }
+        return Translation(
+            verseNumber: verse.number,
+            language: selectedEdition.language,
+            text: response.text,
+            author: selectedEdition.author
+        )
     }
 
     /// Get multiple translations for a verse (for side-by-side comparison)
@@ -866,6 +856,10 @@ class QuranService {
             }
 
             try context.save()
+
+            // Persist global stats (lastRead position, streak) — without this
+            // a manual mark reverted on relaunch while auto-tracking survived
+            updateGlobalStats(surahNumber: surahNumber, verseNumber: verseNumber, context: context)
 
             // Incrementally update in-memory progress instead of refetching all records
             if var progress = readingProgress {
@@ -1249,61 +1243,7 @@ class QuranService {
         return loadBundledSurahs()
     }
 
-    /// Get sample verses for fallback when API/cache fails
-    func getSampleVerses(forSurah surahNumber: Int) -> [Verse] {
-        switch surahNumber {
-        case 1:
-            return [
-                Verse(number: 1, surahNumber: 1, verseNumber: 1, text: "بِسۡمِ ٱللَّهِ ٱلرَّحۡمَـٰنِ ٱلرَّحِیمِ", juz: 1),
-                Verse(number: 2, surahNumber: 1, verseNumber: 2, text: "ٱلۡحَمۡدُ لِلَّهِ رَبِّ ٱلۡعَـٰلَمِینَ", juz: 1),
-                Verse(number: 3, surahNumber: 1, verseNumber: 3, text: "ٱلرَّحۡمَـٰنِ ٱلرَّحِیمِ", juz: 1),
-                Verse(number: 4, surahNumber: 1, verseNumber: 4, text: "مَـٰلِكِ یَوۡمِ ٱلدِّینِ", juz: 1),
-                Verse(number: 5, surahNumber: 1, verseNumber: 5, text: "إِیَّاكَ نَعۡبُدُ وَإِیَّاكَ نَسۡتَعِینُ", juz: 1),
-                Verse(number: 6, surahNumber: 1, verseNumber: 6, text: "ٱهۡدِنَا ٱلصِّرَ ٰ⁠طَ ٱلۡمُسۡتَقِیمَ", juz: 1),
-                Verse(number: 7, surahNumber: 1, verseNumber: 7, text: "صِرَ ٰ⁠طَ ٱلَّذِینَ أَنۡعَمۡتَ عَلَیۡهِمۡ غَیۡرِ ٱلۡمَغۡضُوبِ عَلَیۡهِمۡ وَلَا ٱلضَّاۤلِّینَ", juz: 1)
-            ]
-        case 112:
-            return [
-                Verse(number: 1, surahNumber: 112, verseNumber: 1, text: "قُلۡ هُوَ ٱللَّهُ أَحَدٌ", juz: 30),
-                Verse(number: 2, surahNumber: 112, verseNumber: 2, text: "ٱللَّهُ ٱلصَّمَدُ", juz: 30),
-                Verse(number: 3, surahNumber: 112, verseNumber: 3, text: "لَمۡ یَلِدۡ وَلَمۡ یُولَدۡ", juz: 30),
-                Verse(number: 4, surahNumber: 112, verseNumber: 4, text: "وَلَمۡ یَكُن لَّهُۥ كُفُوًا أَحَدٌۢ", juz: 30)
-            ]
-        default:
-            // Return single placeholder verse indicating data needs to be loaded
-            return [
-                Verse(
-                    number: 1,
-                    surahNumber: surahNumber,
-                    verseNumber: 1,
-                    text: "⚠️ Failed to load Quran data. Please check your internet connection and try again.",
-                    juz: 1
-                )
-            ]
-        }
-    }
 
-    /// Get sample translation for fallback when API/cache fails
-    func getSampleTranslation(forVerse verse: Verse) -> Translation {
-        let translations: [Int: String] = [
-            1: "In the name of Allah, the Entirely Merciful, the Especially Merciful.",
-            2: "[All] praise is [due] to Allah, Lord of the worlds -",
-            3: "The Entirely Merciful, the Especially Merciful,",
-            4: "Sovereign of the Day of Recompense.",
-            5: "It is You we worship and You we ask for help.",
-            6: "Guide us to the straight path -",
-            7: "The path of those upon whom You have bestowed favor, not of those who have evoked [Your] anger or of those who are astray."
-        ]
-
-        let text = translations[verse.verseNumber] ?? "Translation loading... Please connect to internet."
-
-        return Translation(
-            verseNumber: verse.number,
-            language: "English",
-            text: text,
-            author: "Sahih International"
-        )
-    }
 
     // MARK: - Fuzzy Search
 
@@ -1357,7 +1297,8 @@ class QuranService {
                         break
                     }
 
-                    let verses = try await getVerses(forSurah: surah.id)
+                    // One unreachable surah must not abort the whole search
+                    guard let verses = try? await getVerses(forSurah: surah.id) else { continue }
                     let surahResults = FuzzySearchUtility.search(
                         verses,
                         query: query,

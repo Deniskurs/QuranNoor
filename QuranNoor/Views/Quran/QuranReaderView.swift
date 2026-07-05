@@ -38,8 +38,8 @@ struct QuranReaderView: View {
     @State private var activeFilter: RevelationFilter = .all
     @State private var searchScope: SearchScope = .surahs
     @State private var verseSearchTask: Task<Void, Never>?
-    @State private var navigateToSurah: Surah?
-    @State private var navigateToVerse: Int?
+    /// Verse to open the reader at (set by verse search results and the "2:255" reference banner)
+    @State private var readerTargetVerse: Int?
 
     // MARK: - Body
     var body: some View {
@@ -143,7 +143,7 @@ struct QuranReaderView: View {
             }
             .fullScreenCover(isPresented: $showingVerseReader) {
                 if let surah = viewModel.selectedSurah {
-                    VerseReaderView(surah: surah, viewModel: viewModel)
+                    VerseReaderView(surah: surah, viewModel: viewModel, targetVerse: readerTargetVerse)
                 }
             }
             .sheet(isPresented: $showProgressManagement) {
@@ -280,7 +280,7 @@ struct QuranReaderView: View {
         return Button {
             if let surah {
                 viewModel.selectSurah(surah)
-                navigateToVerse = ref.verseNumber
+                readerTargetVerse = ref.verseNumber
                 showingVerseReader = true
             }
         } label: {
@@ -375,6 +375,7 @@ struct QuranReaderView: View {
 
                 Button {
                     viewModel.selectSurah(surah)
+                    readerTargetVerse = nil
                     showingVerseReader = true
                 } label: {
                     SurahRow(
@@ -500,6 +501,7 @@ struct QuranReaderView: View {
     private func navigateToVerseResult(_ result: VerseSearchResult) {
         if let surah = viewModel.surahs.first(where: { $0.id == result.surahNumber }) {
             viewModel.selectSurah(surah)
+            readerTargetVerse = result.verseNumber
             showingVerseReader = true
         }
     }

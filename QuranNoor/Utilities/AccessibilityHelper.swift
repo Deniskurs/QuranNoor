@@ -201,12 +201,22 @@ extension Font {
 
 // MARK: - Accessibility Announcements
 
+/// Pairs an announcement message with a generation counter. `onChange` compares
+/// equality, so posting the same text twice in a row would otherwise be dropped;
+/// bumping the generation makes every post a distinct change.
+private struct AnnouncementToken: Equatable {
+    let message: String
+    let generation: Int
+}
+
 extension View {
-    /// Posts an accessibility announcement for VoiceOver users
-    func accessibilityAnnounce(_ message: String, delay: TimeInterval = 0.5) -> some View {
-        self.onChange(of: message) { _, newValue in
+    /// Posts an accessibility announcement for VoiceOver users.
+    /// Bump `generation` on every post so identical consecutive messages
+    /// (e.g. "Bookmark added" twice) still announce.
+    func accessibilityAnnounce(_ message: String, generation: Int = 0, delay: TimeInterval = 0.5) -> some View {
+        self.onChange(of: AnnouncementToken(message: message, generation: generation)) { _, newValue in
             DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-                UIAccessibility.post(notification: .announcement, argument: newValue)
+                UIAccessibility.post(notification: .announcement, argument: newValue.message)
             }
         }
     }

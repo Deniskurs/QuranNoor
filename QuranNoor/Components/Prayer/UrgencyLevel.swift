@@ -59,9 +59,9 @@ enum UrgencyLevel: Int, Comparable, CaseIterable {
         case .elevated:
             return theme.accentMuted
         case .urgent:
-            return Color.orange // System orange
+            return theme.semanticWarning
         case .critical:
-            return Color.red // System red
+            return theme.semanticError
         }
     }
 
@@ -91,9 +91,9 @@ enum UrgencyLevel: Int, Comparable, CaseIterable {
         case .elevated:
             return theme.accentMuted.opacity(0.12)
         case .urgent:
-            return Color.orange.opacity(0.15)
+            return theme.semanticWarning.opacity(0.15)
         case .critical:
-            return Color.red.opacity(0.18)
+            return theme.semanticError.opacity(0.18)
         }
     }
 
@@ -105,9 +105,9 @@ enum UrgencyLevel: Int, Comparable, CaseIterable {
         case .elevated:
             return theme.accentMuted
         case .urgent:
-            return Color.orange
+            return theme.semanticWarning
         case .critical:
-            return Color.red
+            return theme.semanticError
         }
     }
 

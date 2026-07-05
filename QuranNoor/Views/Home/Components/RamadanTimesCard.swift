@@ -12,7 +12,7 @@ struct RamadanTimesCard: View {
 
     let prayerTimes: DailyPrayerTimes?
 
-    @State private var calendarService = IslamicCalendarService()
+    private let calendarService = IslamicCalendarService.shared
 
     private static let timeFormatter: DateFormatter = {
         let f = DateFormatter()

@@ -71,21 +71,23 @@ class PrayerTransitionHandler {
 
         let timeUntilMidnight = midnight.timeIntervalSinceNow
 
-        // Schedule task to run at midnight (with 5 second buffer)
-        dayTransitionTask = Task {
+        // Schedule task to run at midnight (with 5 second buffer).
+        // [weak self]: a strong capture would keep the handler (and its
+        // view model chain) alive for up to 24h after the owning view dies.
+        dayTransitionTask = Task { [weak self] in
             do {
                 // Wait until midnight + 5 seconds
                 let sleepDuration = UInt64((timeUntilMidnight + 5) * 1_000_000_000)
                 try await Task.sleep(nanoseconds: sleepDuration)
 
-                // Check if task was cancelled
-                guard !Task.isCancelled else { return }
+                guard !Task.isCancelled, let self else { return }
 
                 // Perform transition
-                await performDayTransition()
+                await self.performDayTransition()
 
-                // Reschedule for next midnight
+                // Reschedule for next midnight and the next Maghrib
                 self.scheduleMidnightCheck()
+                self.scheduleMaghribHijriTransition()
 
             } catch {
                 // Task was cancelled
@@ -113,22 +115,10 @@ class PrayerTransitionHandler {
         // Step 3.5: Reset urgent notification tracking for new day
         viewModel.resetUrgentNotificationTracking()
 
-        // Step 4: Update notifications for new day
-        if viewModel.notificationService.isAuthorized &&
-           viewModel.notificationService.notificationsEnabled,
-           let todayPrayers = viewModel.todayPrayerTimes {
-            do {
-                // Get location info for rich notifications
-                let locationInfo = viewModel.getLocationInfo()
-                try await viewModel.notificationService.schedulePrayerNotifications(
-                    todayPrayers,
-                    city: locationInfo.city,
-                    countryCode: locationInfo.countryCode
-                )
-            } catch {
-                // Notification scheduling failed — non-critical
-            }
-        }
+        // Step 4: Update notifications for the days ahead. Must go through
+        // the multi-day path — a single-day schedule here would wipe the
+        // week of notifications loadPrayerTimes set up.
+        await viewModel.rescheduleNotifications()
     }
 
     // MARK: - Maghrib Hijri Transition
@@ -146,7 +136,7 @@ class PrayerTransitionHandler {
 
         let timeUntilMaghrib = maghribTime.timeIntervalSince(now)
 
-        maghribTransitionTask = Task {
+        maghribTransitionTask = Task { [weak self] in
             do {
                 // Wait until Maghrib + 2 seconds
                 let sleepDuration = UInt64((timeUntilMaghrib + 2) * 1_000_000_000)
@@ -156,6 +146,15 @@ class PrayerTransitionHandler {
 
                 // Post notification so views refresh their Hijri date
                 NotificationCenter.default.post(name: .hijriDateTransition, object: nil)
+
+                // Re-arm for tomorrow's Maghrib once times roll over.
+                // Without this the Hijri date stops advancing in any session
+                // that survives past one Maghrib. Tomorrow's Maghrib isn't
+                // known yet here; the midnight transition re-arms with the
+                // fresh day's times, so nothing to do until then — but if
+                // today's times already contain a FUTURE Maghrib (clock
+                // change, adjustment), pick it up.
+                self?.scheduleMaghribHijriTransition()
             } catch {
                 // Task was cancelled
             }
@@ -171,19 +170,19 @@ class PrayerTransitionHandler {
 
         // This ensures the prayer period stays accurate as time passes
         // Particularly important near prayer time boundaries
-        recalculationTask = Task {
+        recalculationTask = Task { [weak self] in
             while !Task.isCancelled {
                 do {
                     // Wait 5 minutes
                     try await Task.sleep(nanoseconds: 5 * 60 * 1_000_000_000)
 
-                    guard !Task.isCancelled else { return }
+                    guard !Task.isCancelled, let self else { return }
 
                     // Recalculate period
-                    viewModel?.recalculatePeriod()
+                    self.viewModel?.recalculatePeriod()
 
                     // Check if day has changed (edge case: app was suspended)
-                    await viewModel?.checkIfNeedsDayTransition()
+                    await self.viewModel?.checkIfNeedsDayTransition()
 
                 } catch {
                     // Task was cancelled or interrupted

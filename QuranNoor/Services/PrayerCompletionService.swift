@@ -100,6 +100,10 @@ class PrayerCompletionService {
         // Increment change counter to trigger reactive UI updates
         changeCounter += 1
 
+        // Push the cleared checkmarks to the widget — without this the
+        // widget showed yesterday's completions until some other code path
+        // happened to update it
+        WidgetUpdateService.shared.updatePrayerCompletions()
     }
 
     /// Get streak information
@@ -138,8 +142,10 @@ class PrayerCompletionService {
             let lastResetDate = Date(timeIntervalSince1970: lastResetTimestamp)
             let lastResetDay = calendar.startOfDay(for: lastResetDate)
 
-            // If last reset was not today, reset completions
-            if today > lastResetDay {
+            // If last reset was on a DIFFERENT day, reset. `!=` instead of
+            // `>`: a clock rolled back past midnight (timezone change, manual
+            // set) previously skipped the reset entirely.
+            if today != lastResetDay {
                 resetCompletions()
             }
         } else {

@@ -9,7 +9,7 @@ import SwiftUI
 
 struct RamadanHomeCard: View {
     @Environment(ThemeManager.self) var themeManager: ThemeManager
-    @State private var calendarService = IslamicCalendarService()
+    private let calendarService = IslamicCalendarService.shared
     @State private var showingTracker = false
 
     /// Optional prayer times for showing Suhoor/Iftar row
@@ -140,10 +140,7 @@ struct RamadanHomeCard: View {
                 }
             }
             .buttonStyle(.plain)
-            .sheet(isPresented: $showingTracker, onDismiss: {
-                // Refresh in case user changed moon sighting offset
-                calendarService = IslamicCalendarService()
-            }) {
+            .sheet(isPresented: $showingTracker) {
                 RamadanTrackerView(calendarService: calendarService)
             }
             .accessibilityLabel("Ramadan tracker, Day \(dayOfRamadan), \(tracker.totalFastingDays) fasts completed. Tap to open tracker.")

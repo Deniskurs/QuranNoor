@@ -10,7 +10,7 @@ import SwiftUI
 
 struct AdhkarQuickAccessCard: View {
     @Environment(ThemeManager.self) var themeManager: ThemeManager
-    @State private var adhkarService = AdhkarService()
+    private let adhkarService = AdhkarService.shared
 
     // Sheet states
     @State private var showTasbih = false

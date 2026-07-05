@@ -64,6 +64,10 @@ struct Designation: Codable {
 
 // MARK: - Hijri Calendar Service
 class HijriCalendarService {
+    /// Shared instance — callers previously built throwaway instances per render
+    /// / per widget push, defeating the service-owned snapshot cache.
+    static let shared = HijriCalendarService()
+
     // MARK: - Private Properties
     private let apiClient = APIClient.shared
     private let userDefaults = UserDefaults.standard
@@ -76,11 +80,24 @@ class HijriCalendarService {
     }()
 
     private static let decoder = JSONDecoder()
+    private static let encoder = JSONEncoder()
 
     // Cache keys
     private let currentHijriDateCacheKey = "current_hijri_date"
     private func hijriDateCacheKey(for date: String) -> String {
         return "hijri_date_\(date)"
+    }
+
+    /// Service-owned snapshot of the last successful conversion. APIClient's
+    /// cache moved from UserDefaults to files, so the old
+    /// `cache_hijri_date_*` keys are never written anymore — synchronous
+    /// reads need their own store.
+    private static let lastSnapshotKey = "hijri_last_snapshot_v1"
+
+    private struct HijriSnapshot: Codable {
+        /// The dd-MM-yyyy Gregorian day the conversion was made for
+        let gregorianKey: String
+        let hijri: APIHijriDate
     }
 
     // MARK: - Public Methods
@@ -93,27 +110,20 @@ class HijriCalendarService {
         return convertToDomainModel(apiDate)
     }
 
-    /// Get cached Hijri date (synchronous, Maghrib-aware)
+    /// Get cached Hijri date (synchronous, Maghrib-aware).
+    /// Returns nil rather than a stale date when the snapshot is for a
+    /// different (Maghrib-adjusted) day.
     func getCachedHijriDate() -> HijriDate? {
         let adjustedDate = MaghribTimeStore.shared.maghribAdjustedDate(from: Date())
         let todayString = Self.dateFormatter.string(from: adjustedDate)
-        let cacheKey = "cache_\(hijriDateCacheKey(for: todayString))"
 
-        guard let entryData = userDefaults.data(forKey: cacheKey),
-              let cachedEntry = try? Self.decoder.decode(CachedEntry.self, from: entryData) else {
+        guard let data = userDefaults.data(forKey: Self.lastSnapshotKey),
+              let snapshot = try? Self.decoder.decode(HijriSnapshot.self, from: data),
+              snapshot.gregorianKey == todayString else {
             return nil
         }
 
-        guard Date() <= cachedEntry.expirationDate else {
-            userDefaults.removeObject(forKey: cacheKey)
-            return nil
-        }
-
-        guard let cachedResponse = try? Self.decoder.decode(HijriCalendarResponse.self, from: cachedEntry.data) else {
-            return nil
-        }
-
-        return convertToDomainModel(cachedResponse.hijri)
+        return convertToDomainModel(snapshot.hijri)
     }
 
     /// Convert Gregorian date to Hijri (internal - returns API model)
@@ -122,6 +132,13 @@ class HijriCalendarService {
             endpoint: .hijriCalendar(date),
             cacheKey: hijriDateCacheKey(for: date)
         )
+
+        // Persist the snapshot that backs getCachedHijriDate()
+        let snapshot = HijriSnapshot(gregorianKey: date, hijri: response.hijri)
+        if let data = try? Self.encoder.encode(snapshot) {
+            userDefaults.set(data, forKey: Self.lastSnapshotKey)
+        }
+
         return response.hijri
     }
 
@@ -143,9 +160,12 @@ class HijriCalendarService {
         return hijriDate.formattedArabic
     }
 
-    /// Check if today is an Islamic holiday
+    /// Check if today is an Islamic holiday (Maghrib-aware, matching
+    /// getCurrentHijriDate — a raw Date() here made the holiday list disagree
+    /// with the displayed Hijri date after Maghrib)
     func getTodayHolidays() async throws -> [String] {
-        let todayString = Self.dateFormatter.string(from: Date())
+        let adjustedDate = MaghribTimeStore.shared.maghribAdjustedDate(from: Date())
+        let todayString = Self.dateFormatter.string(from: adjustedDate)
         let apiDate = try await convertGregorianToHijriInternal(date: todayString)
         return apiDate.holidays ?? []
     }
@@ -222,6 +242,8 @@ class HijriCalendarService {
 
     /// Clear Hijri date cache
     func clearCache() {
+        userDefaults.removeObject(forKey: Self.lastSnapshotKey)
+        // Purge legacy pre-file-cache keys that may linger from old builds
         let keys = userDefaults.dictionaryRepresentation().keys
         keys.filter { $0.hasPrefix("cache_hijri_date_") }.forEach { key in
             userDefaults.removeObject(forKey: key)
@@ -256,10 +278,6 @@ class HijriCalendarService {
     }
 }
 
-private struct CachedEntry: Codable {
-    let data: Data
-    let expirationDate: Date
-}
 
 // MARK: - Array Extension (Safe Subscript)
 private extension Array {

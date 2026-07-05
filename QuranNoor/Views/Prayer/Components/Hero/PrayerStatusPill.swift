@@ -48,7 +48,7 @@ struct PrayerStatusPill: View {
                     .frame(width: 1, height: 16)
 
                 // Time
-                Text(timeFormatter.string(from: time))
+                Text(Self.timeFormatter.string(from: time))
                     .font(.system(size: 14, weight: .semibold, design: .rounded))
                     .foregroundColor(themeManager.currentTheme.textPrimary)
             }
@@ -159,7 +159,7 @@ struct PrayerStatusPill: View {
     private var accessibilityDescription: String {
         var description = statusText
         if let time = prayerTime {
-            description += " at \(timeFormatter.string(from: time))"
+            description += " at \(Self.timeFormatter.string(from: time))"
         }
         if isUrgent {
             description += ", urgent"
@@ -169,11 +169,13 @@ struct PrayerStatusPill: View {
 
     // MARK: - Formatter
 
-    private var timeFormatter: DateFormatter {
+    /// Cached: this pill re-renders every second inside the hero's TimelineView,
+    /// and DateFormatter construction is far too expensive to repeat per tick.
+    private static let timeFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.timeStyle = .short
         return formatter
-    }
+    }()
 }
 
 // MARK: - Preview

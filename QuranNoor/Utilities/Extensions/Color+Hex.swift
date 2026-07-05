@@ -56,10 +56,24 @@ extension Color {
         }
         #endif
 
-        let r = Int(components[0] * 255.0)
-        let g = Int(components[1] * 255.0)
-        let b = Int(components[2] * 255.0)
-        let a = components.count >= 4 ? Int(components[3] * 255.0) : 255
+        // Grayscale colorspaces (e.g. Color.white, Color.gray) yield only
+        // [white, alpha] — indexing [1]/[2] as green/blue would crash, so
+        // replicate the white channel across r/g/b instead.
+        let red, green, blue, alpha: CGFloat
+        if components.count >= 3 {
+            (red, green, blue) = (components[0], components[1], components[2])
+            alpha = components.count >= 4 ? components[3] : 1
+        } else if !components.isEmpty {
+            (red, green, blue) = (components[0], components[0], components[0])
+            alpha = components.count >= 2 ? components[1] : 1
+        } else {
+            return nil
+        }
+
+        let r = Int(red * 255.0)
+        let g = Int(green * 255.0)
+        let b = Int(blue * 255.0)
+        let a = Int(alpha * 255.0)
 
         if includeAlpha {
             return String(format: "#%02X%02X%02X%02X", r, g, b, a)

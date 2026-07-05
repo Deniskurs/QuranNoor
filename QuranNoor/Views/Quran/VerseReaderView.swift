@@ -12,6 +12,8 @@ import os
 struct VerseReaderView: View {
     // MARK: - Properties
     let initialSurah: Surah
+    /// Verse number within the surah to scroll to once verses load (bookmark taps, "2:255" search).
+    let targetVerse: Int?
     var viewModel: QuranViewModel
 
     @Environment(ThemeManager.self) var themeManager: ThemeManager
@@ -63,10 +65,15 @@ struct VerseReaderView: View {
     // MARK: - Performance Optimization: Cached Read States
     @State private var verseReadStates: [Int: VerseReadState] = [:]
 
+    // MARK: - Target Verse Navigation
+    @State private var didScrollToTarget = false
+    @State private var highlightedVerseNumber: Int?
+
     // MARK: - Initializer
-    init(surah: Surah, viewModel: QuranViewModel) {
+    init(surah: Surah, viewModel: QuranViewModel, targetVerse: Int? = nil) {
         self.initialSurah = surah
         self.viewModel = viewModel
+        self.targetVerse = targetVerse
         self._surah = State(initialValue: surah)
     }
 
@@ -341,7 +348,7 @@ struct VerseReaderView: View {
                     Text("Retry")
                 }
                 .font(.system(size: 15, weight: .medium))
-                .foregroundColor(.white)
+                .foregroundColor(theme.onAccent)
                 .padding(.horizontal, 24)
                 .padding(.vertical, 12)
                 .background(
@@ -430,6 +437,11 @@ struct VerseReaderView: View {
                             }
                         }
                     }
+                }
+                .onAppear {
+                    // contentView only renders once verses are loaded, so the
+                    // target row id is resolvable here (bookmark tap, "2:255" search)
+                    scrollToTargetVerse(proxy: proxy)
                 }
             }
 
@@ -583,6 +595,8 @@ struct VerseReaderView: View {
         let isCurrentlyPlaying = audioService.currentVerse?.surahNumber == verse.surahNumber
             && audioService.currentVerse?.verseNumber == verse.verseNumber
             && audioService.playbackState.isPlaying
+        // Reuse the playing-verse glow to flash the verse we navigated to
+        let isNavigationTarget = highlightedVerseNumber == verse.verseNumber
 
         return VStack(alignment: .leading, spacing: 16) {
             // Verse header: number circle + action buttons
@@ -739,7 +753,7 @@ struct VerseReaderView: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 20)
-        .playingVerseHighlight(isPlaying: isCurrentlyPlaying, accentColor: theme.accent)
+        .playingVerseHighlight(isPlaying: isCurrentlyPlaying || isNavigationTarget, accentColor: theme.accent)
     }
 
     // MARK: - Verse Number Badge
@@ -799,14 +813,12 @@ struct VerseReaderView: View {
                         .foregroundColor(theme.textTertiary)
                 }
             } else {
-                // Fallback to sample translation
-                let fallback = quranService.getSampleTranslation(forVerse: verse)
-                Text(fallback.text)
-                    .font(.system(size: settings.fontSize.translationSize))
-                    .foregroundColor(theme.textSecondary)
-                    .lineSpacing(settings.fontSize.lineSpacing * 0.6)
+                // Honest placeholder — the old fallback rendered Al-Fatiha's
+                // translation under ANY verse in the Quran
+                Text("Translation unavailable — check your connection")
+                    .font(.system(size: 13))
+                    .foregroundColor(theme.textTertiary)
                     .italic()
-                    .opacity(0.7)
             }
         }
     }
@@ -1026,7 +1038,7 @@ struct VerseReaderView: View {
                         Text("Start from Al-Fatihah")
                             .font(.system(size: FontSizes.base, weight: .semibold))
                     }
-                    .foregroundColor(.white)
+                    .foregroundColor(theme.onAccent)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, Spacing.xs)
                     .background(
@@ -1106,6 +1118,28 @@ struct VerseReaderView: View {
         }
     }
 
+    // MARK: - Target Verse Scroll
+
+    /// Scroll to `targetVerse` once, right after the first successful load.
+    /// Flashes the row with the playing-verse highlight so the eye lands on it.
+    private func scrollToTargetVerse(proxy: ScrollViewProxy) {
+        guard let target = targetVerse, !didScrollToTarget else { return }
+        guard let match = verses.first(where: { $0.verseNumber == target }) else { return }
+        didScrollToTarget = true
+
+        Task {
+            // Give the lazy stack a beat to lay out before jumping
+            try? await Task.sleep(nanoseconds: 300_000_000)
+            withAnimation(AppAnimation.standard) {
+                proxy.scrollTo(match.id, anchor: UnitPoint(x: 0.5, y: 0.3))
+            }
+            highlightedVerseNumber = target
+            // Let the glow linger long enough to register, then fade
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            highlightedVerseNumber = nil
+        }
+    }
+
     // MARK: - Dwell-Based Progress Tracking
 
     private func handleVerseVisibilityChange(isVisible: Bool, surahNumber: Int, verseNumber: Int) {
@@ -1182,20 +1216,22 @@ struct VerseReaderView: View {
             )
             async let transliterationsTask = quranService.getTransliterations(forSurah: surah.id)
 
-            let (fetchedVerses, fetchedTranslations) = try await (versesTask, translationsTask)
-            let fetchedTransliterations = try await transliterationsTask
-            verses = fetchedVerses
-            translations = fetchedTranslations
-            transliterations = fetchedTransliterations
+            // Arabic text is the primary content and must succeed; secondary
+            // content degrades gracefully instead of failing the whole load
+            verses = try await versesTask
+            translations = (try? await translationsTask) ?? [:]
+            transliterations = (try? await transliterationsTask) ?? [:]
             isLoading = false
             loadVerseReadStates()
         } catch {
             loadError = error
             isLoading = false
+            verses = []
+            translations = [:]
             transliterations = [:]
             AppLogger.quran.error("Failed to load verses for Surah \(surah.id, privacy: .public): \(error.localizedDescription, privacy: .public)")
-            verses = quranService.getSampleVerses(forSurah: surah.id)
-            loadVerseReadStates()
+            // No fake sample verses and no read-state tracking against them —
+            // the error state (with retry) is the only honest UI here
         }
     }
 

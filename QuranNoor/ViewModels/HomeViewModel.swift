@@ -25,7 +25,7 @@ final class HomeViewModel {
 
     // MARK: - Dependencies
 
-    private let hijriService = HijriCalendarService()
+    private let hijriService = HijriCalendarService.shared
     private let islamicContentService = IslamicContentService.shared
     private let apiClient = APIClient.shared
 
@@ -274,11 +274,16 @@ final class HomeViewModel {
         return progress.totalVersesRead > 0 ? min(progress.totalVersesRead, 120) : 0
     }
 
-    /// Cumulative verse counts marking the end of each juz (1-based index into array gives juz number)
+    /// Cumulative absolute verse number ending each juz (index+1 = juz).
+    /// Derived from alquran.cloud/v1/meta juz boundaries (standard Hafs
+    /// mushaf, 6236 verses): end(juz N) = start(juz N+1) − 1. Cross-checks:
+    /// juz 29 ends at 5672 and juz 30 starts at An-Naba (78:1) = 5673, which
+    /// matches QuranService.surahStartVerse[78]. The previous table drifted
+    /// from ~juz 14 on (claimed juz 29 ended at 4698 — a 974-verse error).
     private static let juzVerseEnds: [Int] = [
-        148, 259, 385, 516, 640, 751, 899, 1041, 1200, 1327,
-        1478, 1648, 1802, 1901, 2029, 2214, 2483, 2673, 2875, 3051,
-        3214, 3385, 3563, 3674, 3875, 4009, 4264, 4510, 4698, 6236
+        148, 259, 385, 516, 640, 750, 899, 1041, 1200, 1327,
+        1478, 1648, 1802, 2029, 2214, 2483, 2673, 2875, 3214, 3385,
+        3563, 3732, 4089, 4264, 4510, 4705, 5104, 5241, 5672, 6236
     ]
 
     private func calculateCurrentJuz(from progress: ReadingProgress) -> Int {

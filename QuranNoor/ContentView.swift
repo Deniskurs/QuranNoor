@@ -73,6 +73,11 @@ struct ContentView: View {
                         HapticManager.shared.trigger(.light)
                         audioService.isFullPlayerPresented = false
                     }
+                    .accessibilityLabel("Dismiss player")
+                    .accessibilityAddTraits(.isButton)
+                    .accessibilityAction {
+                        audioService.isFullPlayerPresented = false
+                    }
 
                 // Full player
                 AudioPlayerView(animationNamespace: playerNamespace) {
@@ -80,6 +85,8 @@ struct ContentView: View {
                 }
                 .transition(.move(edge: .bottom).combined(with: .opacity))
                 .zIndex(999)
+                // Keep VoiceOver focus inside the player while it covers the tabs
+                .accessibilityAddTraits(.isModal)
             }
         }
         .animation(AppAnimation.standard, value: audioService.isFullPlayerPresented)

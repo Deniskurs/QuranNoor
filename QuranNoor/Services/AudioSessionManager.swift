@@ -44,10 +44,25 @@ final class AudioSessionManager {
 
     // MARK: - Public Methods
 
+    /// Error thrown when a lower-priority usage tries to take the session
+    enum AudioSessionError: Error {
+        case blockedByHigherPriority
+    }
+
     /// Configure audio session for specific usage
     /// - Parameter usage: The type of audio that will be played
-    /// - Throws: AVAudioSession errors if configuration fails
+    /// - Throws: AVAudioSession errors if configuration fails, or
+    ///   `AudioSessionError.blockedByHigherPriority` when a higher-priority
+    ///   usage (e.g. adhan) currently owns the session
     func configureSession(for usage: AudioUsageType) throws {
+        // Enforce the priority rules — previously only advertised via
+        // canConfigure(for:) and never checked, so a UI sound could downgrade
+        // the session category in the middle of Quran playback.
+        guard canConfigure(for: usage) else {
+            AppLogger.audio.warning("AudioSessionManager: \(String(describing: usage), privacy: .public) blocked by \(String(describing: self.currentUsage), privacy: .public)")
+            throw AudioSessionError.blockedByHigherPriority
+        }
+
         let audioSession = AVAudioSession.sharedInstance()
 
         // Determine appropriate category and options
@@ -66,26 +81,36 @@ final class AudioSessionManager {
             isSessionActive = true
         }
 
-        // Track usage
+        // Track usage. Each usage appears at most ONCE in the stack —
+        // re-configuring (e.g. session reactivation after an interruption)
+        // used to append duplicates and the stack grew unboundedly.
         currentUsage = usage
+        if let existing = usageStack.lastIndex(of: usage) {
+            usageStack.remove(at: existing)
+        }
         usageStack.append(usage)
     }
 
-    /// Release audio session for current usage and restore previous configuration
-    /// - Parameter usage: The type of audio that finished playing (must match current)
+    /// Release audio session for a usage and restore the previous configuration
+    /// - Parameter usage: The type of audio that finished playing
     func releaseSession(for usage: AudioUsageType) {
-        // Remove from stack if it's the current usage
-        if let lastUsage = usageStack.last, lastUsage == usage {
-            usageStack.removeLast()
+        // Remove the usage wherever it sits — releasing out of LIFO order
+        // used to silently leak the entry
+        if let index = usageStack.lastIndex(of: usage) {
+            usageStack.remove(at: index)
         }
 
-        // If stack is empty, deactivate session
         if usageStack.isEmpty {
+            // Deactivate and clear tracking
             deactivateSession()
-            currentUsage = nil
         } else {
-            // Restore previous usage configuration
-            if let previousUsage = usageStack.last {
+            // Clear ownership first — the restore below goes through the
+            // priority gate, which must not see the just-released usage
+            if currentUsage == usage {
+                currentUsage = nil
+            }
+            if let previousUsage = usageStack.last, previousUsage != currentUsage {
+                // Restore previous usage configuration
                 try? configureSession(for: previousUsage)
             }
         }

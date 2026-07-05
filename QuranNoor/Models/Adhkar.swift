@@ -130,16 +130,31 @@ struct Dhikr: Identifiable, Codable, Hashable {
 
 /// Tracks user's progress with adhkar
 struct AdhkarProgress: Codable {
-    var completedToday: Set<UUID>
+    var completedToday: Set<String>
     var lastCompletionDate: Date
     var streak: Int
+    var longestStreak: Int
     var totalCompletions: Int
 
     init() {
         self.completedToday = []
         self.lastCompletionDate = Date()
         self.streak = 0
+        self.longestStreak = 0
         self.totalCompletions = 0
+    }
+
+    /// Derive a stable string key from a Dhikr.
+    /// Dhikr.id is a fresh UUID on every launch, so persistence must key on
+    /// content: category + FNV-1a hash of the Arabic text. Swift's Hasher is
+    /// seeded per-process, so a manual hash keeps keys stable across launches.
+    static func stableKey(for dhikr: Dhikr) -> String {
+        var hash: UInt64 = 0xcbf2_9ce4_8422_2325
+        for byte in dhikr.arabicText.utf8 {
+            hash ^= UInt64(byte)
+            hash = hash &* 0x0000_0100_0000_01b3
+        }
+        return "\(dhikr.category.rawValue):\(String(hash, radix: 16))"
     }
 
     /// Check if progress needs to be reset for new day
@@ -151,6 +166,7 @@ struct AdhkarProgress: Codable {
                calendar.isDate(lastCompletionDate, inSameDayAs: yesterday) {
                 // Completed yesterday, increment streak
                 streak += 1
+                longestStreak = max(longestStreak, streak)
             } else {
                 // Missed a day, reset streak
                 streak = 0
@@ -160,23 +176,23 @@ struct AdhkarProgress: Codable {
     }
 
     /// Mark dhikr as completed
-    mutating func markCompleted(dhikrId: UUID) {
+    mutating func markCompleted(dhikrKey: String) {
         checkAndResetForNewDay()
 
-        if !completedToday.contains(dhikrId) {
-            completedToday.insert(dhikrId)
+        if !completedToday.contains(dhikrKey) {
+            completedToday.insert(dhikrKey)
             totalCompletions += 1
             lastCompletionDate = Date()
         }
     }
 
     /// Check if dhikr is completed today
-    func isCompleted(dhikrId: UUID) -> Bool {
+    func isCompleted(dhikrKey: String) -> Bool {
         let calendar = Calendar.current
         guard calendar.isDateInToday(lastCompletionDate) else {
             return false
         }
-        return completedToday.contains(dhikrId)
+        return completedToday.contains(dhikrKey)
     }
 
     /// Get completion percentage for a category
@@ -188,7 +204,10 @@ struct AdhkarProgress: Codable {
             return 0.0
         }
 
-        let completedCount = completedToday.count
+        // Stable keys are category-prefixed, so the numerator can be scoped to
+        // the same category as the denominator instead of counting everything.
+        let keyPrefix = "\(category.rawValue):"
+        let completedCount = completedToday.lazy.filter { $0.hasPrefix(keyPrefix) }.count
         return min(1.0, Double(completedCount) / Double(totalInCategory))
     }
 }

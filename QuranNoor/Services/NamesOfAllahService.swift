@@ -92,8 +92,11 @@ final class NamesOfAllahService {
     }
 
     private static func loadProgress() -> NamesProgress {
-        guard let data = UserDefaults.standard.data(forKey: "names_of_allah_progress"),
-              let progress = try? decoder.decode(NamesProgress.self, from: data) else {
+        guard let data = UserDefaults.standard.data(forKey: "names_of_allah_progress") else {
+            return NamesProgress()
+        }
+        guard let progress = try? decoder.decode(NamesProgress.self, from: data) else {
+            UserDefaults.standard.backupCorruptedBlob(data, forKey: "names_of_allah_progress")
             return NamesProgress()
         }
         return progress

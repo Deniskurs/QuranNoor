@@ -11,6 +11,10 @@ import Observation
 @Observable
 @MainActor
 final class AdhkarService {
+    /// Shared instance so every screen observes the same progress; separate
+    /// instances used to double-count completions and diverge on relaunch.
+    static let shared = AdhkarService()
+
     // MARK: - Cached Codecs (Performance: avoid repeated allocation)
     private static let decoder = JSONDecoder()
     private static let encoder = JSONEncoder()
@@ -20,13 +24,23 @@ final class AdhkarService {
     private(set) var allAdhkar: [Dhikr] = []
     private(set) var progress: AdhkarProgress
 
-    private let progressKey = "adhkar_progress"
+    /// Per-launch UUID -> stable key, computed once so lookups stay O(1).
+    private let stableKeyByID: [UUID: String]
+
+    // v2: keyed by stable content-derived keys (Set<String>). The v1 key
+    // ("adhkar_progress") stored per-launch UUIDs that never matched after a
+    // relaunch, so its data is worthless and intentionally not migrated.
+    private static let progressKey = "adhkar_progress_v2"
 
     // MARK: - Initialization
 
     init() {
+        let adhkar = Self.createAdhkarDatabase()
+        self.allAdhkar = adhkar
+        self.stableKeyByID = Dictionary(
+            uniqueKeysWithValues: adhkar.map { ($0.id, AdhkarProgress.stableKey(for: $0)) }
+        )
         self.progress = Self.loadProgress()
-        self.allAdhkar = Self.createAdhkarDatabase()
         progress.checkAndResetForNewDay()
     }
 
@@ -49,13 +63,15 @@ final class AdhkarService {
 
     /// Mark dhikr as completed
     func markCompleted(dhikrId: UUID) {
-        progress.markCompleted(dhikrId: dhikrId)
+        guard let key = stableKeyByID[dhikrId] else { return }
+        progress.markCompleted(dhikrKey: key)
         saveProgress()
     }
 
     /// Check if dhikr is completed today
     func isCompleted(dhikrId: UUID) -> Bool {
-        progress.isCompleted(dhikrId: dhikrId)
+        guard let key = stableKeyByID[dhikrId] else { return false }
+        return progress.isCompleted(dhikrKey: key)
     }
 
     /// Get statistics for a category
@@ -70,7 +86,7 @@ final class AdhkarService {
             completedToday: completedCount,
             completionPercentage: percentage,
             currentStreak: progress.streak,
-            longestStreak: progress.streak, // Longest streak tracking shares current streak value
+            longestStreak: progress.longestStreak,
             totalCompletions: progress.totalCompletions
         )
     }
@@ -85,12 +101,12 @@ final class AdhkarService {
 
     private func saveProgress() {
         if let encoded = try? Self.encoder.encode(progress) {
-            UserDefaults.standard.set(encoded, forKey: progressKey)
+            UserDefaults.standard.set(encoded, forKey: Self.progressKey)
         }
     }
 
     private static func loadProgress() -> AdhkarProgress {
-        guard let data = UserDefaults.standard.data(forKey: "adhkar_progress"),
+        guard let data = UserDefaults.standard.data(forKey: progressKey),
               let progress = try? decoder.decode(AdhkarProgress.self, from: data) else {
             return AdhkarProgress()
         }

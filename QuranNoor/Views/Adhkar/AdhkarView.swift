@@ -9,7 +9,7 @@ import SwiftUI
 
 struct AdhkarView: View {
     @Environment(ThemeManager.self) var themeManager
-    @State private var adhkarService = AdhkarService()
+    private let adhkarService = AdhkarService.shared
     @State private var selectedCategory: AdhkarCategory?
     @State private var showingTasbih = false
     @State private var showingNamesOfAllah = false

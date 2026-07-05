@@ -100,6 +100,24 @@ enum ThemeMode: String, CaseIterable, Identifiable {
         }
     }
 
+    /// Foreground ink for content sitting ON the accent color (filled CTAs,
+    /// primary buttons, accent-filled pills). White fails on the light accents
+    /// of dark/night (~2:1), so those themes use a dark ink instead.
+    ///
+    /// Contrast ratios (on respective accents):
+    /// - Light (#FFFFFF on #0D7377): 5.6:1  (WCAG AA)
+    /// - Dark  (#1A2332 on #5EC4C8): 7.7:1  (WCAG AAA)
+    /// - Night (#1A2332 on #D4A574): 7.1:1  (WCAG AAA)
+    /// - Sepia (#FFF8ED on #7A6148): 5.5:1  (WCAG AA)
+    var onAccent: Color {
+        switch self {
+        case .light: return Color.white            // White on emerald
+        case .dark:  return Color(hex: "#1A2332")  // Midnight ink on soft teal
+        case .night: return Color(hex: "#1A2332")  // Midnight ink on warm amber
+        case .sepia: return Color(hex: "#FFF8ED")  // Warm white on brown ink
+        }
+    }
+
     // =========================================================================
     // MARK: - Background / Surface Colors (3-Level Hierarchy)
     // =========================================================================

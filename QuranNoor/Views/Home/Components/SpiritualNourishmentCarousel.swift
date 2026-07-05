@@ -50,6 +50,8 @@ struct SpiritualNourishmentCarousel: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: Spacing.sm) { // 16pt spacing between cards
                     // Verse of the day
+                    // Explicit ids: .scrollPosition(id:) can only track the
+                    // page indicator when each card carries a matching identity.
                     if let verse = verseOfDay {
                         SpiritualContentCard(
                             icon: "book.fill",
@@ -57,6 +59,7 @@ struct SpiritualNourishmentCarousel: View {
                             content: verse,
                             accentColor: themeManager.currentTheme.accent
                         )
+                        .id(0)
                     }
 
                     // Hadith of the day
@@ -67,6 +70,7 @@ struct SpiritualNourishmentCarousel: View {
                             content: hadith,
                             accentColor: themeManager.currentTheme.accentMuted
                         )
+                        .id(verseOfDay != nil ? 1 : 0)
                     }
 
                     // Loading placeholders if no content

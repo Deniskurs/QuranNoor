@@ -50,6 +50,7 @@ final class SpiritualBookmarkService {
             bookmarks = try Self.decoder.decode([SpiritualBookmark].self, from: data)
             bookmarks.sort { $0.timestamp > $1.timestamp } // Most recent first
         } catch {
+            userDefaults.backupCorruptedBlob(data, forKey: bookmarksKey)
             bookmarks = []
         }
     }

@@ -113,6 +113,9 @@ final class OnboardingCoordinator {
 
     init(
         storage: OnboardingStorageProtocol = OnboardingStorage.default,
+        // MockAnalyticsService is the only AnalyticsServiceProtocol implementation
+        // in the project, so release builds record no onboarding analytics.
+        // Swap this default when a real analytics backend lands.
         analyticsService: AnalyticsServiceProtocol = MockAnalyticsService.shared
     ) {
         self.storage = storage
@@ -254,7 +257,13 @@ final class OnboardingCoordinator {
             return "Karachi"
         case "IR":
             return "Tehran"
-        case "GB", "FR", "DE", "IT", "ES":
+        case "AE":
+            return "Dubai"
+        case "GB", "IE":
+            // UK/Ireland mosque timetables follow Moonsighting Committee
+            // times; MWL's 18° twilight fails at these latitudes in summer.
+            return "Moonsighting"
+        case "FR", "DE", "IT", "ES":
             return "MWL"
         default:
             return "MWL"

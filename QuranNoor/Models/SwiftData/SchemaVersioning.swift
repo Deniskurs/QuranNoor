@@ -32,6 +32,29 @@ enum QuranNoorSchemaV1: VersionedSchema {
     }
 }
 
+// MARK: - Schema Version 2 (Bookmark Categories)
+
+/// Version 2.0.0 of the QuranNoor SwiftData schema
+/// Adds `BookmarkRecord.category` (String, defaulted to "All Bookmarks"),
+/// which shipped as an inline default on the live model after V1 was frozen.
+/// This version makes that change explicit so stores created before the
+/// property existed migrate cleanly instead of relying on undeclared drift.
+/// Like V1, this enum only references the live model classes (see the
+/// warning above about redefining @Model classes inside a VersionedSchema).
+enum QuranNoorSchemaV2: VersionedSchema {
+    /// Semantic versioning identifier for this schema
+    static var versionIdentifier = Schema.Version(2, 0, 0)
+
+    /// All model types included in this schema version
+    static var models: [any PersistentModel.Type] {
+        [
+            BookmarkRecord.self,
+            ReadingProgressRecord.self,
+            ReadingStatsRecord.self
+        ]
+    }
+}
+
 // MARK: - Migration Plan
 
 /// Defines the migration stages for QuranNoor SwiftData schema
@@ -40,42 +63,52 @@ enum QuranNoorMigrationPlan: SchemaMigrationPlan {
     /// Ordered list of schema versions from oldest to newest
     static var schemas: [any VersionedSchema.Type] {
         [
-            QuranNoorSchemaV1.self
+            QuranNoorSchemaV1.self,
+            QuranNoorSchemaV2.self
             // Future versions will be added here:
-            // QuranNoorSchemaV2.self,
             // QuranNoorSchemaV3.self,
             // etc.
         ]
     }
 
     /// Migration stages between schema versions
-    /// Empty for now since V1 is the initial version
     static var stages: [MigrationStage] {
         [
-            // Future migrations will be added here when V2 is created:
-            // migrateV1toV2,
+            migrateV1toV2
+            // Future migrations will be added here:
             // migrateV2toV3,
             // etc.
         ]
     }
 
+    // MARK: - V1 → V2 (lightweight)
+
+    /// Adds `BookmarkRecord.category` with a default value. Lightweight is
+    /// correct here: adding an attribute that has a default requires no
+    /// custom logic — SwiftData infers the mapping and fills existing rows
+    /// with "All Bookmarks" in place, preserving the store and all records.
+    static let migrateV1toV2 = MigrationStage.lightweight(
+        fromVersion: QuranNoorSchemaV1.self,
+        toVersion: QuranNoorSchemaV2.self
+    )
+
     // MARK: - Future Migration Examples (for reference)
 
     /*
-    /// Example: Migration from V1 to V2
-    /// Uncomment and customize when creating V2
-    static let migrateV1toV2 = MigrationStage.custom(
-        fromVersion: QuranNoorSchemaV1.self,
-        toVersion: QuranNoorSchemaV2.self,
+    /// Example: Custom migration (manual logic needed)
+    /// Use this for renames, transformations, or data cleanup
+    static let migrateV2toV3 = MigrationStage.custom(
+        fromVersion: QuranNoorSchemaV2.self,
+        toVersion: QuranNoorSchemaV3.self,
         willMigrate: { context in
             // Pre-migration logic (optional)
             // e.g., validate data, backup critical records
-            AppLogger.migration.debug("Starting migration from V1 to V2...")
+            AppLogger.migration.debug("Starting migration from V2 to V3...")
         },
         didMigrate: { context in
             // Post-migration logic (optional)
             // e.g., transform data, update relationships, cleanup
-            AppLogger.migration.debug("Completed migration from V1 to V2")
+            AppLogger.migration.debug("Completed migration from V2 to V3")
 
             // Example: Update all BookmarkRecord instances
             let bookmarks = try? context.fetch(FetchDescriptor<BookmarkRecord>())
@@ -86,15 +119,6 @@ enum QuranNoorMigrationPlan: SchemaMigrationPlan {
 
             try? context.save()
         }
-    )
-    */
-
-    /*
-    /// Example: Lightweight migration (no custom logic needed)
-    /// Use this when only adding optional properties or simple changes
-    static let migrateV2toV3 = MigrationStage.lightweight(
-        fromVersion: QuranNoorSchemaV2.self,
-        toVersion: QuranNoorSchemaV3.self
     )
     */
 }

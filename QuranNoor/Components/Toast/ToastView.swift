@@ -29,8 +29,8 @@ enum ToastStyle {
         switch self {
         case .success: return theme.accent
         case .info: return theme.accent
-        case .warning: return Color.orange
-        case .error: return Color.red
+        case .warning: return theme.semanticWarning
+        case .error: return theme.semanticError
         case .spiritual: return theme.accentMuted
         }
     }

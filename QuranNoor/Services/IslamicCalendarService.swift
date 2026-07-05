@@ -6,10 +6,15 @@
 //
 
 import Foundation
-import UserNotifications
+import os
 
 @Observable
 final class IslamicCalendarService {
+    /// Shared instance. Views used to create independent instances, each loading
+    /// hijriDayOffset/trackers at init — a moon-sighting offset change in one
+    /// screen left every other screen stale until relaunch.
+    static let shared = IslamicCalendarService()
+
     // MARK: - Cached Codecs (Performance: avoid repeated allocation)
     private static let decoder = JSONDecoder()
     private static let encoder = JSONEncoder()
@@ -48,11 +53,10 @@ final class IslamicCalendarService {
         UserDefaults.standard.set(clamped, forKey: Self.hijriOffsetKey)
 
         // Strip entries that are now in the future under the new offset
-        let newCurrentDay = convertToHijri().day
-        let currentYear = convertToHijri().year
-        if var tracker = ramadanTrackers[currentYear] {
-            tracker.clearFutureEntries(currentDay: newCurrentDay)
-            ramadanTrackers[currentYear] = tracker
+        let newHijri = convertToHijri()
+        if var tracker = ramadanTrackers[newHijri.year] {
+            tracker.clearFutureEntries(currentDay: newHijri.day)
+            ramadanTrackers[newHijri.year] = tracker
             saveRamadanTrackers()
         }
     }
@@ -257,9 +261,13 @@ final class IslamicCalendarService {
     // MARK: - Persistence
 
     private static func loadProgress() -> CalendarProgress {
-        if let data = UserDefaults.standard.data(forKey: progressKey),
-           let progress = try? decoder.decode(CalendarProgress.self, from: data) {
-            return progress
+        if let data = UserDefaults.standard.data(forKey: progressKey) {
+            if let progress = try? decoder.decode(CalendarProgress.self, from: data) {
+                return progress
+            }
+            // Keep the corrupt blob recoverable — the next save would silently overwrite it.
+            UserDefaults.standard.set(data, forKey: progressKey + "_backup_v1")
+            AppLogger.data.error("CalendarProgress decode failed; raw data preserved at \(progressKey, privacy: .public)_backup_v1")
         }
         return CalendarProgress()
     }

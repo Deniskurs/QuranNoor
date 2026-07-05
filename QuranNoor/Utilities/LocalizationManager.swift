@@ -19,11 +19,12 @@ enum AppLanguage: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
+    /// English name — shown alongside `nativeName` so every user can identify each option.
     var displayName: String {
         switch self {
         case .english: return "English"
-        case .arabic: return "العربية"
-        case .urdu: return "اردو"
+        case .arabic: return "Arabic"
+        case .urdu: return "Urdu"
         }
     }
 
@@ -60,9 +61,11 @@ enum AppLanguage: String, CaseIterable, Identifiable {
 final class LocalizationManager {
     static let shared = LocalizationManager()
 
+    private static let storageKey = "app_language"
+
     var currentLanguage: AppLanguage {
         didSet {
-            UserDefaults.standard.set(currentLanguage.rawValue, forKey: "app_language")
+            UserDefaults.standard.set(currentLanguage.rawValue, forKey: Self.storageKey)
             updateLayoutDirection()
         }
     }
@@ -70,15 +73,16 @@ final class LocalizationManager {
     var layoutDirection: LayoutDirection
 
     private init() {
-        // Load saved language or use device language
+        // Default to English on first launch — never the device locale. In-app
+        // translations currently cover only the onboarding keys below, so deriving
+        // the language (and thus RTL layout) from an Arabic/Urdu device locale
+        // would mirror an all-English UI with no in-app way to switch back.
         let savedLanguage: AppLanguage
-        if let savedLang = UserDefaults.standard.string(forKey: "app_language"),
+        if let savedLang = UserDefaults.standard.string(forKey: Self.storageKey),
            let language = AppLanguage(rawValue: savedLang) {
             savedLanguage = language
         } else {
-            // Detect device language
-            let deviceLang = Locale.current.language.languageCode?.identifier ?? "en"
-            savedLanguage = AppLanguage(rawValue: deviceLang) ?? .english
+            savedLanguage = .english
         }
 
         self.currentLanguage = savedLanguage
@@ -153,14 +157,17 @@ enum LocalizedKey {
     case step(Int, Int)  // step X of Y
 
     func localized(for language: AppLanguage) -> String {
+        let translation: String
         switch language {
         case .english:
             return englishTranslation
         case .arabic:
-            return arabicTranslation
+            translation = arabicTranslation
         case .urdu:
-            return urduTranslation
+            translation = urduTranslation
         }
+        // Fall back to English so an untranslated key never renders blank.
+        return translation.isEmpty ? englishTranslation : translation
     }
 
     // MARK: - English Translations
@@ -441,14 +448,5 @@ extension View {
     /// Apply RTL layout if needed
     func adaptiveLayout() -> some View {
         self.environment(\.layoutDirection, LocalizationManager.shared.layoutDirection)
-    }
-}
-
-// MARK: - String Extension
-
-extension String {
-    func localized() -> String {
-        // For static strings, use Bundle localization
-        NSLocalizedString(self, comment: "")
     }
 }

@@ -86,6 +86,7 @@ struct ProgressManagementView: View {
                         } label: {
                             Image(systemName: "ellipsis.circle")
                         }
+                        .accessibilityLabel("Progress options")
                     }
                 }
                 .confirmationDialog(

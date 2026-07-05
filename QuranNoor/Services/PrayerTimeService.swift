@@ -3,7 +3,7 @@
 //  QuranNoor
 //
 //  Calculate prayer times using Aladhan API with offline fallback
-//  Uses Adhan Swift package for offline calculations when API fails
+//  Offline path: OfflinePrayerCalculationService (pure-Swift astronomy)
 //
 
 import Foundation
@@ -112,7 +112,7 @@ final class PrayerTimeService {
     private let userDefaults = UserDefaults.standard
     private let cacheKeyPrefix = "cachedPrayerTimes" // Will append date
     private let cacheVersionKey = "cacheVersion" // Add versioning for cache invalidation
-    private let currentCacheVersion = "3.3" // MWL default + high-lat adjustment (invalidates ISNA-tainted cache)
+    private let currentCacheVersion = "3.4" // Offline angle-based high-lat rule + true Moonsighting + UK migration
     private let cacheSettingsKey = "cachedPrayerSettings" // Store method + madhab used for cache
     private let offlineService = OfflinePrayerCalculationService.shared
 
@@ -373,10 +373,19 @@ final class PrayerTimeService {
 
     // MARK: - Caching
 
+    /// Locale-pinned key formatter — cache keys must be identical on every
+    /// device and parseable by PerformanceOptimizationService.cleanupOldCaches
+    private static let cacheKeyDateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.timeZone = .current
+        return f
+    }()
+
     /// Generate cache key for a specific date
     private func cacheKey(for date: Date) -> String {
-        let dateString = date.formatted(date: .numeric, time: .omitted)
-        return "\(cacheKeyPrefix)_\(dateString)"
+        "\(cacheKeyPrefix)_\(Self.cacheKeyDateFormatter.string(from: date))"
     }
 
     private func cachePrayerTimes(

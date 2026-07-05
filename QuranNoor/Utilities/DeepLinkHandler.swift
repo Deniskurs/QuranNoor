@@ -103,6 +103,11 @@ class DeepLinkHandler {
 
     // MARK: - Navigation
 
+    /// Generation token: each navigate() invalidates the previous delayed
+    /// clear, so a rapid second deep link can't have its destination wiped
+    /// by the first link's timer.
+    private var navigationGeneration = 0
+
     /// Navigate to a specific destination
     func navigate(to destination: DeepLinkDestination) {
         // Set active destination
@@ -111,10 +116,15 @@ class DeepLinkHandler {
         // Trigger navigation (ContentView will observe this)
         pendingNavigation = destination
 
+        navigationGeneration += 1
+        let generation = navigationGeneration
+
         // Clear pending navigation after a short delay (allows ContentView to react)
         Task {
             try? await Task.sleep(nanoseconds: 500_000_000)  // 500ms
-            pendingNavigation = nil
+            if generation == navigationGeneration {
+                pendingNavigation = nil
+            }
         }
     }
 

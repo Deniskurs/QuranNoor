@@ -49,6 +49,9 @@ struct SettingsView: View {
                         // Appearance Section
                         AppearanceSection()
 
+                        // Language Section
+                        LanguageSection()
+
                         // Reading Progress Section
                         ReadingProgressSection(
                             showProgressManagement: $showProgressManagement,
@@ -512,4 +515,5 @@ struct SettingsView: View {
 #Preview {
     SettingsView(prayerVM: PrayerViewModel())
         .environment(ThemeManager())
+        .environment(LocalizationManager.shared)
 }

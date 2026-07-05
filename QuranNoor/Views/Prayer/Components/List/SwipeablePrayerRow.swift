@@ -3,13 +3,15 @@
 //  QuranNoor
 //
 //  Swipe-to-complete with rubber band, haptics, and smooth animations
-//  Drag state stored outside SwiftUI to survive TimelineView updates
+//  Drag state held in @State-owned storage so it survives TimelineView re-inits
 //
 
 import SwiftUI
 
-/// Stores drag offsets outside of SwiftUI view lifecycle
-/// Note: Not a singleton anymore - each row has its own instance
+/// Reference-type drag storage. Held in `@State` so SwiftUI keeps the same
+/// instance across view re-inits (TimelineView ticks rebuild the row every
+/// second); a plain `let` would allocate a fresh instance — and reset the
+/// offset to 0 — on every tick, killing an in-flight swipe.
 private final class SwipeDragState {
     private var offset: CGFloat = 0
 
@@ -36,6 +38,8 @@ struct SwipeablePrayerRow: View {
     let isCompleted: Bool
     let onCompletionToggle: () -> Void
 
+    @Environment(ThemeManager.self) private var themeManager
+
     // Force view updates when dragging
     @State private var dragTick: Int = 0
     @State private var hasTriggeredThresholdHaptic: Bool = false
@@ -50,8 +54,8 @@ struct SwipeablePrayerRow: View {
     private let maxSwipe: CGFloat = 140
     private let velocityThreshold: CGFloat = -400
 
-    // Instance-level drag state to avoid cross-row interference
-    private let dragState = SwipeDragState()
+    // Instance-level drag state (per-row, no cross-row interference)
+    @State private var dragState = SwipeDragState()
 
     private var currentOffset: CGFloat {
         dragState.getOffset()
@@ -117,7 +121,7 @@ struct SwipeablePrayerRow: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(
             RoundedRectangle(cornerRadius: BorderRadius.xl, style: .continuous)
-                .fill(Color.green)
+                .fill(themeManager.currentTheme.semanticSuccess)
         )
         .opacity(swipeProgress)
         .animation(AppAnimation.fast, value: isPastThreshold)
